@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect VMI - Valley Park Inventory Management</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #0B5FFF;
+            --danger-red: #D32F2F;
+            --success-green: #2E7D32;
+            --warning-orange: #F57C00;
+            --gray-50: #FAFAFA;
+            --gray-100: #F5F5F5;
+            --gray-200: #EEEEEE;
+            --gray-300: #E0E0E0;
+            --gray-400: #BDBDBD;
+            --gray-500: #9E9E9E;
+            --gray-600: #757575;
+            --gray-700: #616161;
+            --gray-800: #424242;
+            --gray-900: #212121;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-900);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .app-header {
+            background: #FFFFFF;
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .brand {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--gray-900);
+            letter-spacing: -0.02em;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .nav-tab {
+            padding: 8px 16px;
+            color: var(--gray-600);
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .nav-tab:hover {
+            background: var(--gray-100);
+            color: var(--gray-900);
+        }
+
+        .nav-tab.active {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .customer-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .user-name {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        /* Page Header */
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+            letter-spacing: -0.03em;
+        }
+
+        .page-subtitle {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        /* Alert Banner */
+        .alert-banner {
+            background: linear-gradient(135deg, #FFF3E0 0%, #FFEBEE 100%);
+            border: 2px solid var(--danger-red);
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .alert-icon {
+            font-size: 40px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--danger-red);
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .alert-products {
+            font-size: 15px;
+            color: var(--gray-700);
+            margin-bottom: 20px;
+        }
+
+        .alert-cta {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 28px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(11, 95, 255, 0.2);
+        }
+
+        .alert-cta:hover {
+            background: #0952E0;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(11, 95, 255, 0.3);
+        }
+
+        .alert-cta:active {
+            transform: translateY(0);
+        }
+
+        /* Card */
+        .card {
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+            letter-spacing: -0.02em;
+        }
+
+        .card-subtitle {
+            font-size: 13px;
+            color: var(--gray-600);
+            margin-top: 4px;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .status-badge.urgent {
+            background: #FFEBEE;
+            color: var(--danger-red);
+        }
+
+        .status-badge.warning {
+            background: #FFF3E0;
+            color: var(--warning-orange);
+        }
+
+        .status-badge.healthy {
+            background: #E8F5E9;
+            color: var(--success-green);
+        }
+
+        /* Action Button */
+        .action-button {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 20px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(11, 95, 255, 0.2);
+            position: relative;
+        }
+
+        .action-button:hover {
+            background: #0952E0;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(11, 95, 255, 0.3);
+        }
+
+        .action-button .button-main {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .action-button .button-meta {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .action-button.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .action-button.loading::after {
+            content: "";
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            top: 50%;
+            left: 50%;
+            margin-left: -9px;
+            margin-top: -9px;
+            border: 3px solid white;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Chart Container */
+        .chart-wrapper {
+            margin-bottom: 24px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        .chart-legend {
+            display: flex;
+            gap: 24px;
+            padding: 16px;
+            background: var(--gray-50);
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        .legend-color.danger {
+            background: var(--danger-red);
+        }
+
+        .legend-color.success {
+            background: var(--success-green);
+        }
+
+        .legend-color.target {
+            background: var(--gray-400);
+            border: 1px dashed var(--gray-500);
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .data-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 14px;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table .product-name {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        .data-table .number {
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-weight: 500;
+        }
+
+        .data-table .total-row {
+            background: var(--gray-50);
+            font-weight: 600;
+        }
+
+        /* Expandable Section */
+        .expandable-section {
+            margin-top: 16px;
+        }
+
+        .expand-toggle {
+            background: transparent;
+            border: none;
+            color: var(--primary-blue);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 8px 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.2s;
+        }
+
+        .expand-toggle:hover {
+            color: #0952E0;
+        }
+
+        .expand-icon {
+            transition: transform 0.3s;
+        }
+
+        .expand-icon.open {
+            transform: rotate(180deg);
+        }
+
+        .expand-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+        }
+
+        .expand-content.open {
+            max-height: 3000px;
+            transition: max-height 0.6s ease-in;
+        }
+
+        .expand-content-inner {
+            padding-top: 24px;
+        }
+
+        /* Product Detail Card */
+        .product-detail {
+            background: var(--gray-50);
+            border-left: 4px solid var(--danger-red);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .product-detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .product-detail-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--gray-900);
+            letter-spacing: -0.01em;
+        }
+
+        .product-detail-chart {
+            height: 250px;
+            margin-bottom: 16px;
+        }
+
+        .product-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-900);
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+
+        .stat-value.editable {
+            color: var(--primary-blue);
+            cursor: pointer;
+            border-bottom: 2px dashed var(--primary-blue);
+        }
+
+        .stat-value.editable:hover {
+            background: #E3F2FD;
+        }
+
+        .stat-unit {
+            font-size: 12px;
+            color: var(--gray-600);
+            margin-left: 4px;
+        }
+
+        /* Info Banner */
+        .info-banner {
+            background: #E3F2FD;
+            border-left: 4px solid var(--primary-blue);
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-banner-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+        }
+
+        .info-banner-text {
+            font-size: 13px;
+            color: var(--gray-700);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 700px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+            animation: modalSlideUp 0.3s ease-out;
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                transform: translateY(40px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 32px 32px 24px 32px;
+            text-align: center;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .modal-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--success-green) 0%, #43A047 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+            color: white;
+            animation: iconPop 0.5s ease-out 0.2s both;
+        }
+
+        @keyframes iconPop {
+            0% {
+                transform: scale(0);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .modal-subtitle {
+            font-size: 14px;
+            color: var(--gray-600);
+        }
+
+        .modal-body {
+            padding: 32px;
+        }
+
+        .order-summary {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            font-size: 14px;
+        }
+
+        .summary-label {
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .summary-value {
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .timeline {
+            margin-bottom: 24px;
+        }
+
+        .timeline-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .timeline-step {
+            display: flex;
+            gap: 16px;
+            padding: 12px 0;
+            position: relative;
+        }
+
+        .timeline-step:not(:last-child)::before {
+            content: "";
+            position: absolute;
+            left: 15px;
+            top: 40px;
+            bottom: -12px;
+            width: 2px;
+            background: var(--gray-200);
+        }
+
+        .step-icon-wrapper {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+            background: white;
+            border: 2px solid var(--gray-200);
+        }
+
+        .timeline-step.completed .step-icon-wrapper {
+            background: var(--success-green);
+            border-color: var(--success-green);
+            color: white;
+        }
+
+        .step-content {
+            flex: 1;
+            padding-top: 4px;
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 2px;
+        }
+
+        .step-date {
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        .status-preview {
+            background: #E8F5E9;
+            border: 1px solid var(--success-green);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .status-preview-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-preview-item {
+            padding: 8px 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--success-green);
+        }
+
+        .modal-button {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 32px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .modal-button:hover {
+            background: #0952E0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 20px 16px;
+            }
+
+            .header-content {
+                padding: 16px;
+            }
+
+            .page-title {
+                font-size: 24px;
+            }
+
+            .alert-banner {
+                flex-direction: column;
+                padding: 24px 20px;
+            }
+
+            .chart-container {
+                height: 300px;
+            }
+
+            .product-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="header-left">
+                <div class="brand">MyPak Connect</div>
+                <nav class="nav-tabs">
+                    <div class="nav-tab">Orders</div>
+                    <div class="nav-tab">Tracking</div>
+                    <div class="nav-tab active">VMI</div>
+                </nav>
+            </div>
+            <div class="header-right">
+                <div class="customer-name">Valley Park Farms</div>
+                <div class="user-name">Ian M.</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">Inventory Management</h1>
+            <p class="page-subtitle">Automated monitoring and ordering recommendations</p>
+        </div>
+
+        <!-- Alert Banner -->
+        <div class="alert-banner">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+                <h2 class="alert-title">3 Products Running Out Dec 18-23, 2025</h2>
+                <p class="alert-products">Woolworths Cage Free 700g • FYFE Family 800g Free Range • Coles Free Range 800g</p>
+                <button class="alert-cta" onclick="scrollToAction()">View Recommendation</button>
+            </div>
+        </div>
+
+        <!-- Recommendation Card -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Recommended Action: Container 1</h2>
+                    <p class="card-subtitle">Order by Nov 12 to prevent stockout</p>
+                </div>
+                <div class="status-badge urgent">
+                    <span>●</span>
+                    <span>URGENT</span>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="chart-wrapper">
+                <div class="chart-container">
+                    <canvas id="mainChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <div class="legend-color danger"></div>
+                        <span>Without Order (Stockout Dec 18-23)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color success"></div>
+                        <span>With Container 1 (All Products Safe)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color target"></div>
+                        <span>Target Stock Level (10-week buffer)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Container Details -->
+            <div style="margin-top: 32px;">
+                <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--gray-900);">Container 1 Contents</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th style="text-align: right;">Current Stock</th>
+                            <th style="text-align: right;">Weekly Usage</th>
+                            <th style="text-align: right;">Order Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="product-name">Woolworths Cage Free 700g</td>
+                            <td class="number" style="text-align: right;">80,000</td>
+                            <td class="number" style="text-align: right;">12,000</td>
+                            <td class="number" style="text-align: right;">33,000</td>
+                        </tr>
+                        <tr>
+                            <td class="product-name">FYFE Family 800g Free Range</td>
+                            <td class="number" style="text-align: right;">90,000</td>
+                            <td class="number" style="text-align: right;">13,000</td>
+                            <td class="number" style="text-align: right;">35,000</td>
+                        </tr>
+                        <tr>
+                            <td class="product-name">Coles Free Range 800g</td>
+                            <td class="number" style="text-align: right;">70,000</td>
+                            <td class="number" style="text-align: right;">11,000</td>
+                            <td class="number" style="text-align: right;">23,000</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td><strong>Total Container 1</strong></td>
+                            <td class="number" style="text-align: right;"><strong>240,000</strong></td>
+                            <td class="number" style="text-align: right;"><strong>36,000</strong></td>
+                            <td class="number" style="text-align: right;"><strong>91,000</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="info-banner" style="margin-top: 24px;">
+                <div class="info-banner-title">Why this recommendation?</div>
+                <div class="info-banner-text">
+                    All three products will run out within 5 days of each other (Dec 18-23). Ordering them together in one container:
+                    <ul style="margin-top: 8px; padding-left: 20px;">
+                        <li>Prevents all three stockouts with single shipment</li>
+                        <li>Fills container to 101% capacity (efficient shipping)</li>
+                        <li>Restores 10-week safety stock for all products</li>
+                        <li>Order must be placed by Nov 12 (45-day lead time)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <div style="margin-top: 32px;" id="actionSection">
+                <button class="action-button" id="approveButton" onclick="approveOrder()">
+                    <div class="button-main">Approve Container 1 Order — 91,000 Cartons</div>
+                    <div class="button-meta">Delivery: Dec 27, 2025 • Lead time: 45 days</div>
+                </button>
+            </div>
+
+            <!-- Expandable: Individual Products -->
+            <div class="expandable-section">
+                <button class="expand-toggle" onclick="toggleIndividual()">
+                    <span class="expand-icon" id="individualIcon">▼</span>
+                    <span>View individual product projections</span>
+                </button>
+                <div class="expand-content" id="individualContent">
+                    <div class="expand-content-inner">
+                        <!-- Woolworths -->
+                        <div class="product-detail">
+                            <div class="product-detail-header">
+                                <div class="product-detail-title">WOOLWORTHS CAGE FREE 700G</div>
+                                <div class="status-badge urgent"><span>●</span> URGENT</div>
+                            </div>
+                            <div class="product-detail-chart">
+                                <canvas id="chartWool"></canvas>
+                            </div>
+                            <div class="product-stats">
+                                <div class="stat-box">
+                                    <div class="stat-label">Current Stock</div>
+                                    <div class="stat-value">80,000</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Weekly Usage</div>
+                                    <div class="stat-value editable">12,000<span class="stat-unit">/wk</span></div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Runs Out</div>
+                                    <div class="stat-value" style="color: var(--danger-red);">Dec 18</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Order Quantity</div>
+                                    <div class="stat-value" style="color: var(--success-green);">33,000</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- FYFE -->
+                        <div class="product-detail">
+                            <div class="product-detail-header">
+                                <div class="product-detail-title">FYFE FAMILY 800G FREE RANGE</div>
+                                <div class="status-badge urgent"><span>●</span> URGENT</div>
+                            </div>
+                            <div class="product-detail-chart">
+                                <canvas id="chartFyfe"></canvas>
+                            </div>
+                            <div class="product-stats">
+                                <div class="stat-box">
+                                    <div class="stat-label">Current Stock</div>
+                                    <div class="stat-value">90,000</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Weekly Usage</div>
+                                    <div class="stat-value editable">13,000<span class="stat-unit">/wk</span></div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Runs Out</div>
+                                    <div class="stat-value" style="color: var(--danger-red);">Dec 20</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Order Quantity</div>
+                                    <div class="stat-value" style="color: var(--success-green);">35,000</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coles -->
+                        <div class="product-detail">
+                            <div class="product-detail-header">
+                                <div class="product-detail-title">COLES FREE RANGE 800G</div>
+                                <div class="status-badge urgent"><span>●</span> URGENT</div>
+                            </div>
+                            <div class="product-detail-chart">
+                                <canvas id="chartColes"></canvas>
+                            </div>
+                            <div class="product-stats">
+                                <div class="stat-box">
+                                    <div class="stat-label">Current Stock</div>
+                                    <div class="stat-value">70,000</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Weekly Usage</div>
+                                    <div class="stat-value editable">11,000<span class="stat-unit">/wk</span></div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Runs Out</div>
+                                    <div class="stat-value" style="color: var(--danger-red);">Dec 23</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-label">Order Quantity</div>
+                                    <div class="stat-value" style="color: var(--success-green);">23,000</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Next Up -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h2 class="card-title">Container 2: Not Urgent Yet</h2>
+                    <p class="card-subtitle">Order by Dec 3 • 3 products</p>
+                </div>
+                <div class="status-badge warning">
+                    <span>●</span>
+                    <span>WATCH</span>
+                </div>
+            </div>
+            <p style="color: var(--gray-700); font-size: 14px;">
+                FYFE Family 900g, FYFE Family 700g, and Good Yolk Cage Free 700g run out Jan 15-22.
+                We'll remind you when it's time to order.
+            </p>
+        </div>
+
+        <!-- Healthy Products -->
+        <div class="card">
+            <div style="text-align: center; padding: 12px 0;">
+                <div class="status-badge healthy" style="font-size: 14px; padding: 8px 16px;">
+                    <span>●</span>
+                    <span>4 OTHER PRODUCTS HEALTHY (12+ weeks supply)</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">✓</div>
+                <h2 class="modal-title">Container Order Confirmed</h2>
+                <p class="modal-subtitle">Confirmation email sent to ian@valleypark.com.au</p>
+            </div>
+            <div class="modal-body">
+                <div class="order-summary">
+                    <div class="summary-row">
+                        <span class="summary-label">Order Number</span>
+                        <span class="summary-value">MPK-2025-11-00234</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Container</span>
+                        <span class="summary-value">Container 1</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Total Quantity</span>
+                        <span class="summary-value">91,000 cartons</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Products</span>
+                        <span class="summary-value">3 items</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Expected Delivery</span>
+                        <span class="summary-value">December 27, 2025</span>
+                    </div>
+                </div>
+
+                <div class="timeline">
+                    <div class="timeline-title">Order Timeline</div>
+                    <div class="timeline-step completed">
+                        <div class="step-icon-wrapper">✓</div>
+                        <div class="step-content">
+                            <div class="step-title">Order Received</div>
+                            <div class="step-date">November 5, 2025 - Just now</div>
+                        </div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="step-icon-wrapper">⏱</div>
+                        <div class="step-content">
+                            <div class="step-title">Production Begins</div>
+                            <div class="step-date">November 13, 2025</div>
+                        </div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="step-icon-wrapper">📦</div>
+                        <div class="step-content">
+                            <div class="step-title">Container Ships</div>
+                            <div class="step-date">December 20, 2025</div>
+                        </div>
+                    </div>
+                    <div class="timeline-step">
+                        <div class="step-icon-wrapper">🚚</div>
+                        <div class="step-content">
+                            <div class="step-title">Delivery to Valley Park Farms</div>
+                            <div class="step-date">December 27, 2025</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="status-preview">
+                    <div class="status-preview-title">Updated Status</div>
+                    <div class="status-preview-item">✓ Woolworths 700g — Healthy (delivery Dec 27)</div>
+                    <div class="status-preview-item">✓ FYFE 800g — Healthy (delivery Dec 27)</div>
+                    <div class="status-preview-item">✓ Coles 800g — Healthy (delivery Dec 27)</div>
+                </div>
+
+                <button class="modal-button" onclick="closeModal()">Return to Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chart.js setup
+        Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif";
+        Chart.defaults.font.size = 12;
+        Chart.defaults.color = '#757575';
+
+        let charts = {};
+
+        // Initialize main chart
+        window.addEventListener('load', function() {
+            initializeMainChart();
+        });
+
+        function initializeMainChart() {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+
+            // Time labels (8 weeks)
+            const labels = ['Now\n(Nov 5)', 'Nov 12', 'Nov 19', 'Nov 26', 'Dec 3', 'Dec 10', 'Dec 17', 'Dec 24', 'Dec 31'];
+
+            // Woolworths: 80K stock, 12K/week burn, runs out week 6.7 (Dec 18)
+            const woolWithout = [80000, 68000, 56000, 44000, 32000, 20000, 8000, 0, 0];
+            const woolWith = [80000, 68000, 56000, 44000, 32000, 20000, 8000, 33000, 21000];
+
+            // FYFE: 90K stock, 13K/week burn, runs out week 6.9 (Dec 20)
+            const fyfeWithout = [90000, 77000, 64000, 51000, 38000, 25000, 12000, 0, 0];
+            const fyfeWith = [90000, 77000, 64000, 51000, 38000, 25000, 12000, 35000, 22000];
+
+            // Coles: 70K stock, 11K/week burn, runs out week 6.4 (Dec 23)
+            const colesWithout = [70000, 59000, 48000, 37000, 26000, 15000, 4000, 0, 0];
+            const colesWith = [70000, 59000, 48000, 37000, 26000, 15000, 4000, 23000, 12000];
+
+            charts.main = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Woolworths (without order)',
+                            data: woolWithout,
+                            borderColor: '#D32F2F',
+                            backgroundColor: 'rgba(211, 47, 47, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'FYFE (without order)',
+                            data: fyfeWithout,
+                            borderColor: '#E57373',
+                            backgroundColor: 'rgba(229, 115, 115, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Coles (without order)',
+                            data: colesWithout,
+                            borderColor: '#EF9A9A',
+                            backgroundColor: 'rgba(239, 154, 154, 0.1)',
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'With Container 1 (all products)',
+                            data: woolWith,
+                            borderColor: '#2E7D32',
+                            backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                            borderWidth: 4,
+                            borderDash: [8, 4],
+                            pointRadius: 0,
+                            pointHoverRadius: 8,
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: {
+                                size: 13,
+                                weight: '600'
+                            },
+                            bodyFont: {
+                                size: 12
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += context.parsed.y.toLocaleString() + ' cartons';
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 140000,
+                            ticks: {
+                                callback: function(value) {
+                                    return (value / 1000) + 'K';
+                                },
+                                font: {
+                                    size: 11
+                                },
+                                color: '#9E9E9E'
+                            },
+                            grid: {
+                                color: '#F5F5F5',
+                                drawBorder: false
+                            },
+                            border: {
+                                display: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11
+                                },
+                                color: '#9E9E9E'
+                            },
+                            border: {
+                                display: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        function initializeIndividualCharts() {
+            if (charts.wool) return; // Already initialized
+
+            const labels = ['Now', 'Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6', 'Week 7'];
+
+            // Woolworths
+            const ctxW = document.getElementById('chartWool').getContext('2d');
+            charts.wool = new Chart(ctxW, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Target (120K)',
+                            data: [120000, 120000, 120000, 120000, 120000, 120000, 120000, 120000],
+                            borderColor: '#BDBDBD',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'Without Order',
+                            data: [80000, 68000, 56000, 44000, 32000, 20000, 8000, 0],
+                            borderColor: '#D32F2F',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#D32F2F',
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'With 33K Order',
+                            data: [80000, 68000, 56000, 44000, 32000, 20000, 8000, 33000],
+                            borderColor: '#2E7D32',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#2E7D32',
+                            borderDash: [8, 4],
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: getIndividualOptions()
+            });
+
+            // FYFE
+            const ctxF = document.getElementById('chartFyfe').getContext('2d');
+            charts.fyfe = new Chart(ctxF, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Target (130K)',
+                            data: [130000, 130000, 130000, 130000, 130000, 130000, 130000, 130000],
+                            borderColor: '#BDBDBD',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'Without Order',
+                            data: [90000, 77000, 64000, 51000, 38000, 25000, 12000, 0],
+                            borderColor: '#D32F2F',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#D32F2F',
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'With 35K Order',
+                            data: [90000, 77000, 64000, 51000, 38000, 25000, 12000, 35000],
+                            borderColor: '#2E7D32',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#2E7D32',
+                            borderDash: [8, 4],
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: getIndividualOptions()
+            });
+
+            // Coles
+            const ctxC = document.getElementById('chartColes').getContext('2d');
+            charts.coles = new Chart(ctxC, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Target (110K)',
+                            data: [110000, 110000, 110000, 110000, 110000, 110000, 110000, 110000],
+                            borderColor: '#BDBDBD',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'Without Order',
+                            data: [70000, 59000, 48000, 37000, 26000, 15000, 4000, 0],
+                            borderColor: '#D32F2F',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#D32F2F',
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: 'With 23K Order',
+                            data: [70000, 59000, 48000, 37000, 26000, 15000, 4000, 23000],
+                            borderColor: '#2E7D32',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#2E7D32',
+                            borderDash: [8, 4],
+                            fill: false,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: getIndividualOptions()
+            });
+        }
+
+        function getIndividualOptions() {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 12,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' cartons';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return (value / 1000) + 'K';
+                            },
+                            font: {
+                                size: 10
+                            },
+                            color: '#9E9E9E'
+                        },
+                        grid: {
+                            color: '#F5F5F5'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 10
+                            },
+                            color: '#9E9E9E'
+                        }
+                    }
+                }
+            };
+        }
+
+        function scrollToAction() {
+            document.getElementById('actionSection').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function toggleIndividual() {
+            const content = document.getElementById('individualContent');
+            const icon = document.getElementById('individualIcon');
+
+            if (content.classList.contains('open')) {
+                content.classList.remove('open');
+                icon.classList.remove('open');
+            } else {
+                content.classList.add('open');
+                icon.classList.add('open');
+
+                // Initialize charts when opened
+                setTimeout(() => {
+                    initializeIndividualCharts();
+                }, 100);
+            }
+        }
+
+        function approveOrder() {
+            const button = document.getElementById('approveButton');
+            button.classList.add('loading');
+            button.innerHTML = '';
+
+            setTimeout(() => {
+                button.classList.remove('loading');
+                document.getElementById('confirmModal').classList.add('active');
+            }, 1200);
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+
+            // Update page to show success state
+            document.querySelector('.alert-banner').innerHTML = `
+                <div class="alert-icon">✅</div>
+                <div class="alert-content">
+                    <h2 class="alert-title" style="color: var(--success-green);">Container 1 Order Confirmed</h2>
+                    <p class="alert-products">Delivery scheduled for December 27, 2025 • Order #MPK-2025-11-00234</p>
+                </div>
+            `;
+            document.querySelector('.alert-banner').style.background = 'linear-gradient(135deg, #E8F5E9 0%, #F1F8E9 100%)';
+            document.querySelector('.alert-banner').style.borderColor = 'var(--success-green)';
+        }
+
+        // Close modal on outside click
+        document.getElementById('confirmModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect VMI - Timeline Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            border-bottom: 1px solid #d2d2d7;
+            padding: 16px 0;
+            margin-bottom: 24px;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1d1d1f;
+            cursor: pointer;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-tab {
+            padding: 8px 16px;
+            color: #6e6e73;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-tab:hover {
+            color: #1d1d1f;
+        }
+
+        .nav-tab.active {
+            color: #0071e3;
+            border-bottom-color: #0071e3;
+        }
+
+        .user-info {
+            color: #6e6e73;
+            font-size: 14px;
+        }
+
+        /* Dashboard */
+        .dashboard-alert {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #ff9500;
+        }
+
+        .dashboard-alert h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .dashboard-alert p {
+            color: #6e6e73;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #0071e3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #0077ed;
+        }
+
+        .btn-secondary {
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .btn-secondary:hover {
+            background: #e8e8ed;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 32px 0 16px 0;
+            color: #6e6e73;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .product-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-red {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-yellow {
+            background: #fff9e6;
+            color: #f57f17;
+        }
+
+        .status-green {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .product-summary {
+            font-size: 14px;
+            color: #6e6e73;
+            margin-bottom: 12px;
+        }
+
+        .mini-bar-container {
+            height: 32px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            margin-bottom: 8px;
+        }
+
+        .mini-bar {
+            flex: 1;
+            background: linear-gradient(to top, #34c759, #34c759);
+            border-radius: 2px 2px 0 0;
+        }
+
+        .mini-bar.warning {
+            background: linear-gradient(to top, #ff9500, #ff9500);
+        }
+
+        .mini-bar.danger {
+            background: linear-gradient(to top, #ff3b30, #ff3b30);
+        }
+
+        /* Timeline View */
+        .timeline-view {
+            display: none;
+        }
+
+        .timeline-view.active {
+            display: block;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            color: #0071e3;
+            cursor: pointer;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .back-button:hover {
+            text-decoration: underline;
+        }
+
+        .product-timeline {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .timeline-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 16px;
+        }
+
+        .stock-info-bar {
+            display: flex;
+            gap: 32px;
+            padding: 16px;
+            background: #f5f5f7;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stock-info-item {
+            display: flex;
+            gap: 8px;
+        }
+
+        .stock-info-label {
+            color: #6e6e73;
+        }
+
+        .stock-info-value {
+            font-weight: 600;
+            font-family: 'SF Mono', 'Monaco', monospace;
+        }
+
+        .editable-value {
+            color: #0071e3;
+            cursor: pointer;
+            border-bottom: 1px dashed #0071e3;
+        }
+
+        .editable-value:hover {
+            background: #e8f4fd;
+        }
+
+        .edit-input {
+            width: 80px;
+            padding: 4px 8px;
+            border: 2px solid #0071e3;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 14px;
+        }
+
+        /* Container Recommendations */
+        .recommendations-section {
+            margin-top: 48px;
+        }
+
+        .recommendations-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .container-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #0071e3;
+        }
+
+        .container-card.scheduled {
+            border-left-color: #ff9500;
+        }
+
+        .container-header {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #0071e3;
+        }
+
+        .container-card.scheduled .container-header {
+            color: #ff9500;
+        }
+
+        .product-list {
+            margin-bottom: 16px;
+        }
+
+        .product-list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f5f5f7;
+        }
+
+        .product-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .container-total {
+            font-weight: 600;
+            padding: 12px;
+            background: #f5f5f7;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .container-explanation {
+            background: #e8f4fd;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            color: #1d1d1f;
+        }
+
+        .container-explanation ul {
+            margin-left: 20px;
+        }
+
+        .container-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Confirmation Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid #d2d2d7;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #e8f5e9;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 40px;
+            color: #2e7d32;
+        }
+
+        .order-summary {
+            background: #f5f5f7;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .order-summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .timeline-steps {
+            margin-top: 24px;
+        }
+
+        .timeline-step {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .stock-info-bar {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .chart-container {
+                height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">Connect VMI</div>
+            <div class="nav-tabs">
+                <div class="nav-tab">Orders</div>
+                <div class="nav-tab">Tracking</div>
+                <div class="nav-tab active">VMI</div>
+            </div>
+            <div class="user-info">Valley Park Farms • Ian</div>
+        </div>
+    </header>
+
+    <!-- DASHBOARD VIEW -->
+    <div class="container" id="dashboardView">
+        <div class="dashboard-alert">
+            <h3>⚠️ 3 products need orders soon</h3>
+            <p>💡 We recommend 2 containers to keep everything healthy</p>
+            <button class="btn" onclick="showTimeline()">View Timeline & Recommendations</button>
+        </div>
+
+        <div class="section-title">🔴 URGENT (Order within 2 weeks)</div>
+
+        <div class="product-card" onclick="showTimeline('woolworths')">
+            <div class="product-header">
+                <div>
+                    <div class="product-name">Woolworths Cage Free 700g</div>
+                </div>
+                <div class="status-badge status-red">🔴 Urgent</div>
+            </div>
+            <div class="product-summary">
+                Runs out: Dec 18 (6 weeks) • Current: 80,000 cartons • Using 12,000/week
+            </div>
+            <div class="mini-bar-container">
+                <div class="mini-bar" style="height: 90%;"></div>
+                <div class="mini-bar" style="height: 75%;"></div>
+                <div class="mini-bar warning" style="height: 60%;"></div>
+                <div class="mini-bar warning" style="height: 45%;"></div>
+                <div class="mini-bar danger" style="height: 30%;"></div>
+                <div class="mini-bar danger" style="height: 15%;"></div>
+                <div class="mini-bar danger" style="height: 5%;"></div>
+            </div>
+        </div>
+
+        <div class="product-card" onclick="showTimeline('fyfe')">
+            <div class="product-header">
+                <div>
+                    <div class="product-name">FYFE Free Range 800g</div>
+                </div>
+                <div class="status-badge status-red">🔴 Urgent</div>
+            </div>
+            <div class="product-summary">
+                Runs out: Dec 25 (7 weeks) • Current: 90,000 cartons • Using 13,000/week
+            </div>
+            <div class="mini-bar-container">
+                <div class="mini-bar" style="height: 95%;"></div>
+                <div class="mini-bar" style="height: 85%;"></div>
+                <div class="mini-bar" style="height: 70%;"></div>
+                <div class="mini-bar warning" style="height: 55%;"></div>
+                <div class="mini-bar warning" style="height: 40%;"></div>
+                <div class="mini-bar danger" style="height: 25%;"></div>
+                <div class="mini-bar danger" style="height: 10%;"></div>
+            </div>
+        </div>
+
+        <div class="section-title">🟡 WATCH (Order within 4 weeks)</div>
+
+        <div class="product-card" onclick="showTimeline('better-eggs')">
+            <div class="product-header">
+                <div>
+                    <div class="product-name">Better Eggs 12-pack</div>
+                </div>
+                <div class="status-badge status-yellow">🟡 Watch</div>
+            </div>
+            <div class="product-summary">
+                Runs out: Jan 8 (9 weeks) • Current: 110,000 cartons • Using 12,000/week
+            </div>
+            <div class="mini-bar-container">
+                <div class="mini-bar" style="height: 100%;"></div>
+                <div class="mini-bar" style="height: 95%;"></div>
+                <div class="mini-bar" style="height: 85%;"></div>
+                <div class="mini-bar" style="height: 75%;"></div>
+                <div class="mini-bar warning" style="height: 60%;"></div>
+                <div class="mini-bar warning" style="height: 45%;"></div>
+                <div class="mini-bar warning" style="height: 30%;"></div>
+            </div>
+        </div>
+
+        <div class="section-title">🟢 HEALTHY (11 products - all good)</div>
+        <div style="color: #6e6e73; font-size: 14px; padding: 12px;">
+            ▶ Store Brands (3 products)<br>
+            ▶ Henergy (4 products)<br>
+            ▶ White Label (2 products)<br>
+            ▶ Rise n Shine (2 products)
+        </div>
+    </div>
+
+    <!-- TIMELINE VIEW -->
+    <div class="container timeline-view" id="timelineView">
+        <div class="back-button" onclick="showDashboard()">← Back to Dashboard</div>
+
+        <h2 style="margin-bottom: 32px; font-size: 24px;">Your Inventory Timeline</h2>
+
+        <!-- Woolworths -->
+        <div class="product-timeline">
+            <div class="timeline-header">
+                <div>
+                    <div class="timeline-title">WOOLWORTHS CAGE FREE 700G</div>
+                </div>
+                <div class="status-badge status-red">🔴 URGENT</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="chartWoolworths"></canvas>
+            </div>
+            <div class="stock-info-bar">
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Stock now:</span>
+                    <span class="stock-info-value">80,000</span>
+                </div>
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Using:</span>
+                    <span class="stock-info-value editable-value" onclick="editBurnRate('woolworths', 12000)">12,000</span>
+                    <span class="stock-info-label">/week</span>
+                </div>
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Target:</span>
+                    <span class="stock-info-value">120,000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FYFE -->
+        <div class="product-timeline">
+            <div class="timeline-header">
+                <div>
+                    <div class="timeline-title">FYFE FREE RANGE 800G</div>
+                </div>
+                <div class="status-badge status-red">🔴 URGENT</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="chartFyfe"></canvas>
+            </div>
+            <div class="stock-info-bar">
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Stock now:</span>
+                    <span class="stock-info-value">90,000</span>
+                </div>
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Using:</span>
+                    <span class="stock-info-value editable-value" onclick="editBurnRate('fyfe', 13000)">13,000</span>
+                    <span class="stock-info-label">/week</span>
+                </div>
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Target:</span>
+                    <span class="stock-info-value">130,000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Better Eggs -->
+        <div class="product-timeline">
+            <div class="timeline-header">
+                <div>
+                    <div class="timeline-title">BETTER EGGS 12-PACK</div>
+                </div>
+                <div class="status-badge status-yellow">🟡 WATCH</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="chartBetterEggs"></canvas>
+            </div>
+            <div class="stock-info-bar">
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Stock now:</span>
+                    <span class="stock-info-value">110,000</span>
+                </div>
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Using:</span>
+                    <span class="stock-info-value editable-value" onclick="editBurnRate('better-eggs', 12000)">12,000</span>
+                    <span class="stock-info-label">/week</span>
+                </div>
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Target:</span>
+                    <span class="stock-info-value">120,000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Store Brand (Healthy) -->
+        <div class="product-timeline">
+            <div class="timeline-header">
+                <div>
+                    <div class="timeline-title">STORE BRAND 18-PACK</div>
+                </div>
+                <div class="status-badge status-green">🟢 HEALTHY</div>
+            </div>
+            <div class="chart-container">
+                <canvas id="chartStoreBrand"></canvas>
+            </div>
+            <div class="stock-info-bar">
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Stock now:</span>
+                    <span class="stock-info-value">150,000</span>
+                </div>
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Using:</span>
+                    <span class="stock-info-value editable-value" onclick="editBurnRate('store-brand', 14000)">14,000</span>
+                    <span class="stock-info-label">/week</span>
+                </div>
+                <div class="stock-info-item">
+                    <span class="stock-info-label">Target:</span>
+                    <span class="stock-info-value">140,000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Container Recommendations -->
+        <div class="recommendations-section">
+            <div class="recommendations-title">💡 RECOMMENDED CONTAINER PLAN</div>
+            <p style="color: #6e6e73; margin-bottom: 24px;">Optimized for efficiency - fills containers and prevents stockouts</p>
+
+            <!-- Container 1 -->
+            <div class="container-card">
+                <div class="container-header">CONTAINER 1 - Order by Nov 12 → Arrives Dec 27</div>
+
+                <div class="product-list">
+                    <div class="product-list-item">
+                        <span>✓ Woolworths 700g</span>
+                        <strong>30,000 cartons</strong>
+                    </div>
+                    <div class="product-list-item">
+                        <span>✓ FYFE 800g</span>
+                        <strong>35,000 cartons</strong>
+                    </div>
+                    <div class="product-list-item">
+                        <span>✓ Better Eggs 12pk</span>
+                        <strong>25,000 cartons</strong>
+                    </div>
+                </div>
+
+                <div class="container-total">
+                    Total: 90,000 cartons (1 full container)
+                </div>
+
+                <div class="container-explanation">
+                    <strong>Why this grouping?</strong>
+                    <ul>
+                        <li>All three products run out around same time (Dec-Jan)</li>
+                        <li>Ordering together fills container efficiently</li>
+                        <li>Prevents all Dec stockouts with one shipment</li>
+                    </ul>
+                </div>
+
+                <div class="container-actions">
+                    <button class="btn" onclick="approveContainer1()">✓ Approve Container 1</button>
+                    <button class="btn btn-secondary">Edit Mix</button>
+                </div>
+            </div>
+
+            <!-- Container 2 -->
+            <div class="container-card scheduled">
+                <div class="container-header">CONTAINER 2 - Order by Dec 3 → Arrives Jan 17</div>
+
+                <div class="product-list">
+                    <div class="product-list-item">
+                        <span>⏱ Better Eggs 12pk</span>
+                        <strong>30,000 cartons</strong>
+                    </div>
+                    <div class="product-list-item">
+                        <span>⏱ Store Brand 18pk</span>
+                        <strong>40,000 cartons</strong>
+                    </div>
+                    <div class="product-list-item">
+                        <span>⏱ Henergy 6pk</span>
+                        <strong>20,000 cartons</strong>
+                    </div>
+                </div>
+
+                <div class="container-total">
+                    Total: 90,000 cartons (1 full container)
+                </div>
+
+                <div class="container-explanation">
+                    <strong>Why wait?</strong>
+                    <ul>
+                        <li>These products don't run out until Jan-Feb</li>
+                        <li>Ordering now would create excess inventory</li>
+                        <li>We'll remind you on Dec 3</li>
+                    </ul>
+                </div>
+
+                <div class="container-actions">
+                    <button class="btn btn-secondary">Schedule Reminder</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIRMATION MODAL -->
+    <div class="modal" id="confirmationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">✅ Container Order Confirmed</div>
+            </div>
+            <div class="modal-body">
+                <div class="success-icon">✓</div>
+
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">
+                        Your container order has been placed!
+                    </div>
+                    <div style="font-size: 14px; color: #6e6e73;">
+                        Email confirmation sent to ian@valleypark.com
+                    </div>
+                </div>
+
+                <div class="order-summary">
+                    <div class="order-summary-row">
+                        <span style="color: #6e6e73;">Order #:</span>
+                        <strong>MPK-2025-11-00234</strong>
+                    </div>
+                    <div class="order-summary-row">
+                        <span style="color: #6e6e73;">Container 1:</span>
+                        <strong>90,000 cartons</strong>
+                    </div>
+                    <div class="order-summary-row">
+                        <span style="color: #6e6e73;">Products:</span>
+                        <strong>3 items</strong>
+                    </div>
+                    <div class="order-summary-row">
+                        <span style="color: #6e6e73;">Expected arrival:</span>
+                        <strong>Dec 27, 2025</strong>
+                    </div>
+                </div>
+
+                <div style="background: #f5f5f7; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                    <strong style="font-size: 14px;">What Happens Next:</strong>
+                    <div class="timeline-steps">
+                        <div class="timeline-step">
+                            <div>✓</div>
+                            <div>
+                                <strong>Order sent to MyPak production</strong><br>
+                                <span style="font-size: 13px; color: #6e6e73;">Just now</span>
+                            </div>
+                        </div>
+                        <div class="timeline-step">
+                            <div>⏳</div>
+                            <div>
+                                <strong>Production begins</strong><br>
+                                <span style="font-size: 13px; color: #6e6e73;">Nov 13, 2025</span>
+                            </div>
+                        </div>
+                        <div class="timeline-step">
+                            <div>📦</div>
+                            <div>
+                                <strong>Container ships from facility</strong><br>
+                                <span style="font-size: 13px; color: #6e6e73;">Dec 20, 2025</span>
+                            </div>
+                        </div>
+                        <div class="timeline-step">
+                            <div>🚚</div>
+                            <div>
+                                <strong>Arrives at Valley Park Farms</strong><br>
+                                <span style="font-size: 13px; color: #6e6e73;">Dec 27, 2025</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #e8f5e9; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                    <strong>Updated Timeline Preview</strong><br>
+                    <div style="margin-top: 12px; font-size: 14px;">
+                        Woolworths 700g: 🟢 Healthy (order incoming Dec 27)<br>
+                        FYFE 800g: 🟢 Healthy (order incoming Dec 27)<br>
+                        Better Eggs 12pk: 🟢 Healthy (order incoming Dec 27)
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <button class="btn" onclick="closeConfirmation()">Back to Dashboard</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let charts = {};
+        const productData = {
+            'woolworths': { stock: 80000, burnRate: 12000, target: 120000 },
+            'fyfe': { stock: 90000, burnRate: 13000, target: 130000 },
+            'better-eggs': { stock: 110000, burnRate: 12000, target: 120000 },
+            'store-brand': { stock: 150000, burnRate: 14000, target: 140000 }
+        };
+
+        // Navigation
+        function showDashboard() {
+            document.getElementById('dashboardView').style.display = 'block';
+            document.getElementById('timelineView').classList.remove('active');
+        }
+
+        function showTimeline(productId) {
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('timelineView').classList.add('active');
+
+            // Initialize charts if not already done
+            if (Object.keys(charts).length === 0) {
+                initializeCharts();
+            }
+
+            // Scroll to product if specified
+            if (productId) {
+                setTimeout(() => {
+                    const element = document.getElementById('chart' + capitalize(productId.replace('-', '')));
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 100);
+            }
+        }
+
+        function capitalize(str) {
+            return str.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
+        }
+
+        // Chart Initialization
+        function initializeCharts() {
+            charts.woolworths = createProductChart('chartWoolworths', productData.woolworths, 'Woolworths', 30000);
+            charts.fyfe = createProductChart('chartFyfe', productData.fyfe, 'FYFE', 35000);
+            charts.betterEggs = createProductChart('chartBetterEggs', productData['better-eggs'], 'Better Eggs', 25000);
+            charts.storeBrand = createProductChart('chartStoreBrand', productData['store-brand'], 'Store Brand', 0);
+        }
+
+        function createProductChart(canvasId, data, productName, orderQty) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+
+            // Generate projections
+            const weeks = 9;
+            const labels = ['Now', 'Nov 13', 'Nov 27', 'Dec 11', 'Dec 25', 'Jan 8', 'Jan 22', 'Feb 5'];
+
+            // Current projection (without order)
+            const currentProjection = [];
+            let stock = data.stock;
+            for (let i = 0; i < weeks; i++) {
+                currentProjection.push(stock);
+                stock -= data.burnRate;
+                if (stock < 0) stock = 0;
+            }
+
+            // With order projection
+            const withOrderProjection = [];
+            stock = data.stock;
+            for (let i = 0; i < weeks; i++) {
+                stock -= data.burnRate;
+                // Order arrives at week 6 (Dec 27)
+                if (i === 6 && orderQty > 0) {
+                    stock += orderQty;
+                }
+                withOrderProjection.push(stock);
+            }
+
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Target Level',
+                            data: Array(weeks).fill(data.target),
+                            borderColor: '#0071e3',
+                            borderDash: [5, 5],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false
+                        },
+                        {
+                            label: 'Without Order',
+                            data: currentProjection,
+                            borderColor: '#ff3b30',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#ff3b30',
+                            fill: false,
+                            tension: 0.3
+                        },
+                        {
+                            label: orderQty > 0 ? `With Order (${orderQty/1000}K arrives Dec 27)` : null,
+                            data: orderQty > 0 ? withOrderProjection : [],
+                            borderColor: '#34c759',
+                            borderDash: [3, 3],
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#34c759',
+                            fill: false,
+                            tension: 0.3,
+                            hidden: orderQty === 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15,
+                                filter: function(item) {
+                                    return item.text !== null;
+                                }
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += context.parsed.y.toLocaleString() + ' cartons';
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return (value / 1000) + 'K';
+                                }
+                            },
+                            grid: {
+                                color: '#f0f0f0'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Edit Burn Rate
+        function editBurnRate(productId, currentValue) {
+            const element = event.target;
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'edit-input';
+            input.value = currentValue;
+
+            input.onblur = function() {
+                updateBurnRate(productId, parseInt(this.value) || currentValue, element);
+            };
+
+            input.onkeypress = function(e) {
+                if (e.key === 'Enter') {
+                    this.blur();
+                }
+            };
+
+            element.replaceWith(input);
+            input.focus();
+            input.select();
+        }
+
+        function updateBurnRate(productId, newRate, originalElement) {
+            // Update data
+            productData[productId].burnRate = newRate;
+
+            // Update display
+            const newElement = document.createElement('span');
+            newElement.className = 'stock-info-value editable-value';
+            newElement.textContent = newRate.toLocaleString();
+            newElement.onclick = function() { editBurnRate(productId, newRate); };
+
+            event.target.replaceWith(newElement);
+
+            // Recreate chart
+            const chartMap = {
+                'woolworths': ['chartWoolworths', 'Woolworths', 30000],
+                'fyfe': ['chartFyfe', 'FYFE', 35000],
+                'better-eggs': ['chartBetterEggs', 'Better Eggs', 25000],
+                'store-brand': ['chartStoreBrand', 'Store Brand', 0]
+            };
+
+            if (chartMap[productId]) {
+                const [canvasId, name, orderQty] = chartMap[productId];
+                charts[productId.replace('-', '')].destroy();
+                charts[productId.replace('-', '')] = createProductChart(canvasId, productData[productId], name, orderQty);
+            }
+        }
+
+        // Approve Container
+        function approveContainer1() {
+            document.getElementById('confirmationModal').classList.add('active');
+        }
+
+        function closeConfirmation() {
+            document.getElementById('confirmationModal').classList.remove('active');
+            showDashboard();
+        }
+
+        // Close modal on outside click
+        document.getElementById('confirmationModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeConfirmation();
+            }
+        });
+    </script>
+</body>
+</html>
