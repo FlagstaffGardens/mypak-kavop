@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -31,19 +31,27 @@ export function Sidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
 
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const saved = localStorage.getItem('sidebar-collapsed');
-    return saved === 'true';
-  });
-
-  const [demoState, setDemoState] = useState<DemoState>(() => {
-    if (typeof window === 'undefined') return 'production';
-    const savedState = localStorage.getItem('demoState') as DemoState | null;
-    return savedState || 'production';
-  });
-
+  // Always start with default values to avoid hydration mismatch
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [demoState, setDemoState] = useState<DemoState>('production');
   const [showDevTools] = useState(() => process.env.NODE_ENV === 'development');
+
+  // Load saved state from localStorage after hydration
+  // This is the correct pattern to avoid hydration mismatches.
+  // Server must render default values, then client updates from localStorage after hydration.
+  useEffect(() => {
+    /* eslint-disable react-hooks/exhaustive-deps */
+    const saved = localStorage.getItem('sidebar-collapsed');
+    if (saved !== null) {
+      setIsCollapsed(saved === 'true');
+    }
+
+    const savedState = localStorage.getItem('demoState') as DemoState | null;
+    if (savedState) {
+      setDemoState(savedState);
+    }
+    /* eslint-enable react-hooks/exhaustive-deps */
+  }, []);
 
   // Handle demo state change
   const handleDemoStateChange = (state: DemoState) => {
