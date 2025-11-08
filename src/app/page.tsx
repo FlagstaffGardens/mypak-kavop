@@ -34,19 +34,23 @@ function getInitialData() {
   return { products: mockProducts, containers: SCENARIOS.production.containers };
 }
 
-function getInitialTimestamp() {
-  if (typeof window === 'undefined') return null;
-  const savedTimestamp = localStorage.getItem('inventoryLastUpdated');
-  return savedTimestamp ? new Date(savedTimestamp) : null;
-}
-
 export default function Dashboard() {
   const [demoState] = useState<DemoState>(getInitialState);
   const [products, setProducts] = useState<Product[]>(() => getInitialData().products);
   const [containers, setContainers] = useState<ContainerRecommendation[]>(() => getInitialData().containers);
   const [targetSOH, setTargetSOH] = useState(6);
   const [showEditTable, setShowEditTable] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(getInitialTimestamp);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Load lastUpdated from localStorage after hydration
+  useEffect(() => {
+    /* eslint-disable react-hooks/exhaustive-deps */
+    const savedTimestamp = localStorage.getItem('inventoryLastUpdated');
+    if (savedTimestamp) {
+      setLastUpdated(new Date(savedTimestamp));
+    }
+    /* eslint-enable react-hooks/exhaustive-deps */
+  }, []);
 
   // Calculate worst product
   const worstProduct = useMemo(() => {
