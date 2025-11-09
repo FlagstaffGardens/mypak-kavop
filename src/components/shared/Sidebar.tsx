@@ -72,7 +72,10 @@ export function Sidebar() {
   // Always start with default values to avoid hydration mismatch
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [demoState, setDemoState] = useState<DemoState>('healthy');
-  const [showDevTools] = useState(() => process.env.NODE_ENV === 'development');
+  const [showDevTools] = useState(() =>
+    process.env.NODE_ENV === 'development' ||
+    process.env.NEXT_PUBLIC_SHOW_DEV_TOOLS === 'true'
+  );
   const [ordersExpanded, setOrdersExpanded] = useState(pathname.startsWith('/orders'));
 
   // Load saved state from localStorage after hydration
