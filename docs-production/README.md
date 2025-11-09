@@ -46,6 +46,20 @@ Contains:
 
 ---
 
+### 4. **MOBILE-STRATEGY.md**
+**For:** Frontend developers + designers
+
+Contains:
+- Mobile responsiveness analysis
+- Hamburger menu implementation
+- 5-day mobile rollout plan
+- Responsive design patterns
+- Testing checklist
+
+**Use this to:** Make the app mobile-ready
+
+---
+
 ## Quick Links to Key Code
 
 - **Types:** `/src/lib/types.ts`
