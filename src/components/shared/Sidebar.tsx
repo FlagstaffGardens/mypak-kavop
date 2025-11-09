@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { LayoutDashboard, Package, Settings, LogOut, Sun, Moon, User, ChevronLeft, ChevronRight, Palette, Beaker, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Package, Settings, LogOut, Sun, Moon, User, ChevronLeft, ChevronRight, Palette, Beaker, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -17,15 +17,53 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type DemoState = 'production' | 'healthy' | 'single_urgent' | 'multiple_urgent' | 'mixed';
+type DemoState = 'healthy' | 'single_urgent' | 'multiple_urgent';
 
 const STATE_CONFIG: Record<DemoState, { label: string; emoji: string; color: string }> = {
-  production: { label: 'Production', emoji: '🔴', color: 'text-gray-700 dark:text-gray-300' },
   healthy: { label: 'Healthy', emoji: '✅', color: 'text-green-700 dark:text-green-400' },
   single_urgent: { label: 'Single Urgent', emoji: '⚠️', color: 'text-amber-700 dark:text-amber-400' },
   multiple_urgent: { label: 'Multiple Urgent', emoji: '🚨', color: 'text-red-700 dark:text-red-400' },
-  mixed: { label: 'Mixed', emoji: '🔶', color: 'text-orange-700 dark:text-orange-400' },
 };
+
+// Sub-component for Orders navigation that uses useSearchParams
+function OrdersSubNav({ isCollapsed }: { isCollapsed: boolean }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const ordersSubNav = [
+    { name: 'Recommended', href: '/orders?tab=recommended' },
+    { name: 'Live', href: '/orders?tab=live' },
+    { name: 'Completed', href: '/orders?tab=completed' },
+  ];
+
+  if (isCollapsed) return null;
+
+  return (
+    <div className="ml-6 mt-1 space-y-0.5 border-l border-gray-200 dark:border-gray-700 pl-3">
+      {ordersSubNav.map((subItem) => {
+        // Extract tab parameter from href (e.g., "/orders?tab=recommended" -> "recommended")
+        const tabParam = subItem.href.split('tab=')[1];
+        const currentTab = searchParams.get('tab') || 'recommended';
+        const isActive = tabParam === currentTab && pathname === '/orders';
+
+        return (
+          <Link
+            key={subItem.name}
+            href={subItem.href}
+            className={cn(
+              'block rounded-md px-2 py-1 text-xs font-medium transition-colors cursor-pointer',
+              isActive
+                ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50'
+            )}
+          >
+            {subItem.name}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -33,8 +71,9 @@ export function Sidebar() {
 
   // Always start with default values to avoid hydration mismatch
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [demoState, setDemoState] = useState<DemoState>('production');
+  const [demoState, setDemoState] = useState<DemoState>('healthy');
   const [showDevTools] = useState(() => process.env.NODE_ENV === 'development');
+  const [ordersExpanded, setOrdersExpanded] = useState(pathname.startsWith('/orders'));
 
   // Load saved state from localStorage after hydration
   // This is the correct pattern to avoid hydration mismatches.
@@ -74,12 +113,6 @@ export function Sidebar() {
       href: '/',
       icon: LayoutDashboard,
       current: pathname === '/',
-    },
-    {
-      name: 'Orders',
-      href: '/orders',
-      icon: Package,
-      current: pathname === '/orders',
     },
   ];
 
@@ -128,7 +161,7 @@ export function Sidebar() {
               href={item.href}
               title={isCollapsed ? item.name : undefined}
               className={cn(
-                'group flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors',
+                'group flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer',
                 isCollapsed ? 'justify-center' : '',
                 item.current
                   ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
@@ -153,6 +186,58 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {/* Orders with Sub-navigation */}
+        <div>
+          <div className="flex items-center">
+            <Link
+              href="/orders"
+              title={isCollapsed ? 'Orders' : undefined}
+              className={cn(
+                'group flex flex-1 items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer',
+                isCollapsed ? 'justify-center' : '',
+                pathname.startsWith('/orders')
+                  ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
+                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50'
+              )}
+            >
+              <Package
+                className={cn(
+                  'h-4 w-4 flex-shrink-0',
+                  !isCollapsed && 'mr-2',
+                  pathname.startsWith('/orders')
+                    ? 'text-gray-900 dark:text-gray-50'
+                    : 'text-gray-500 group-hover:text-gray-900 dark:text-gray-500 dark:group-hover:text-gray-50'
+                )}
+              />
+              <span className={cn(
+                "flex-1 text-left transition-opacity duration-150 ease-out whitespace-nowrap",
+                isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+              )}>
+                Orders
+              </span>
+            </Link>
+            {!isCollapsed && (
+              <button
+                onClick={() => setOrdersExpanded(!ordersExpanded)}
+                className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+              >
+                {ordersExpanded ? (
+                  <ChevronUp className="h-3 w-3 flex-shrink-0" />
+                ) : (
+                  <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Sub-navigation */}
+          {ordersExpanded && (
+            <Suspense fallback={null}>
+              <OrdersSubNav isCollapsed={isCollapsed} />
+            </Suspense>
+          )}
+        </div>
       </nav>
 
       {/* Dev Tools - State Switcher */}
@@ -174,7 +259,7 @@ export function Sidebar() {
               <DropdownMenuTrigger asChild>
                 <button
                   className={cn(
-                    "w-full text-left rounded-md px-2 py-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors",
+                    "w-full text-left rounded-md px-2 py-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors cursor-pointer",
                     "flex items-center gap-2 text-sm font-medium",
                     STATE_CONFIG[demoState].color,
                     isCollapsed && "justify-center px-1"

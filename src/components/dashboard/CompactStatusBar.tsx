@@ -1,35 +1,51 @@
 import { Settings } from 'lucide-react';
-import type { Product } from '@/lib/types';
+import { addWeeks, format } from 'date-fns';
+import type { Product, ContainerRecommendation } from '@/lib/types';
 
 interface CompactStatusBarProps {
-  worstProduct: Product | null;
+  products: Product[];
+  containers: ContainerRecommendation[];
   targetSOH: number;
-  urgentCount: number;
-  nextOrderByDate: string | null;
   onTargetSOHClick: () => void;
-  onWorstProductClick: () => void;
 }
 
 export function CompactStatusBar({
-  worstProduct,
+  products,
+  containers,
   targetSOH,
-  urgentCount,
-  nextOrderByDate,
   onTargetSOHClick,
-  onWorstProductClick,
 }: CompactStatusBarProps) {
-  // Determine status variant based on worst product and urgent count
+  // Calculate total coverage
+  const calculateCoverage = () => {
+    if (!products || products.length === 0) return { weeksCovered: 0, coveredUntilDate: null };
+
+    // Sum current stock across all products
+    const totalCurrentStock = products.reduce((sum, p) => sum + p.currentStock, 0);
+
+    // Sum all container quantities
+    const totalContainerQuantity = containers?.reduce((sum, c) => sum + c.totalCartons, 0) || 0;
+
+    // Sum weekly consumption across all products
+    const totalWeeklyConsumption = products.reduce((sum, p) => sum + p.weeklyConsumption, 0);
+
+    if (totalWeeklyConsumption === 0) return { weeksCovered: 0, coveredUntilDate: null };
+
+    // Calculate weeks covered
+    const weeksCovered = (totalCurrentStock + totalContainerQuantity) / totalWeeklyConsumption;
+
+    // Calculate covered until date
+    const coveredUntilDate = addWeeks(new Date(), weeksCovered);
+
+    return { weeksCovered, coveredUntilDate };
+  };
+
+  const { weeksCovered, coveredUntilDate } = calculateCoverage();
+
+  // Determine status variant based on weeks covered
   const getStatusVariant = () => {
-    if (!worstProduct) return 'neutral';
-
-    // Critical: worst product < 2 weeks OR 3+ urgent containers
-    if (worstProduct.weeksRemaining < 2 || urgentCount >= 3) return 'critical';
-
-    // Warning: worst product < 6 weeks OR any urgent containers
-    if (worstProduct.weeksRemaining < 6 || urgentCount > 0) return 'warning';
-
-    // Healthy: everything on track
-    return 'healthy';
+    if (weeksCovered >= 16) return 'healthy';
+    if (weeksCovered >= 6) return 'warning';
+    return 'critical';
   };
 
   const variant = getStatusVariant();
@@ -62,26 +78,27 @@ export function CompactStatusBar({
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* Left: Worst Product - Clickable Card */}
-      <button
-        onClick={onWorstProductClick}
-        className="text-left px-5 py-4 bg-card border border-border rounded-lg hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all"
-        type="button"
-      >
+      {/* Card 1: Weeks Covered */}
+      <div className="px-5 py-4 bg-card border border-border rounded-lg">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Good for
+          Weeks Covered
         </p>
         <p className={`text-2xl font-bold mt-1 ${config.textColor}`}>
-          {worstProduct ? `${worstProduct.weeksRemaining.toFixed(1)} weeks` : 'N/A'}
+          {weeksCovered > 0 ? `${weeksCovered.toFixed(1)} weeks` : 'N/A'}
         </p>
-        {worstProduct && (
-          <p className="text-xs text-muted-foreground mt-1 truncate">
-            {worstProduct.name}
-          </p>
-        )}
-      </button>
+      </div>
 
-      {/* Center: Target SOH - Interactive Button */}
+      {/* Card 2: Covered Until */}
+      <div className="px-5 py-4 bg-card border border-border rounded-lg">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Covered Until
+        </p>
+        <p className={`text-2xl font-bold mt-1 ${config.textColor}`}>
+          {coveredUntilDate ? format(coveredUntilDate, 'MMM dd, yyyy') : 'N/A'}
+        </p>
+      </div>
+
+      {/* Card 3: Target SOH - Interactive */}
       <button
         id="target-soh-button"
         onClick={onTargetSOHClick}
@@ -102,23 +119,6 @@ export function CompactStatusBar({
           </p>
         </div>
       </button>
-
-      {/* Right: Status / Next Order */}
-      <div className="px-5 py-4 bg-card border border-border rounded-lg text-left md:text-right flex flex-col justify-center">
-        <div className="flex items-center gap-2 md:justify-end">
-          <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${config.badgeColor}`}>
-            {urgentCount === 0 ? 'Healthy' : urgentCount >= 3 ? 'Critical' : 'Urgent'}
-          </span>
-        </div>
-        <p className={`text-2xl font-bold mt-2 ${config.textColor}`}>
-          {urgentCount === 0 ? 'All On Track' : `${urgentCount} due soon`}
-        </p>
-        {nextOrderByDate && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Next: {nextOrderByDate}
-          </p>
-        )}
-      </div>
     </div>
   );
 }

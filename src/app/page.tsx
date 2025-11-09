@@ -11,13 +11,13 @@ import { SCENARIOS } from '@/lib/data/mock-scenarios';
 import { mockLiveOrders } from '@/lib/data/mock-orders';
 import type { Product, ContainerRecommendation } from '@/lib/types';
 
-type DemoState = 'production' | 'healthy' | 'single_urgent' | 'multiple_urgent' | 'mixed';
+type DemoState = 'healthy' | 'single_urgent' | 'multiple_urgent';
 
 export default function Dashboard() {
-  // Always start with production data to avoid hydration mismatch
-  const [demoState, setDemoState] = useState<DemoState>('production');
+  // Always start with healthy data to avoid hydration mismatch
+  const [demoState, setDemoState] = useState<DemoState>('healthy');
   const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [containers, setContainers] = useState<ContainerRecommendation[]>(SCENARIOS.production.containers);
+  const [containers, setContainers] = useState<ContainerRecommendation[]>(SCENARIOS.healthy.containers);
   const [targetSOH, setTargetSOH] = useState(6);
   const [showEditTable, setShowEditTable] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -29,11 +29,11 @@ export default function Dashboard() {
   useEffect(() => {
     /* eslint-disable react-hooks/exhaustive-deps */
     setIsMounted(true);
-    const savedState = (localStorage.getItem('demoState') as DemoState) || 'production';
+    const savedState = (localStorage.getItem('demoState') as DemoState) || 'healthy';
     setDemoState(savedState);
 
-    // Load scenario data if not production
-    if (savedState !== 'production' && SCENARIOS[savedState]) {
+    // Load scenario data
+    if (SCENARIOS[savedState]) {
       const scenario = SCENARIOS[savedState];
       setProducts(scenario.products.length > 0 ? scenario.products : mockProducts);
       setContainers(scenario.containers);

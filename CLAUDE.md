@@ -25,14 +25,14 @@ npm run lint         # Run ESLint
 The app uses a **dev-only state switcher** for testing different UI scenarios without a backend:
 
 - **Location:** Purple "Dev Mode" panel in sidebar (only shows in `NODE_ENV=development`)
-- **States:** `production`, `healthy`, `single_urgent`, `multiple_urgent`, `mixed`
+- **States:** `healthy`, `single_urgent`, `multiple_urgent`
 - **Mechanism:** localStorage + page reload to swap data sources
 - **Implementation:**
   ```typescript
   // Sidebar sets state in localStorage → page reloads
   // Pages check localStorage on mount:
-  const state = localStorage.getItem('demoState') || 'production';
-  const data = state !== 'production' ? SCENARIOS[state] : mockData;
+  const state = localStorage.getItem('demoState') || 'healthy';
+  const data = SCENARIOS[state];
   ```
 
 **Key Files:**
@@ -150,7 +150,7 @@ Pages check `localStorage.getItem('demoState')` on mount to determine data sourc
 
 3. Update `Sidebar.tsx`:
    ```typescript
-   type DemoState = 'production' | ... | 'new_state';
+   type DemoState = 'healthy' | 'single_urgent' | 'multiple_urgent' | 'new_state';
    const STATE_CONFIG = {
      new_state: { label: '...', emoji: '...', color: '...' },
    }
@@ -171,16 +171,15 @@ return <Card className={`border-l-4 ${config.borderColor}`}>...</Card>
 
 ### When Real API is Ready
 
-Replace state-based data loading with API calls in `production` mode:
+Replace state-based data loading with API calls:
 
 ```typescript
 useEffect(() => {
-  const state = localStorage.getItem('demoState');
-
-  if (state !== 'production') {
-    setData(SCENARIOS[state]);  // Dev mode
+  if (process.env.NODE_ENV === 'development') {
+    const state = localStorage.getItem('demoState') || 'healthy';
+    setData(SCENARIOS[state]);  // Dev mode with state switcher
   } else {
-    fetchFromAPI().then(setData);  // Production
+    fetchFromAPI().then(setData);  // Production API
   }
 }, []);
 ```
@@ -230,7 +229,7 @@ useEffect(() => {
 
 1. Start dev server: `npm run dev`
 2. Open sidebar → "Dev Mode" panel at bottom
-3. Select state from dropdown
+3. Select state from dropdown (healthy, single_urgent, multiple_urgent)
 4. Page reloads with demo data
 5. Verify UI adapts correctly (colors, messaging, CTAs)
-6. Test in all 5 states before committing
+6. Test in all 3 states before committing

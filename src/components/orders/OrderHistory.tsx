@@ -41,25 +41,18 @@ export function OrderHistory() {
   });
 
   if (deliveredOrders.length === 0) {
-    return null;
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-20" />
+        <p>No completed orders yet</p>
+      </div>
+    );
   }
 
   return (
-    <section>
-      {/* Section Header with Filters */}
+    <div>
+      {/* Filters Row */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50">
-              Order History
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'} found
-            </p>
-          </div>
-        </div>
-
-        {/* Filters Row */}
         <div className="flex items-center gap-3">
           {/* Status Filter */}
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
@@ -191,6 +184,6 @@ export function OrderHistory() {
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }

@@ -1,135 +1,106 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { mockContainers } from '@/lib/data/mock-containers';
+import { useRouter } from 'next/navigation';
 import { SCENARIOS } from '@/lib/data/mock-scenarios';
-import { Button } from '@/components/ui/button';
-import { Package } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ContainerCard } from '@/components/dashboard/ContainerCard';
+import type { ContainerRecommendation } from '@/lib/types';
 
-type DemoState = 'production' | 'healthy' | 'single_urgent' | 'multiple_urgent' | 'mixed';
+type DemoState = 'healthy' | 'single_urgent' | 'multiple_urgent';
 
 export function RecommendedContainers() {
-  // Always start with mockContainers to avoid hydration mismatch
-  const [containers, setContainers] = useState(mockContainers);
+  const router = useRouter();
+  const [containers, setContainers] = useState(SCENARIOS.healthy.containers);
 
   // Load from localStorage after hydration
   useEffect(() => {
     /* eslint-disable react-hooks/exhaustive-deps */
-    const savedState = (localStorage.getItem('demoState') as DemoState) || 'production';
+    const savedState = (localStorage.getItem('demoState') as DemoState) || 'healthy';
 
-    if (savedState !== 'production' && SCENARIOS[savedState]) {
+    if (SCENARIOS[savedState]) {
       setContainers(SCENARIOS[savedState].containers);
     }
     /* eslint-enable react-hooks/exhaustive-deps */
   }, []);
 
+  // Separate urgent and non-urgent containers
+  const urgentContainers = containers.filter(c => c.urgency === 'URGENT');
+  const nonUrgentContainers = containers.filter(c => !c.urgency);
+
+  // Empty state
+  if (containers.length === 0) {
+    return (
+      <div className="border border-border rounded-lg bg-card px-8 py-12 text-center">
+        <p className="text-lg font-medium text-green-600 dark:text-green-500 mb-2">
+          ✓ All Caught Up!
+        </p>
+        <p className="text-sm text-muted-foreground">
+          No containers need ordering at this time
+        </p>
+      </div>
+    );
+  }
+
+  const handleOrderClick = (containerId: number) => {
+    router.push(`/orders/review/${containerId}`);
+  };
+
   return (
-    <section>
-      {/* Section Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold">
-            Recommended Containers
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Based on current consumption rates and target stock levels
-          </p>
-        </div>
-        {containers.length > 0 && (
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-          >
-            <Link href={`/orders/review/${containers[0].id}`}>
-              + Create New Order
-            </Link>
-          </Button>
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-foreground uppercase tracking-wide">
+          Recommended Orders
+        </h2>
+        {urgentContainers.length > 0 && (
+          <Badge variant="destructive">
+            {urgentContainers.length} Urgent
+          </Badge>
         )}
       </div>
 
-      {/* Container Cards */}
+      {/* Container List */}
       <div className="space-y-4">
-        {containers.map((container) => (
-          <div
-            key={container.id}
-            className={`bg-card border rounded overflow-hidden transition-all hover:shadow-md ${
-              container.urgency === 'URGENT'
-                ? 'border-l-4 border-l-amber-500 border-y border-r'
-                : ''
-            }`}
-          >
-            <div className="px-6 py-5">
-              {/* Container Header */}
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="flex items-start gap-3">
-                  <Package className={`flex-shrink-0 w-5 h-5 mt-0.5 ${
-                    container.urgency === 'URGENT'
-                      ? 'text-amber-600 dark:text-amber-500'
-                      : 'text-muted-foreground'
-                  }`} />
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-bold text-card-foreground">
-                        Container {container.containerNumber}
-                      </h3>
-                      {container.urgency === 'URGENT' && (
-                        <span className="px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 text-xs font-bold uppercase tracking-wider rounded">
-                          Urgent
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {container.productCount} {container.productCount === 1 ? 'product' : 'products'} • {container.totalCartons.toLocaleString()} cartons
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dates and Action */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-6">
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Order By
-                    </p>
-                    <p className={`text-sm font-bold mt-1 ${
-                      container.urgency === 'URGENT'
-                        ? 'text-amber-900 dark:text-amber-100'
-                        : 'text-card-foreground'
-                    }`}>
-                      {container.orderByDate}
-                    </p>
-                  </div>
-                  <div className="h-10 w-px bg-border" />
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Estimated Delivery
-                    </p>
-                    <p className="text-sm font-semibold text-card-foreground mt-1">
-                      {container.deliveryDate}
-                    </p>
-                  </div>
-                </div>
-
-                <Button
-                  asChild
-                  variant={container.urgency === 'URGENT' ? 'default' : 'outline'}
-                  className={container.urgency === 'URGENT'
-                    ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700'
-                    : ''
-                  }
-                >
-                  <Link href={`/orders/review/${container.id}`}>
-                    Review Container {container.containerNumber}
-                  </Link>
-                </Button>
-              </div>
-            </div>
+        {/* Urgent Containers */}
+        {urgentContainers.length > 0 && (
+          <div className="space-y-4">
+            {urgentContainers.map(container => (
+              <ContainerCard
+                key={container.id}
+                container={container}
+                variant="recommended"
+                defaultExpanded={true}
+                onOrderClick={() => handleOrderClick(container.id)}
+              />
+            ))}
           </div>
-        ))}
+        )}
+
+        {/* Divider */}
+        {urgentContainers.length > 0 && nonUrgentContainers.length > 0 && (
+          <div className="border-t-2 border-dashed border-border pt-4">
+            <p className="text-sm text-muted-foreground uppercase tracking-wide mb-4">
+              Future Orders
+            </p>
+          </div>
+        )}
+
+        {/* Non-Urgent Containers */}
+        {nonUrgentContainers.length > 0 && (
+          <div className="space-y-4">
+            {nonUrgentContainers.map(container => (
+              <ContainerCard
+                key={container.id}
+                container={container}
+                variant="recommended"
+                defaultExpanded={false}
+                onOrderClick={() => handleOrderClick(container.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
-    </section>
+    </div>
   );
 }

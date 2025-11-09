@@ -43,12 +43,11 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   // Load container data
   useEffect(() => {
     const loadContainer = () => {
-      const demoState = typeof window !== 'undefined' ? localStorage.getItem('demoState') : null;
+      const demoState = typeof window !== 'undefined' ? localStorage.getItem('demoState') : 'healthy';
 
-      const containerData =
-        demoState && demoState !== 'production'
-          ? SCENARIOS[demoState as keyof typeof SCENARIOS]?.containers.find((c) => c.id.toString() === containerId)
-          : mockContainers.find((c) => c.id.toString() === containerId);
+      const containerData = SCENARIOS[demoState as keyof typeof SCENARIOS]?.containers.find(
+        (c) => c.id.toString() === containerId
+      );
 
       if (containerData) {
         setContainer(containerData);

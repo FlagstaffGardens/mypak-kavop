@@ -30,24 +30,6 @@ export function DashboardOverview({
   const [showTargetEditor, setShowTargetEditor] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  // Calculate metrics
-  const urgentContainers = containers.filter(c => c.urgency === 'URGENT');
-  const nextContainer = containers[0];
-  const nextOrderByDate = nextContainer?.orderByDate || null;
-
-  // Handle worst product click - scroll to product
-  const handleWorstProductClick = () => {
-    if (!worstProduct) return;
-    const productElement = document.getElementById(`product-${worstProduct.id}`);
-    if (productElement) {
-      productElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      productElement.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2');
-      setTimeout(() => {
-        productElement.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
-      }, 2000);
-    }
-  };
-
   // Handle order click - navigate to review page
   const handleOrderClick = (containerId: number) => {
     router.push(`/orders/review/${containerId}`);
@@ -57,12 +39,10 @@ export function DashboardOverview({
     <div className="space-y-8">
       {/* Compact Status Bar */}
       <CompactStatusBar
-        worstProduct={worstProduct}
+        products={products}
+        containers={containers}
         targetSOH={targetSOH}
-        urgentCount={urgentContainers.length}
-        nextOrderByDate={nextOrderByDate}
         onTargetSOHClick={() => setShowTargetEditor(true)}
-        onWorstProductClick={handleWorstProductClick}
       />
 
       {/* Target SOH Editor (Modal) */}

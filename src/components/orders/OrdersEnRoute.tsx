@@ -8,10 +8,6 @@ export function OrdersEnRoute() {
   // Get only in-transit orders
   const inTransitOrders = mockOrders.filter(order => order.type === 'IN_TRANSIT');
 
-  if (inTransitOrders.length === 0) {
-    return null;
-  }
-
   // Status icon mapping
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -31,20 +27,17 @@ export function OrdersEnRoute() {
     }
   };
 
-  return (
-    <section>
-      {/* Section Header */}
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50">
-          Orders En Route
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          {inTransitOrders.length} {inTransitOrders.length === 1 ? 'order' : 'orders'} currently in transit
-        </p>
+  if (inTransitOrders.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <Ship className="h-12 w-12 mx-auto mb-4 opacity-20" />
+        <p>No live orders currently in transit</p>
       </div>
+    );
+  }
 
-      {/* Order Cards */}
-      <div className="space-y-4">
+  return (
+    <div className="space-y-4">
         {inTransitOrders.map((order) => (
           <div
             key={order.id}
@@ -118,7 +111,6 @@ export function OrdersEnRoute() {
             </div>
           </div>
         ))}
-      </div>
-    </section>
+    </div>
   );
 }
