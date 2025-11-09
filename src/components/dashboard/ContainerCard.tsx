@@ -76,7 +76,7 @@ export function ContainerCard({
         </div>
 
         {/* Summary and Dates in One Line */}
-        <div className="flex items-center justify-between text-sm mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm mb-2 gap-1 sm:gap-0">
           <div className="text-foreground">
             <span className="font-medium">{totalPallets} pallets</span>
             <span className="text-muted-foreground font-normal ml-1">
@@ -90,7 +90,7 @@ export function ContainerCard({
         </div>
 
         {/* Dates */}
-        <div className="flex gap-4 text-xs text-muted-foreground mb-3">
+        <div className="flex flex-col sm:flex-row sm:gap-4 text-xs text-muted-foreground mb-3 gap-0.5 sm:gap-4">
           <div>
             <span className="font-medium">Order by:</span> {container.orderByDate}
           </div>
@@ -152,15 +152,15 @@ function ProductRow({ product }: { product: ContainerProduct }) {
   };
 
   return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-foreground font-medium truncate flex-1 mr-4">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm gap-1 sm:gap-0">
+      <span className="text-foreground font-medium truncate flex-1 sm:mr-4">
         {product.productName.slice(0, 40)}{product.productName.length > 40 ? '...' : ''}
       </span>
-      <div className="flex items-center gap-4 flex-shrink-0">
+      <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 text-xs sm:text-sm">
         <span className="text-muted-foreground">
           {Math.round(product.recommendedQuantity / 1000)} pallets
         </span>
-        <span className={`font-medium min-w-[60px] text-right ${getWeeksColor()}`}>
+        <span className={`font-medium min-w-[50px] sm:min-w-[60px] text-right ${getWeeksColor()}`}>
           {product.weeksSupply.toFixed(1)} wks
         </span>
       </div>

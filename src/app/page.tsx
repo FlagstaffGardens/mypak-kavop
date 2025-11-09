@@ -99,19 +99,20 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Inventory Dashboard
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Monitor your egg carton inventory and receive order recommendations
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <Button onClick={() => setShowEditTable(true)} size="lg" className="gap-2">
+        <div className="flex flex-col items-start sm:items-end gap-2">
+          <Button onClick={() => setShowEditTable(true)} size="lg" className="gap-2 w-full sm:w-auto">
             <Edit3 className="h-4 w-4" />
-            Update Inventory Data
+            <span className="hidden sm:inline">Update Inventory Data</span>
+            <span className="sm:hidden">Update Inventory</span>
           </Button>
           <p className="text-xs text-muted-foreground">
             Last updated: <span className="font-medium">{isMounted && lastUpdated ? formatLastUpdated(lastUpdated) : 'Never'}</span>

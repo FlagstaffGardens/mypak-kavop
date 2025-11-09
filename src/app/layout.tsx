@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Sidebar } from "@/components/shared/Sidebar";
+import { MobileNav } from "@/components/shared/MobileNav";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
@@ -19,9 +20,17 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
-            <Sidebar />
+            {/* Desktop Sidebar - Hidden on mobile (< md), visible on desktop (md+) */}
+            <div className="hidden md:block">
+              <Sidebar />
+            </div>
+
+            {/* Mobile Navigation - Only visible on mobile (< md) */}
+            <MobileNav />
+
+            {/* Main Content - Adjusted padding for mobile */}
             <main className="flex-1 overflow-y-auto">
-              <div className="mx-auto max-w-7xl px-6 py-8">
+              <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4 sm:py-8">
                 {children}
               </div>
             </main>
