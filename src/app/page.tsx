@@ -13,38 +13,33 @@ import type { Product, ContainerRecommendation } from '@/lib/types';
 
 type DemoState = 'production' | 'healthy' | 'single_urgent' | 'multiple_urgent' | 'mixed';
 
-function getInitialState() {
-  if (typeof window === 'undefined') return 'production' as DemoState;
-  return (localStorage.getItem('demoState') as DemoState) || 'production';
-}
-
-function getInitialData() {
-  if (typeof window === 'undefined') {
-    return { products: mockProducts, containers: SCENARIOS.production.containers };
-  }
-
-  const savedState = (localStorage.getItem('demoState') as DemoState) || 'production';
-  if (savedState !== 'production' && SCENARIOS[savedState]) {
-    const scenario = SCENARIOS[savedState];
-    return {
-      products: scenario.products.length > 0 ? scenario.products : mockProducts,
-      containers: scenario.containers,
-    };
-  }
-  return { products: mockProducts, containers: SCENARIOS.production.containers };
-}
-
 export default function Dashboard() {
-  const [demoState] = useState<DemoState>(getInitialState);
-  const [products, setProducts] = useState<Product[]>(() => getInitialData().products);
-  const [containers, setContainers] = useState<ContainerRecommendation[]>(() => getInitialData().containers);
+  // Always start with production data to avoid hydration mismatch
+  const [demoState, setDemoState] = useState<DemoState>('production');
+  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [containers, setContainers] = useState<ContainerRecommendation[]>(SCENARIOS.production.containers);
   const [targetSOH, setTargetSOH] = useState(6);
   const [showEditTable, setShowEditTable] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Load lastUpdated from localStorage after hydration
+  // Load data from localStorage after hydration to avoid mismatch
+  // This is the correct pattern to prevent hydration mismatches - server and client
+  // must render identically on first pass, then update from localStorage after mount
   useEffect(() => {
     /* eslint-disable react-hooks/exhaustive-deps */
+    setIsMounted(true);
+    const savedState = (localStorage.getItem('demoState') as DemoState) || 'production';
+    setDemoState(savedState);
+
+    // Load scenario data if not production
+    if (savedState !== 'production' && SCENARIOS[savedState]) {
+      const scenario = SCENARIOS[savedState];
+      setProducts(scenario.products.length > 0 ? scenario.products : mockProducts);
+      setContainers(scenario.containers);
+    }
+
+    // Load lastUpdated timestamp
     const savedTimestamp = localStorage.getItem('inventoryLastUpdated');
     if (savedTimestamp) {
       setLastUpdated(new Date(savedTimestamp));
@@ -119,7 +114,7 @@ export default function Dashboard() {
             Update Inventory Data
           </Button>
           <p className="text-xs text-muted-foreground">
-            Last updated: <span className="font-medium">{formatLastUpdated(lastUpdated)}</span>
+            Last updated: <span className="font-medium">{isMounted && lastUpdated ? formatLastUpdated(lastUpdated) : 'Never'}</span>
           </p>
         </div>
       </div>

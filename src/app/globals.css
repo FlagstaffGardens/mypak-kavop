@@ -188,3 +188,10 @@
     letter-spacing: var(--tracking-normal);
   }
 }
+
+#target-soh-button,
+#target-soh-button *,
+#target-soh-button:hover,
+#target-soh-button:hover * {
+  cursor: pointer !important;
+}

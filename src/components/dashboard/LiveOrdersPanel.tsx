@@ -95,52 +95,54 @@ function OrderCard({ order, onClick }: { order: Order; onClick?: () => void }) {
       className="rounded-md bg-card border border-border transition-all hover:shadow-md cursor-pointer"
       onClick={onClick}
     >
-      <div className="px-6 py-5">
+      <div className="px-4 py-3">
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
-            <StatusIcon className="w-5 h-5 text-muted-foreground" />
-            <h3 className="text-xl font-semibold text-foreground">
+            <StatusIcon className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-base font-semibold text-foreground">
               {order.orderNumber}
             </h3>
           </div>
-          <Badge variant={badge.variant}>
+          <Badge variant={badge.variant} className="text-xs">
             {badge.text}
           </Badge>
         </div>
 
+        {/* Summary */}
+        <div className="text-sm mb-2">
+          <span className="font-medium text-foreground">{totalPallets} pallets</span>
+          <span className="text-muted-foreground font-normal ml-1">
+            ({order.totalCartons.toLocaleString()} cartons)
+          </span>
+          <span className="text-muted-foreground mx-1.5">•</span>
+          <span className="text-muted-foreground font-normal">
+            {order.productCount} {order.productCount === 1 ? 'product' : 'products'}
+          </span>
+        </div>
+
         {/* Details */}
-        <div className="flex gap-6 text-sm text-muted-foreground mb-4">
+        <div className="flex gap-3 text-xs text-muted-foreground mb-3">
           <div>
             <span className="font-medium">Arriving:</span> {order.deliveryDate}
           </div>
           {order.shippingTerm && (
-            <div>
-              <span className="font-medium">{order.shippingTerm}</span>
-            </div>
+            <>
+              <span>•</span>
+              <div>{order.shippingTerm}</div>
+            </>
           )}
           {order.shippingMethod && (
-            <div>
-              <span className="font-medium">{order.shippingMethod}</span>
-            </div>
+            <>
+              <span>•</span>
+              <div>{order.shippingMethod}</div>
+            </>
           )}
-        </div>
-
-        {/* Summary */}
-        <div className="text-base font-medium text-foreground mb-4">
-          {totalPallets} pallets
-          <span className="text-muted-foreground font-normal ml-1.5">
-            ({order.totalCartons.toLocaleString()} cartons)
-          </span>
-          <span className="text-muted-foreground mx-2">•</span>
-          <span className="text-muted-foreground font-normal">
-            {order.productCount} products
-          </span>
         </div>
 
         {/* Product List (Expandable) */}
         {isExpanded && order.products && order.products.length > 0 && (
-          <div className="mb-4 px-4 py-3 bg-muted/50 rounded border border-border space-y-2">
+          <div className="mb-3 px-3 py-2 bg-muted/50 rounded border border-border space-y-1.5">
             {order.products.map((product) => (
               <div key={product.productId} className="flex items-center justify-between text-sm">
                 <span className="text-foreground font-medium truncate flex-1 mr-4">
@@ -160,16 +162,16 @@ function OrderCard({ order, onClick }: { order: Order; onClick?: () => void }) {
             e.stopPropagation();
             setIsExpanded(!isExpanded);
           }}
-          className="text-sm text-blue-600 dark:text-blue-500 hover:underline font-medium flex items-center gap-1"
+          className="text-xs text-blue-600 dark:text-blue-500 hover:underline font-medium flex items-center gap-1"
         >
           {isExpanded ? (
             <>
-              <ChevronUp className="w-4 h-4" />
+              <ChevronUp className="w-3 h-3" />
               Hide Products
             </>
           ) : (
             <>
-              <ChevronDown className="w-4 h-4" />
+              <ChevronDown className="w-3 h-3" />
               Show Products
             </>
           )}

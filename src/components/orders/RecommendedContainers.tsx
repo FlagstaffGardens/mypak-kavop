@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { mockContainers } from '@/lib/data/mock-containers';
 import { SCENARIOS } from '@/lib/data/mock-scenarios';
@@ -9,18 +9,20 @@ import { Package } from 'lucide-react';
 
 type DemoState = 'production' | 'healthy' | 'single_urgent' | 'multiple_urgent' | 'mixed';
 
-function getInitialContainers() {
-  if (typeof window === 'undefined') return mockContainers;
-  const savedState = (localStorage.getItem('demoState') as DemoState) || 'production';
-
-  if (savedState !== 'production' && SCENARIOS[savedState]) {
-    return SCENARIOS[savedState].containers;
-  }
-  return mockContainers;
-}
-
 export function RecommendedContainers() {
-  const [containers] = useState(getInitialContainers);
+  // Always start with mockContainers to avoid hydration mismatch
+  const [containers, setContainers] = useState(mockContainers);
+
+  // Load from localStorage after hydration
+  useEffect(() => {
+    /* eslint-disable react-hooks/exhaustive-deps */
+    const savedState = (localStorage.getItem('demoState') as DemoState) || 'production';
+
+    if (savedState !== 'production' && SCENARIOS[savedState]) {
+      setContainers(SCENARIOS[savedState].containers);
+    }
+    /* eslint-enable react-hooks/exhaustive-deps */
+  }, []);
 
   return (
     <section>

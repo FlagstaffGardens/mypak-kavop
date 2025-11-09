@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { StatusMetricsBar } from './StatusMetricsBar';
+import { CompactStatusBar } from './CompactStatusBar';
 import { RecommendedOrdersPanel } from './RecommendedOrdersPanel';
 import { LiveOrdersPanel } from './LiveOrdersPanel';
 import { TargetSOHSlider } from '../shared/TargetSOHSlider';
@@ -55,8 +55,8 @@ export function DashboardOverview({
 
   return (
     <div className="space-y-8">
-      {/* Status Metrics Bar */}
-      <StatusMetricsBar
+      {/* Compact Status Bar */}
+      <CompactStatusBar
         worstProduct={worstProduct}
         targetSOH={targetSOH}
         urgentCount={urgentContainers.length}
