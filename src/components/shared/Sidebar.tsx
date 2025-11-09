@@ -92,6 +92,11 @@ export function Sidebar() {
     /* eslint-enable react-hooks/exhaustive-deps */
   }, []);
 
+  // Sync ordersExpanded with pathname changes
+  useEffect(() => {
+    setOrdersExpanded(pathname.startsWith('/orders'));
+  }, [pathname]);
+
   // Handle demo state change
   const handleDemoStateChange = (state: DemoState) => {
     setDemoState(state);
