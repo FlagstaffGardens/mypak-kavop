@@ -14,10 +14,10 @@ import type { Product, ContainerRecommendation } from '@/lib/types';
 type DemoState = 'healthy' | 'single_urgent' | 'multiple_urgent';
 
 export default function Dashboard() {
-  // Always start with healthy data to avoid hydration mismatch
-  const [demoState, setDemoState] = useState<DemoState>('healthy');
+  // Always start with multiple_urgent data to avoid hydration mismatch
+  const [demoState, setDemoState] = useState<DemoState>('multiple_urgent');
   const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [containers, setContainers] = useState<ContainerRecommendation[]>(SCENARIOS.healthy.containers);
+  const [containers, setContainers] = useState<ContainerRecommendation[]>(SCENARIOS.multiple_urgent.containers);
   const [targetSOH, setTargetSOH] = useState(6);
   const [showEditTable, setShowEditTable] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -29,7 +29,7 @@ export default function Dashboard() {
   useEffect(() => {
     /* eslint-disable react-hooks/exhaustive-deps */
     setIsMounted(true);
-    const savedState = (localStorage.getItem('demoState') as DemoState) || 'healthy';
+    const savedState = (localStorage.getItem('demoState') as DemoState) || 'multiple_urgent';
     setDemoState(savedState);
 
     // Load scenario data

@@ -71,7 +71,7 @@ export function Sidebar() {
 
   // Always start with default values to avoid hydration mismatch
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [demoState, setDemoState] = useState<DemoState>('healthy');
+  const [demoState, setDemoState] = useState<DemoState>('multiple_urgent');
   const [showDevTools] = useState(() =>
     process.env.NODE_ENV === 'development' ||
     process.env.NEXT_PUBLIC_SHOW_DEV_TOOLS === 'true'

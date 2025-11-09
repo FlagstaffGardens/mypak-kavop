@@ -63,7 +63,7 @@ export default function OrdersPage() {
   const [liveCount] = useState(mockLiveOrders.length);
 
   useEffect(() => {
-    const savedState = (localStorage.getItem('demoState') as DemoState) || 'healthy';
+    const savedState = (localStorage.getItem('demoState') as DemoState) || 'multiple_urgent';
     if (SCENARIOS[savedState]) {
       setRecommendedCount(SCENARIOS[savedState].containers.length);
       setFirstContainerId(SCENARIOS[savedState].containers[0]?.id || null);
