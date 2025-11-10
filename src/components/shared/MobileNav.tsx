@@ -31,7 +31,7 @@ export function MobileNav() {
       {/* Hamburger Button - Only visible on mobile (< md) */}
       <button
         onClick={() => setIsOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-800"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white dark:bg-gray-900 shadow-lg border border-gray-200 dark:border-gray-800 cursor-pointer"
         aria-label="Open menu"
       >
         <Menu className="h-6 w-6 text-gray-900 dark:text-gray-50" />
@@ -40,7 +40,7 @@ export function MobileNav() {
       {/* Backdrop - Only visible when drawer is open */}
       {isOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity"
+          className="md:hidden fixed inset-0 bg-black/50 z-40 transition-opacity cursor-pointer"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />
@@ -58,7 +58,7 @@ export function MobileNav() {
         {/* Close Button */}
         <button
           onClick={() => setIsOpen(false)}
-          className="absolute top-4 right-4 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          className="absolute top-4 right-4 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
           aria-label="Close menu"
         >
           <X className="h-5 w-5 text-gray-900 dark:text-gray-50" />

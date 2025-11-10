@@ -60,7 +60,7 @@ export function LiveOrdersPanel({ orders = [], onOrderClick }: LiveOrdersPanelPr
       {/* View All Footer */}
       {hasMore && (
         <div className="mt-4 pt-4 border-t border-border">
-          <Link href="/orders">
+          <Link href="/orders" className="cursor-pointer">
             <Button variant="outline" className="w-full group">
               View All {orders.length} Live Orders
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -162,7 +162,7 @@ function OrderCard({ order, onClick }: { order: Order; onClick?: () => void }) {
             e.stopPropagation();
             setIsExpanded(!isExpanded);
           }}
-          className="text-xs text-blue-600 dark:text-blue-500 hover:underline font-medium flex items-center gap-1"
+          className="text-xs text-blue-600 dark:text-blue-500 hover:underline font-medium flex items-center gap-1 cursor-pointer"
         >
           {isExpanded ? (
             <>

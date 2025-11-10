@@ -21,25 +21,31 @@ function OrdersTabs({ recommendedCount, liveCount }: { recommendedCount: number;
   return (
     <Tabs value={currentTab} className="w-full">
       <TabsList className="h-auto p-1 bg-muted">
-        <TabsTrigger value="recommended" className="data-[state=active]:bg-background">
-          Recommended Orders
-          {recommendedCount > 0 && (
-            <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
-              {recommendedCount}
-            </span>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="live" className="data-[state=active]:bg-background">
-          Live Orders
-          {liveCount > 0 && (
-            <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
-              {liveCount}
-            </span>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="completed" className="data-[state=active]:bg-background">
-          Completed Orders
-        </TabsTrigger>
+        <Link href="/orders?tab=recommended" className="inline-block cursor-pointer">
+          <TabsTrigger value="recommended" className="data-[state=active]:bg-background cursor-pointer">
+            Recommended Orders
+            {recommendedCount > 0 && (
+              <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+                {recommendedCount}
+              </span>
+            )}
+          </TabsTrigger>
+        </Link>
+        <Link href="/orders?tab=live" className="inline-block cursor-pointer">
+          <TabsTrigger value="live" className="data-[state=active]:bg-background cursor-pointer">
+            Live Orders
+            {liveCount > 0 && (
+              <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+                {liveCount}
+              </span>
+            )}
+          </TabsTrigger>
+        </Link>
+        <Link href="/orders?tab=completed" className="inline-block cursor-pointer">
+          <TabsTrigger value="completed" className="data-[state=active]:bg-background cursor-pointer">
+            Completed Orders
+          </TabsTrigger>
+        </Link>
       </TabsList>
 
       <TabsContent value="recommended" className="mt-6">

@@ -47,8 +47,8 @@ export function DashboardOverview({
 
       {/* Target SOH Editor (Modal) */}
       {showTargetEditor && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={() => setShowTargetEditor(false)}>
-          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center cursor-pointer" onClick={() => setShowTargetEditor(false)}>
+          <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full mx-4 cursor-default" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold mb-6">Adjust Target Stock Level</h3>
             <TargetSOHSlider
               initialValue={targetSOH}

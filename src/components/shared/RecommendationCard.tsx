@@ -61,7 +61,7 @@ export function RecommendationCard({ type }: RecommendationCardProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            <Link href="/orders" className="flex-1">
+            <Link href="/orders" className="flex-1 cursor-pointer">
               <Button
                 variant="outline"
                 size="lg"
@@ -72,7 +72,7 @@ export function RecommendationCard({ type }: RecommendationCardProps) {
             </Link>
             <Link
               href="/orders"
-              className="text-sm text-blue-600 dark:text-blue-500 hover:underline font-medium"
+              className="text-sm text-blue-600 dark:text-blue-500 hover:underline font-medium cursor-pointer"
             >
               View All Upcoming Orders
             </Link>
@@ -138,7 +138,7 @@ export function RecommendationCard({ type }: RecommendationCardProps) {
           </div>
 
           {/* Primary action */}
-          <Link href="/orders">
+          <Link href="/orders" className="cursor-pointer">
             <Button
               size="lg"
               className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold text-base h-14 rounded shadow-sm hover:shadow transition-all"
@@ -173,7 +173,7 @@ export function RecommendationCard({ type }: RecommendationCardProps) {
           </div>
         </div>
 
-        <Link href="/orders">
+        <Link href="/orders" className="cursor-pointer">
           <Button
             size="lg"
             className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold text-base h-14 rounded shadow-sm hover:shadow transition-all"

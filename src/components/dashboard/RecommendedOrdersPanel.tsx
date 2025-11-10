@@ -103,7 +103,7 @@ export function RecommendedOrdersPanel({
       {/* View All Footer */}
       {hasMore && (
         <div className="mt-4 pt-4 border-t border-border">
-          <Link href="/orders">
+          <Link href="/orders" className="cursor-pointer">
             <Button variant="outline" className="w-full group">
               View All {containers.length} Recommended Orders
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />

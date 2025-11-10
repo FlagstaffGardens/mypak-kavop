@@ -112,7 +112,7 @@ export function ContainerCard({
         <div className="flex items-center justify-between pt-1">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-xs text-blue-600 dark:text-blue-500 hover:underline font-medium flex items-center gap-1"
+            className="text-xs text-blue-600 dark:text-blue-500 hover:underline font-medium flex items-center gap-1 cursor-pointer"
           >
             {isExpanded ? (
               <>
