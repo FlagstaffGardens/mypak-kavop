@@ -17,6 +17,7 @@ interface InventoryEditTableProps {
 interface EditableProduct extends Product {
   originalStock: number;
   originalConsumption: number;
+  targetSOH?: number; // Per-product target SOH override (default: 6)
 }
 
 export function InventoryEditTable({
@@ -30,12 +31,13 @@ export function InventoryEditTable({
       ...p,
       originalStock: p.currentStock,
       originalConsumption: p.weeklyConsumption,
+      targetSOH: p.targetSOH || 6, // Default to 6 weeks if not set
     }))
   );
 
   const [focusedCell, setFocusedCell] = useState<{
     rowIndex: number;
-    column: 'stock' | 'consumption';
+    column: 'stock' | 'consumption' | 'targetSOH';
   } | null>(null);
 
   // Calculate validation states
@@ -68,10 +70,13 @@ export function InventoryEditTable({
     return acc;
   }, []);
 
-  const updateProduct = (index: number, field: 'currentStock' | 'weeklyConsumption', value: number) => {
+  const updateProduct = (index: number, field: 'currentStock' | 'weeklyConsumption' | 'targetSOH', value: number) => {
     setEditableProducts((prev) =>
       prev.map((p, i) => {
         if (i === index) {
+          if (field === 'targetSOH') {
+            return { ...p, targetSOH: value };
+          }
           // Convert pallets to cartons
           const cartons = value * p.piecesPerPallet;
           if (field === 'currentStock') {
@@ -122,21 +127,25 @@ export function InventoryEditTable({
   const handleKeyDown = (
     e: React.KeyboardEvent,
     rowIndex: number,
-    column: 'stock' | 'consumption'
+    column: 'stock' | 'consumption' | 'targetSOH'
   ) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       if (e.shiftKey) {
         // Shift+Tab: Move left
-        if (column === 'consumption') {
+        if (column === 'targetSOH') {
+          setFocusedCell({ rowIndex, column: 'consumption' });
+        } else if (column === 'consumption') {
           setFocusedCell({ rowIndex, column: 'stock' });
         } else if (rowIndex > 0) {
-          setFocusedCell({ rowIndex: rowIndex - 1, column: 'consumption' });
+          setFocusedCell({ rowIndex: rowIndex - 1, column: 'targetSOH' });
         }
       } else {
         // Tab: Move right
         if (column === 'stock') {
           setFocusedCell({ rowIndex, column: 'consumption' });
+        } else if (column === 'consumption') {
+          setFocusedCell({ rowIndex, column: 'targetSOH' });
         } else if (rowIndex < editableProducts.length - 1) {
           setFocusedCell({ rowIndex: rowIndex + 1, column: 'stock' });
         }
@@ -153,20 +162,6 @@ export function InventoryEditTable({
     }
   };
 
-  const calculateWeeksRemaining = (stock: number, consumption: number) => {
-    if (consumption === 0) return Infinity;
-    return stock / consumption;
-  };
-
-  const getStatusDot = (weeks: number, targetSOH: number = 6) => {
-    if (weeks < targetSOH) {
-      return <div className="w-2 h-2 rounded-full bg-red-500" />;
-    }
-    if (weeks < 16) {
-      return <div className="w-2 h-2 rounded-full bg-amber-500" />;
-    }
-    return <div className="w-2 h-2 rounded-full bg-green-500" />;
-  };
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -176,7 +171,7 @@ export function InventoryEditTable({
           <div>
             <h2 className="text-xl font-bold text-foreground">Update Inventory Data</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Edit current stock and weekly consumption for your products
+              Edit current stock, weekly consumption, and target SOH for your products
             </p>
           </div>
           <Button variant="ghost" size="icon" onClick={onCancel}>
@@ -202,32 +197,30 @@ export function InventoryEditTable({
         {/* Table */}
         <div className="flex-1 overflow-auto">
           <table className="w-full">
-            <thead className="sticky top-0 bg-muted/50 backdrop-blur-sm border-b border-border">
+            <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-sm">
               <tr>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[35%]">
+                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[40%]">
                   Product Name
                 </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[22.5%]">
+                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
                   Current Stock (Pallets)
                 </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[22.5%]">
+                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
                   Weekly Consumption (Pallets)
                 </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-muted-foreground w-[20%]">
-                  Weeks Supply
+                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[10%]">
+                  Target SOH (Weeks)
                 </th>
               </tr>
             </thead>
             <tbody>
               {editableProducts.map((product, index) => {
-                const weeks = calculateWeeksRemaining(
-                  product.currentStock,
-                  product.weeklyConsumption
-                );
                 const isStockFocused =
                   focusedCell?.rowIndex === index && focusedCell?.column === 'stock';
                 const isConsumptionFocused =
                   focusedCell?.rowIndex === index && focusedCell?.column === 'consumption';
+                const isTargetSOHFocused =
+                  focusedCell?.rowIndex === index && focusedCell?.column === 'targetSOH';
 
                 return (
                   <tr
@@ -271,13 +264,17 @@ export function InventoryEditTable({
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {getStatusDot(weeks)}
-                        <span className="text-sm font-medium text-foreground">
-                          {weeks === Infinity
-                            ? '—'
-                            : `${weeks.toFixed(1)} wks`}
-                        </span>
+                      <div className="space-y-1">
+                        <EditableNumberCell
+                          value={product.targetSOH || 6}
+                          onChange={(value) => updateProduct(index, 'targetSOH', value)}
+                          validation={{ state: 'valid', message: '' }}
+                          onKeyDown={(e) => handleKeyDown(e, index, 'targetSOH')}
+                          autoFocus={isTargetSOHFocused}
+                        />
+                        <div className="text-xs text-muted-foreground">
+                          weeks target
+                        </div>
                       </div>
                     </td>
                   </tr>

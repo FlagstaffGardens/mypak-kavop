@@ -18,7 +18,6 @@ export default function Dashboard() {
   const [demoState, setDemoState] = useState<DemoState>('multiple_urgent');
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [containers, setContainers] = useState<ContainerRecommendation[]>(SCENARIOS.multiple_urgent.containers);
-  const [targetSOH, setTargetSOH] = useState(6);
   const [showEditTable, setShowEditTable] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -123,11 +122,9 @@ export default function Dashboard() {
       {/* Dashboard Command Center */}
       <DashboardOverview
         worstProduct={worstProduct}
-        targetSOH={targetSOH}
         containers={containers}
         products={products}
         liveOrders={mockLiveOrders}
-        onTargetSOHChange={setTargetSOH}
       />
 
       {/* Critical Products */}

@@ -1,78 +1,98 @@
-# Production Implementation Docs
+# Production Documentation
 
-**Purpose:** Documentation for implementing backend and going live with pilot customers.
-
----
-
-## Documents in This Folder
-
-### 1. **DATA-REQUIREMENTS.md**
-**For:** Backend developers + ERP team
-
-Contains:
-- Exact API endpoint specifications
-- JSON data structures required
-- ERP integration requirements
-- Algorithm overview
-
-**Use this to:** Define the API contract between backend and frontend
+Clean, production-grade specifications for backend implementation and ERP integration.
 
 ---
 
-### 2. **IMPLEMENTATION-TIMELINE.md**
-**For:** Project managers + developers
+## Documents
 
-Contains:
-- 28-day implementation plan
-- Week-by-week breakdown
-- Critical path items
-- Risk mitigation strategies
+### **DATABASE-MODELS.md**
+Database schema for application database and ERP integration requirements.
 
-**Use this to:** Track progress and stay on schedule
+**Contents:**
+- Application DB tables (product_data, orders, order_items)
+- ERP data requirements (read-only)
+- Calculated data (recommendations, product status)
+- Data flow architecture
+- Performance and security requirements
 
----
-
-### 3. **DEVELOPER-HANDOFF.md**
-**For:** Backend developers joining the project
-
-Contains:
-- Quick start guide
-- Where the business logic lives
-- How to integrate with frontend
-- Common pitfalls to avoid
-- Testing strategy
-
-**Use this to:** Onboard new developers quickly
+**For:** Backend developers, database administrators
 
 ---
 
-### 4. **MOBILE-STRATEGY.md**
-**For:** Frontend developers + designers
+### **API-SPECIFICATION.md**
+Complete API endpoint specifications for backend implementation.
 
-Contains:
-- Mobile responsiveness analysis
-- Hamburger menu implementation
-- 5-day mobile rollout plan
-- Responsive design patterns
-- Testing checklist
+**Contents:**
+- All 8 API endpoints with request/response formats
+- Authentication requirements
+- Error handling
+- Performance requirements
+- Security requirements
 
-**Use this to:** Make the app mobile-ready
-
----
-
-## Quick Links to Key Code
-
-- **Types:** `/src/lib/types.ts`
-- **Calculations:** `/src/lib/calculations.ts`
-- **Mock Data Examples:** `/src/lib/data/mock-products.ts`, `/src/lib/data/mock-scenarios.ts`
+**For:** Backend developers, API implementers
 
 ---
 
-## Timeline Summary
+### **ERP-INTEGRATION-REQUIREMENTS.md**
+Questions and requirements for ERP team integration.
 
-- **Week 1:** Backend + ERP integration
-- **Week 2:** API development + frontend integration
-- **Week 3:** Testing + pilot customers 1-2
-- **Week 4:** Final pilot + production deployment
+**Contents:**
+- Data we need FROM ERP (products, orders)
+- Data we POST TO ERP (order submission)
+- Authentication requirements
+- Data format standards
+- Performance and error handling
 
-**Target:** 3 pilot customers live in 3-4 weeks
+**For:** ERP team, integration team
+
+---
+
+## Quick Links
+
+**Frontend Code:**
+- Types: `/src/lib/types.ts`
+- Calculations: `/src/lib/calculations.ts`
+- Mock Data: `/src/lib/data/mock-*.ts`
+
+**Dev Docs:**
+- Component System: `/docs-dev/design/component-system.md`
+- State Management: `/docs-dev/guides/state-management.md`
+- Status System: `/docs-dev/design/status-system.md`
+
+---
+
+## Implementation Checklist
+
+**Phase 1: Backend Setup**
+- [ ] Create database schema (DATABASE-MODELS.md)
+- [ ] Implement authentication
+- [ ] Build ERP connector
+
+**Phase 2: API Development**
+- [ ] Implement all 8 endpoints (API-SPECIFICATION.md)
+- [ ] Add error handling
+- [ ] Write tests
+
+**Phase 3: Integration**
+- [ ] Connect frontend to backend
+- [ ] Replace mock data with API calls
+- [ ] Test end-to-end flows
+
+**Phase 4: Production**
+- [ ] Deploy backend
+- [ ] Deploy frontend
+- [ ] Monitor performance
+- [ ] Launch alpha
+
+---
+
+## For ERP Team
+
+**Start here:** `ERP-INTEGRATION-REQUIREMENTS.md`
+
+This document has all questions and data format requirements for ERP integration.
+
+---
+
+**Last Updated:** 2025-01-10

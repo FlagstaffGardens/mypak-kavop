@@ -19,6 +19,7 @@ export interface Product {
   currentStock: number;
   weeklyConsumption: number;
   targetStock: number;
+  targetSOH?: number; // Per-product target SOH override (default: 6 weeks)
   runsOutDate: string;
   runsOutDays: number;
   weeksRemaining: number;

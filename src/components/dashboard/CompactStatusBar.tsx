@@ -1,19 +1,14 @@
-import { Settings } from 'lucide-react';
 import { addWeeks, format } from 'date-fns';
 import type { Product, ContainerRecommendation } from '@/lib/types';
 
 interface CompactStatusBarProps {
   products: Product[];
   containers: ContainerRecommendation[];
-  targetSOH: number;
-  onTargetSOHClick: () => void;
 }
 
 export function CompactStatusBar({
   products,
   containers,
-  targetSOH,
-  onTargetSOHClick,
 }: CompactStatusBarProps) {
   // Calculate total coverage
   const calculateCoverage = () => {
@@ -40,6 +35,14 @@ export function CompactStatusBar({
   };
 
   const { weeksCovered, coveredUntilDate } = calculateCoverage();
+
+  // Calculate daily consumption across all products
+  const calculateDailyConsumption = () => {
+    const totalWeeklyConsumption = products.reduce((sum, p) => sum + p.weeklyConsumption, 0);
+    return Math.round(totalWeeklyConsumption / 7);
+  };
+
+  const dailyConsumption = calculateDailyConsumption();
 
   // Determine status variant based on weeks covered
   const getStatusVariant = () => {
@@ -98,27 +101,18 @@ export function CompactStatusBar({
         </p>
       </div>
 
-      {/* Card 3: Target SOH - Interactive */}
-      <button
-        id="target-soh-button"
-        onClick={onTargetSOHClick}
-        type="button"
-        className="w-full text-center px-5 py-4 bg-card border border-border rounded-lg hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500 transition-all active:scale-95 cursor-pointer"
-        aria-label="Adjust target stock on hand"
-      >
-        <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Target SOH
-          </p>
-          <p className="text-2xl font-bold text-foreground mt-1 inline-flex items-center justify-center gap-1.5">
-            {targetSOH} weeks
-            <Settings className="w-4 h-4 text-muted-foreground" />
-          </p>
-          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-            Click to adjust
-          </p>
-        </div>
-      </button>
+      {/* Card 3: Daily Carton Consumption */}
+      <div className="px-5 py-4 bg-card border border-border rounded-lg">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Daily Consumption
+        </p>
+        <p className="text-2xl font-bold text-foreground mt-1">
+          {dailyConsumption.toLocaleString()} cartons
+        </p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          per day
+        </p>
+      </div>
     </div>
   );
 }
