@@ -65,8 +65,8 @@ export function OrdersEnRoute() {
               </div>
 
               {/* Order Details */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
                   <div>
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                       Ordered
@@ -75,7 +75,7 @@ export function OrdersEnRoute() {
                       {order.orderedDate}
                     </p>
                   </div>
-                  <div className="h-10 w-px bg-gray-200 dark:bg-gray-700" />
+                  <div className="hidden sm:block h-10 w-px bg-gray-200 dark:bg-gray-700" />
                   <div>
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                       Expected Arrival
@@ -86,7 +86,7 @@ export function OrdersEnRoute() {
                   </div>
                   {order.shippingMethod && (
                     <>
-                      <div className="h-10 w-px bg-gray-200 dark:bg-gray-700" />
+                      <div className="hidden sm:block h-10 w-px bg-gray-200 dark:bg-gray-700" />
                       <div>
                         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                           Shipping
@@ -103,7 +103,7 @@ export function OrdersEnRoute() {
                   variant="outline"
                   size="sm"
                   disabled
-                  className="cursor-not-allowed"
+                  className="cursor-not-allowed w-full sm:w-auto"
                 >
                   View Details
                 </Button>

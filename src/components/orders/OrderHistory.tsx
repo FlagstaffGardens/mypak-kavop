@@ -53,10 +53,10 @@ export function OrderHistory() {
     <div>
       {/* Filters Row */}
       <div className="mb-6">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Status Filter */}
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="All Orders" />
             </SelectTrigger>
             <SelectContent>
@@ -67,7 +67,7 @@ export function OrderHistory() {
 
           {/* Time Range Filter */}
           <Select value={timeFilter} onValueChange={(value) => setTimeFilter(value as TimeFilter)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Last 12 months" />
             </SelectTrigger>
             <SelectContent>
@@ -79,7 +79,7 @@ export function OrderHistory() {
           </Select>
 
           {/* Search */}
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
@@ -126,8 +126,8 @@ export function OrderHistory() {
                 </div>
 
                 {/* Order Details */}
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
                     <div>
                       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                         Ordered
@@ -136,7 +136,7 @@ export function OrderHistory() {
                         {order.orderedDate}
                       </p>
                     </div>
-                    <div className="h-10 w-px bg-gray-200 dark:bg-gray-700" />
+                    <div className="hidden sm:block h-10 w-px bg-gray-200 dark:bg-gray-700" />
                     <div>
                       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                         Delivered
@@ -147,7 +147,7 @@ export function OrderHistory() {
                     </div>
                     {order.shippingTerm && (
                       <>
-                        <div className="h-10 w-px bg-gray-200 dark:bg-gray-700" />
+                        <div className="hidden sm:block h-10 w-px bg-gray-200 dark:bg-gray-700" />
                         <div>
                           <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                             Terms
@@ -160,12 +160,12 @@ export function OrderHistory() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     <Button
                       variant="outline"
                       size="sm"
                       disabled
-                      className="cursor-not-allowed"
+                      className="cursor-not-allowed flex-1 sm:flex-initial"
                     >
                       View Details
                     </Button>
@@ -173,7 +173,7 @@ export function OrderHistory() {
                       variant="outline"
                       size="sm"
                       disabled
-                      className="cursor-not-allowed"
+                      className="cursor-not-allowed flex-1 sm:flex-initial"
                     >
                       Reorder
                     </Button>
