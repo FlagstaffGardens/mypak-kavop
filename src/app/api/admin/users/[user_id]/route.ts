@@ -16,6 +16,37 @@ export async function DELETE(
   try {
     const { user_id } = await params;
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(user_id)) {
+      return NextResponse.json(
+        { error: "Invalid user ID format" },
+        { status: 400 }
+      );
+    }
+
+    // Prevent self-deletion
+    if (user_id === currentUser.userId) {
+      return NextResponse.json(
+        { error: "Cannot delete your own account" },
+        { status: 400 }
+      );
+    }
+
+    // Check if user exists
+    const [userToDelete] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user_id))
+      .limit(1);
+
+    if (!userToDelete) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
     // Delete the user
     await db.delete(users).where(eq(users.id, user_id));
 
