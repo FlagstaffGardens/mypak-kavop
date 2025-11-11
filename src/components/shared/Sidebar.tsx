@@ -246,6 +246,35 @@ export function Sidebar() {
             </Suspense>
           )}
         </div>
+
+        {/* Admin Link */}
+        <Link
+          href="/admin/organizations"
+          title={isCollapsed ? 'Admin' : undefined}
+          className={cn(
+            'group flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer',
+            isCollapsed ? 'justify-center' : '',
+            pathname.startsWith('/admin')
+              ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
+              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50'
+          )}
+        >
+          <Settings
+            className={cn(
+              'h-4 w-4 flex-shrink-0',
+              !isCollapsed && 'mr-2',
+              pathname.startsWith('/admin')
+                ? 'text-gray-900 dark:text-gray-50'
+                : 'text-gray-500 group-hover:text-gray-900 dark:text-gray-500 dark:group-hover:text-gray-50'
+            )}
+          />
+          <span className={cn(
+            "transition-opacity duration-150 ease-out whitespace-nowrap",
+            isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+          )}>
+            Admin
+          </span>
+        </Link>
       </nav>
 
       {/* Dev Tools - State Switcher */}
