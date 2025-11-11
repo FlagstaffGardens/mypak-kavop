@@ -96,9 +96,9 @@ export function UsersTable({ users, orgId, onUserDeleted }: UsersTableProps) {
         </TableHeader>
         <TableBody>
           {users.map((user) => {
-            const isVisible = visiblePasswords.has(user.user_id);
+            const isVisible = visiblePasswords.has(user.id);
             return (
-              <TableRow key={user.user_id}>
+              <TableRow key={user.id}>
                 <TableCell className="font-medium">{user.name}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
@@ -109,7 +109,7 @@ export function UsersTable({ users, orgId, onUserDeleted }: UsersTableProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => togglePassword(user.user_id)}
+                      onClick={() => togglePassword(user.id)}
                     >
                       {isVisible ? (
                         <EyeOff className="h-4 w-4" />
@@ -121,9 +121,9 @@ export function UsersTable({ users, orgId, onUserDeleted }: UsersTableProps) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => copyPassword(user.password, user.user_id)}
+                        onClick={() => copyPassword(user.password, user.id)}
                       >
-                        {copiedUserId === user.user_id ? (
+                        {copiedUserId === user.id ? (
                           "Copied!"
                         ) : (
                           <Copy className="h-4 w-4" />
@@ -133,8 +133,8 @@ export function UsersTable({ users, orgId, onUserDeleted }: UsersTableProps) {
                   </div>
                 </TableCell>
                 <TableCell>
-                  {user.last_login_at
-                    ? new Date(user.last_login_at).toLocaleDateString()
+                  {user.lastLoginAt
+                    ? new Date(user.lastLoginAt).toLocaleDateString()
                     : <span className="text-gray-400">Never</span>
                   }
                 </TableCell>
@@ -142,10 +142,10 @@ export function UsersTable({ users, orgId, onUserDeleted }: UsersTableProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDeleteUser(user.user_id, user.name)}
-                    disabled={deletingUserId === user.user_id}
+                    onClick={() => handleDeleteUser(user.id, user.name)}
+                    disabled={deletingUserId === user.id}
                   >
-                    {deletingUserId === user.user_id ? "Deleting..." : "Delete"}
+                    {deletingUserId === user.id ? "Deleting..." : "Delete"}
                   </Button>
                 </TableCell>
               </TableRow>
