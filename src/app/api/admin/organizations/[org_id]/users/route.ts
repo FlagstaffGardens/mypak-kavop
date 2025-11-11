@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { generatePassword } from "@/lib/utils/password";
 import { generateNameFromEmail } from "@/lib/utils/name";
 import { z } from "zod";
@@ -14,6 +16,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ org_id: string }> }
 ) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || session.user.role !== "platform_admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { org_id } = await params;
     const body = await request.json();
@@ -21,7 +28,7 @@ export async function POST(
 
     // Generate users data
     const usersData = emails.map((email) => ({
-      org_id: org_id,
+      orgId: org_id,
       email,
       name: generateNameFromEmail(email),
       password: generatePassword(16),
@@ -57,12 +64,17 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ org_id: string }> }
 ) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || session.user.role !== "platform_admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const { org_id } = await params;
     const orgUsers = await db
       .select()
       .from(users)
-      .where(eq(users.org_id, org_id));
+      .where(eq(users.orgId, org_id));
 
     return NextResponse.json({
       success: true,

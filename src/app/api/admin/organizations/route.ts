@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { organizations } from "@/lib/db/schema";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { z } from "zod";
 
 const createOrgSchema = z.object({
@@ -10,6 +12,11 @@ const createOrgSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || session.user.role !== "platform_admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const data = createOrgSchema.parse(body);
@@ -43,6 +50,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session || session.user.role !== "platform_admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const orgs = await db.select().from(organizations);
 
