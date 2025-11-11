@@ -1,27 +1,7 @@
 # ERP Integration Requirements
 
-**Summary:** 3 GET endpoints (products, orders) + 1 POST endpoint (submit order)
+**Summary:** 4 GET endpoints (customer lookup, products, orders) + 1 POST endpoint (submit order)
 
----
-
-## Data Flow Overview
-
-**What we pull from your ERP:**
-1. Product master data (SKU, name, pack info, volume) → Used for calculations
-2. Order status (current + delivered orders) → Shown to customer
-
-**What we store in our database:**
-- Customer inventory metrics: `current_stock`, `weekly_consumption`, `target_soh` per SKU
-- Order submission audit trail
-
-**What we calculate fresh (not stored):**
-- Container recommendations based on inventory + orders
-- Stockout predictions and urgency levels
-
-**What we send to your ERP:**
-- New orders when customer clicks "Submit Order"
-
----
 
 ## Authentication
 
@@ -30,8 +10,7 @@
 Base URL: _______________________________________________
 Auth Type: [ ] API Key  [ ] Bearer Token  [ ] Basic Auth
 Auth Header: _____________________________________________
-Customer ID Format: ______________________________________
-  Example: "CUST-123" or "12345" or "ABC Corp"
+Customer ID Format: Numeric (e.g., "1000042", "1000227")
 ```
 
 **CRITICAL:** Every request needs YOUR `customer_id` - tell us how to pass it:
@@ -42,7 +21,49 @@ Customer ID Format: ______________________________________
 
 ---
 
-## 1. GET Products
+## 1. GET Customer Lookup (Onboarding Only)
+
+**We call this when:** MyPak business team creates a new customer account (one-time setup)
+
+**Purpose:** Get ERP customer_id by customer name to establish the link between our system and yours
+
+**Request:**
+```http
+GET {BASE_URL}/customers/search?name={CUSTOMER_NAME}
+Authorization: {YOUR_AUTH}
+```
+
+**Example:**
+```http
+GET https://erp.example.com/api/customers/search?name=Aginbrook
+```
+
+**Response (200 OK):**
+```json
+{
+  "customer_id": "1000042",
+  "customer_name": "Aginbrook"
+}
+```
+
+**Response (404 Not Found):**
+```json
+{
+  "error": "Customer not found"
+}
+```
+
+**Your endpoint:** `_______________________________________________`
+
+**Notes:**
+- This is used ONLY during initial customer setup
+- Business team searches by customer name (e.g., "Aginbrook", "Joshs Rainbow Eggs")
+- We store the returned customer_id in our database (organizations.erp_customer_id)
+- After setup, all other endpoints use this customer_id
+
+---
+
+## 2. GET Products
 
 **We call this when:** Customer opens the app (every page load)
 
@@ -50,6 +71,11 @@ Customer ID Format: ______________________________________
 ```http
 GET {BASE_URL}/products?customer_id={CUSTOMER_ID}
 Authorization: {YOUR_AUTH}
+```
+
+**Example:**
+```http
+GET https://erp.example.com/api/products?customer_id=1000042
 ```
 
 **Response (200 OK):**
@@ -70,7 +96,7 @@ Authorization: {YOUR_AUTH}
 
 ---
 
-## 2. GET Current Orders (In-Transit + Approved)
+## 3. GET Current Orders (In-Transit + Approved)
 
 **We call this when:** Customer opens orders page
 
@@ -80,12 +106,17 @@ GET {BASE_URL}/orders?customer_id={CUSTOMER_ID}&status=current
 Authorization: {YOUR_AUTH}
 ```
 
+**Example:**
+```http
+GET https://erp.example.com/api/orders?customer_id=1000042&status=current
+```
+
 **Response (200 OK):**
 ```json
 [
   {
     "order_number": "ORD-2025-001",
-    "customer_id": "CUST-123",
+    "customer_id": "1000042",
     "ordered_date": "2025-01-05",
     "delivery_date": "2025-02-20",
     "status": "IN_TRANSIT", // or "APPROVED"
@@ -111,7 +142,7 @@ Authorization: {YOUR_AUTH}
 
 ---
 
-## 3. GET Delivered Orders (History)
+## 4. GET Delivered Orders (History)
 
 **We call this when:** Customer views order history
 
@@ -121,7 +152,12 @@ GET {BASE_URL}/orders?customer_id={CUSTOMER_ID}&status=delivered&limit=50
 Authorization: {YOUR_AUTH}
 ```
 
-**Response:** Same format as #2, but `status = "DELIVERED"`
+**Example:**
+```http
+GET https://erp.example.com/api/orders?customer_id=1000042&status=delivered&limit=50
+```
+
+**Response:** Same format as #3, but `status = "DELIVERED"`
 
 **Your endpoint:** `_______________________________________________`
 
@@ -130,7 +166,7 @@ Authorization: {YOUR_AUTH}
 
 ---
 
-## 4. POST New Order
+## 5. POST New Order
 
 **We call this when:** Customer clicks "Submit Order"
 
@@ -141,7 +177,7 @@ Authorization: {YOUR_AUTH}
 Content-Type: application/json
 
 {
-  "customer_id": "CUST-123",
+  "customer_id": "1000042",
   "delivery_date": "2025-03-15",
   "shipping_method": "standard", // arrival preference: "standard" | "urgent" | "specific"
   "shipping_term": "DDP", // DDP | FOB | CIF
@@ -177,16 +213,23 @@ Content-Type: application/json
 
 ## Customer ID Mapping
 
-**Your System:** Uses `customer_id` (example: "CUST-123")
+**Your System:** Uses numeric `customer_id` (examples: "1000042", "1000227", "1000212")
+
 **Our System:** Uses `org_id` (internal UUID)
 
 **Mapping:**
 ```
 organizations table:
   org_id: "550e8400-..."           ← Our internal ID
-  erp_customer_id: "CUST-123"      ← YOUR customer ID (stored here)
+  org_name: "Aginbrook"            ← Customer name
+  erp_customer_id: "1000042"       ← YOUR customer ID (stored here)
 ```
 
-When calling YOUR APIs, we ALWAYS use YOUR `customer_id`.
+**Onboarding Flow:**
+1. Business team creates new customer account in MyPak
+2. During setup, we call `GET /customers/search?name=Aginbrook`
+3. ERP returns `customer_id: "1000042"`
+4. We store this in `organizations.erp_customer_id`
+5. From then on, all API calls use YOUR `customer_id`
 
 ---

@@ -40,7 +40,7 @@ The app uses a **dev-only state switcher** for testing different UI scenarios wi
 - `src/lib/data/mock-scenarios.ts` - All demo state data
 - `src/app/page.tsx` & `src/app/orders/page.tsx` - Load state on mount
 
-**Documentation:** `docs-dev/guides/state-management.md`
+**Documentation:** `docs/guides/state-management.md`
 
 ### Status System
 
@@ -62,7 +62,7 @@ import { calculateProductStatus } from '@/lib/calculations';
 const status = calculateProductStatus(weeksRemaining, targetSOH);
 ```
 
-**Documentation:** `docs-dev/design/status-system.md`
+**Documentation:** `docs/design/status-system.md`
 
 ### Component Design System
 
@@ -98,7 +98,7 @@ const status = calculateProductStatus(weeksRemaining, targetSOH);
 - Spacing system
 - Typography scale
 
-**Documentation:** `docs-dev/design/component-system.md`
+**Documentation:** `docs/design/component-system.md`
 
 ### Data Layer
 
@@ -211,11 +211,12 @@ useEffect(() => {
 
 ## Documentation Structure
 
-- **Quick Start:** `docs-dev/guides/walkthrough.md`
-- **State System:** `docs-dev/guides/state-management.md`
-- **Component System:** `docs-dev/design/component-system.md`
-- **State Designs:** `docs-dev/states/` (healthy.md is complete, others TBD)
-- **Product Specs:** `docs/` (original wireframes, specs, prototype)
+- **Quick Start:** `docs/guides/walkthrough.md`
+- **State System:** `docs/guides/state-management.md`
+- **Component System:** `docs/design/component-system.md`
+- **State Designs:** `docs/states/` (healthy.md is complete, others TBD)
+- **Backend Planning:** `docs/backend-planning/` (API specs, database models, algorithms for future implementation)
+- **Historical Context:** `archive/` (original wireframes, specs, prototypes)
 
 ## Important Context
 
