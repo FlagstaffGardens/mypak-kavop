@@ -107,3 +107,24 @@ export interface StockoutCalculation {
   weeksRemaining: number;
   status: ProductStatus;
 }
+
+// Database models
+export interface Organization {
+  org_id: string;
+  org_name: string;
+  mypak_customer_name: string;
+  kavop_token: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface User {
+  user_id: string;
+  org_id: string;
+  email: string;
+  name: string;
+  password: string;
+  role: "org_user" | "platform_admin";
+  created_at: Date;
+  last_login_at: Date | null;
+}
