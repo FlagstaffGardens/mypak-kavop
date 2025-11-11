@@ -10,13 +10,13 @@ export const organizations = pgTable("organizations", {
 });
 
 export const users = pgTable("users", {
-  id: text("id").primaryKey(),
+  id: uuid("user_id").primaryKey().defaultRandom(),
   orgId: uuid("org_id").references(() => organizations.org_id, { onDelete: "cascade" }), // Nullable for platform_admin
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   password: text("password").notNull(), // Plain-text for now
   role: text("role").notNull().default("org_user"), // "org_user" | "platform_admin"
-  createdAt: timestamp("createdAt").notNull().defaultNow(),
-  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
 });
