@@ -2,17 +2,34 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { OrganizationCard } from "@/components/admin/OrganizationCard";
 
-async function getOrganizations() {
+async function getOrganizationsWithUsers() {
   const response = await fetch(
     `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/admin/organizations`,
     { cache: "no-store" }
   );
   const data = await response.json();
-  return data.organizations || [];
+  const orgs = data.organizations || [];
+
+  // Fetch users for each org
+  const orgsWithUsers = await Promise.all(
+    orgs.map(async (org: any) => {
+      const usersResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/admin/organizations/${org.org_id}/users`,
+        { cache: "no-store" }
+      );
+      const usersData = await usersResponse.json();
+      return {
+        ...org,
+        users: usersData.users || [],
+      };
+    })
+  );
+
+  return orgsWithUsers;
 }
 
 export default async function OrganizationsPage() {
-  const organizations = await getOrganizations();
+  const organizations = await getOrganizationsWithUsers();
 
   return (
     <div>
@@ -25,7 +42,12 @@ export default async function OrganizationsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {organizations.map((org: any) => (
-          <OrganizationCard key={org.org_id} organization={org} />
+          <OrganizationCard
+            key={org.org_id}
+            organization={org}
+            userCount={org.users.length}
+            userEmails={org.users.map((u: any) => u.email)}
+          />
         ))}
       </div>
 
