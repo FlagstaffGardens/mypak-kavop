@@ -14,16 +14,15 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith("/sign-in");
+  const isAdminPage = pathname?.startsWith("/admin");
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {isAuthPage ? (
-            // Auth pages - no sidebar, full screen
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-              {children}
-            </div>
+          {isAuthPage || isAdminPage ? (
+            // Auth pages and admin pages - no regular sidebar, handled by their own layouts
+            <>{children}</>
           ) : (
             // App pages - with sidebar
             <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">

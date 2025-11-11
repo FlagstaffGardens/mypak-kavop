@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useSession, signOut } from '@/lib/auth-client';
+import { useAuth } from '@/hooks/useAuth';
 
 // Sub-component for Orders navigation that uses useSearchParams
 function OrdersSubNav({ isCollapsed }: { isCollapsed: boolean }) {
@@ -62,7 +62,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { data: session } = useSession();
+  const { user, signOut } = useAuth();
 
   // Always start with default values to avoid hydration mismatch
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -103,20 +103,16 @@ export function Sidebar() {
     },
   ];
 
-  // Get user data from session
-  const user = session?.user
+  // Add initials to user data
+  const userWithInitials = user
     ? {
-        name: session.user.name || 'User',
-        email: session.user.email || '',
-        initials: session.user.name
-          ? session.user.name
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2)
-          : 'U',
-        role: session.user.role,
+        ...user,
+        initials: user.name
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2),
       }
     : null;
 
@@ -279,7 +275,7 @@ export function Sidebar() {
               )}>
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="bg-blue-600 text-white text-xs font-medium">
-                    {user.initials}
+                    {userWithInitials?.initials || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className={cn(
@@ -287,10 +283,10 @@ export function Sidebar() {
                   isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
                 )}>
                   <span className="text-xs font-medium text-gray-900 dark:text-gray-50 truncate whitespace-nowrap">
-                    {user.name}
+                    {userWithInitials?.name || 'User'}
                   </span>
                   <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate whitespace-nowrap">
-                    {user.email}
+                    {userWithInitials?.email || ''}
                   </span>
                 </div>
               </div>

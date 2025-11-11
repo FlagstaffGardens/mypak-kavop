@@ -1,6 +1,6 @@
 'use client';
 
-import { Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceArea } from 'recharts';
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, ReferenceArea } from 'recharts';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { addDays, format, parse } from 'date-fns';
 import type { Product, Order } from '@/lib/types';
@@ -152,70 +152,68 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
 
   return (
     <ChartContainer config={chartConfig} className="h-full w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 20, right: 5, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(215, 20%, 90%)" vertical={false} />
-          <XAxis
-            dataKey="date"
-            tick={{ fontSize: 10 }}
-            tickLine={false}
-            axisLine={false}
-            interval="preserveStartEnd"
-            allowDuplicatedCategory={false}
-          />
-          <YAxis
-            tick={{ fontSize: 10 }}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-          />
-          <ChartTooltip content={<CustomTooltip />} />
+      <LineChart data={data} margin={{ top: 20, right: 5, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(215, 20%, 90%)" vertical={false} />
+        <XAxis
+          dataKey="date"
+          tick={{ fontSize: 10 }}
+          tickLine={false}
+          axisLine={false}
+          interval="preserveStartEnd"
+          allowDuplicatedCategory={false}
+        />
+        <YAxis
+          tick={{ fontSize: 10 }}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+        />
+        <ChartTooltip content={<CustomTooltip />} />
 
-          {/* Order arrival areas */}
-          {data.map((point, idx) => {
-            if (point.isDelivery) {
-              return (
-                <ReferenceArea
-                  key={`delivery-${idx}`}
-                  x1={point.date}
-                  x2={point.date}
-                  fill="hsl(217, 91%, 60%)"
-                  fillOpacity={0.08}
-                  stroke="hsl(217, 91%, 60%)"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  label={{
-                    value: `↑ ${point.orderNumber}`,
-                    position: 'top',
-                    fill: 'hsl(217, 91%, 40%)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    offset: 8,
-                  }}
-                />
-              );
-            }
-            return null;
-          })}
+        {/* Order arrival areas */}
+        {data.map((point, idx) => {
+          if (point.isDelivery) {
+            return (
+              <ReferenceArea
+                key={`delivery-${idx}`}
+                x1={point.date}
+                x2={point.date}
+                fill="hsl(217, 91%, 60%)"
+                fillOpacity={0.08}
+                stroke="hsl(217, 91%, 60%)"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                label={{
+                  value: `↑ ${point.orderNumber}`,
+                  position: 'top',
+                  fill: 'hsl(217, 91%, 40%)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  offset: 8,
+                }}
+              />
+            );
+          }
+          return null;
+        })}
 
-          <Line
-            type="monotone"
-            dataKey="target"
-            stroke="var(--color-target)"
-            strokeWidth={1}
-            strokeDasharray="5 5"
-            dot={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="stock"
-            stroke="var(--color-stock)"
-            strokeWidth={2}
-            dot={<CustomDot />}
-            activeDot={{ r: 5 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+        <Line
+          type="monotone"
+          dataKey="target"
+          stroke="var(--color-target)"
+          strokeWidth={1}
+          strokeDasharray="5 5"
+          dot={false}
+        />
+        <Line
+          type="monotone"
+          dataKey="stock"
+          stroke="var(--color-stock)"
+          strokeWidth={2}
+          dot={<CustomDot />}
+          activeDot={{ r: 5 }}
+        />
+      </LineChart>
     </ChartContainer>
   );
 }

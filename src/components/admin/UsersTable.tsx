@@ -16,13 +16,16 @@ import { User } from "@/lib/types";
 
 interface UsersTableProps {
   users: User[];
+  orgId: string;
+  onUserDeleted?: () => void;
 }
 
-export function UsersTable({ users }: UsersTableProps) {
+export function UsersTable({ users, orgId, onUserDeleted }: UsersTableProps) {
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(
     new Set()
   );
   const [copiedUserId, setCopiedUserId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   function togglePassword(userId: string) {
     setVisiblePasswords((prev) => {
@@ -48,6 +51,35 @@ export function UsersTable({ users }: UsersTableProps) {
     await navigator.clipboard.writeText(password);
     setCopiedUserId(userId);
     setTimeout(() => setCopiedUserId(null), 2000);
+  }
+
+  async function handleDeleteUser(userId: string, userName: string) {
+    if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingUserId(userId);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete user");
+      }
+
+      // Refresh the page or call callback
+      if (onUserDeleted) {
+        onUserDeleted();
+      } else {
+        window.location.reload();
+      }
+    } catch (error) {
+      alert("Failed to delete user. Please try again.");
+      console.error(error);
+    } finally {
+      setDeletingUserId(null);
+    }
   }
 
   return (
@@ -107,8 +139,13 @@ export function UsersTable({ users }: UsersTableProps) {
                   }
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm">
-                    Delete
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteUser(user.user_id, user.name)}
+                    disabled={deletingUserId === user.user_id}
+                  >
+                    {deletingUserId === user.user_id ? "Deleting..." : "Delete"}
                   </Button>
                 </TableCell>
               </TableRow>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "@/lib/auth-client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
-  const { data: session } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -56,12 +56,16 @@ export default function SettingsPage() {
     }
   };
 
-  if (!session) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-gray-500">Loading...</p>
       </div>
     );
+  }
+
+  if (!user) {
+    return null;
   }
 
   return (
@@ -78,16 +82,16 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div>
               <Label className="text-gray-500">Name</Label>
-              <p className="text-lg font-medium">{session.user.name}</p>
+              <p className="text-lg font-medium">{user.name}</p>
             </div>
             <div>
               <Label className="text-gray-500">Email</Label>
-              <p className="text-lg font-medium">{session.user.email}</p>
+              <p className="text-lg font-medium">{user.email}</p>
             </div>
             <div>
               <Label className="text-gray-500">Role</Label>
               <p className="text-lg font-medium">
-                {session.user.role === "platform_admin" ? "Platform Admin" : "Organization User"}
+                {user.role === "platform_admin" ? "Platform Admin" : "Organization User"}
               </p>
             </div>
           </CardContent>

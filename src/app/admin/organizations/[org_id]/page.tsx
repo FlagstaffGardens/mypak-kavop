@@ -1,26 +1,27 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UsersTable } from "@/components/admin/UsersTable";
+import { getCurrentUser } from "@/lib/auth/jwt";
+import { db } from "@/lib/db";
+import { organizations, users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 async function getOrganization(orgId: string) {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/admin/organizations`,
-    { cache: "no-store" }
-  );
-  const data = await response.json();
-  const org = data.organizations?.find((o: any) => o.org_id === orgId);
+  const [org] = await db
+    .select()
+    .from(organizations)
+    .where(eq(organizations.org_id, orgId));
   return org || null;
 }
 
 async function getOrgUsers(orgId: string) {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/admin/organizations/${orgId}/users`,
-    { cache: "no-store" }
-  );
-  const data = await response.json();
-  return data.users || [];
+  const orgUsers = await db
+    .select()
+    .from(users)
+    .where(eq(users.orgId, orgId));
+  return orgUsers;
 }
 
 export default async function OrganizationDetailPage({
@@ -28,6 +29,12 @@ export default async function OrganizationDetailPage({
 }: {
   params: Promise<{ org_id: string }>;
 }) {
+  // Check authentication
+  const user = await getCurrentUser();
+  if (!user || user.role !== "platform_admin") {
+    redirect("/sign-in");
+  }
+
   const { org_id } = await params;
   const org = await getOrganization(org_id);
   const users = await getOrgUsers(org_id);
@@ -56,7 +63,9 @@ export default async function OrganizationDetailPage({
               Created {new Date(org.created_at).toLocaleDateString()}
             </p>
           </div>
-          <Button variant="outline">Edit</Button>
+          <Button variant="outline" disabled title="Coming soon">
+            Edit
+          </Button>
         </div>
       </div>
 
@@ -97,7 +106,7 @@ export default async function OrganizationDetailPage({
             No users yet. Add users to get started.
           </Card>
         ) : (
-          <UsersTable users={users} />
+          <UsersTable users={users} orgId={org.org_id} />
         )}
       </div>
     </div>

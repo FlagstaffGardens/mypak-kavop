@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getCurrentUser } from "@/lib/auth/jwt";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const currentUser = await getCurrentUser();
 
-  if (!session) {
+  if (!currentUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -20,7 +19,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Get user from database
-  const [user] = await db.select().from(users).where(eq(users.id, session.user.id));
+  const [user] = await db.select().from(users).where(eq(users.id, currentUser.userId));
 
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -32,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Update password (plain-text)
-  await db.update(users).set({ password: newPassword }).where(eq(users.id, session.user.id));
+  await db.update(users).set({ password: newPassword }).where(eq(users.id, currentUser.userId));
 
   return NextResponse.json({ success: true });
 }

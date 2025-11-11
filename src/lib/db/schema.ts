@@ -10,40 +10,13 @@ export const organizations = pgTable("organizations", {
 });
 
 export const users = pgTable("users", {
-  id: uuid("user_id").defaultRandom().primaryKey(), // TypeScript: id, Database: user_id
+  id: text("id").primaryKey(),
   orgId: uuid("org_id").references(() => organizations.org_id, { onDelete: "cascade" }), // Nullable for platform_admin
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
-  password: text("password").notNull(),
+  password: text("password").notNull(), // Plain-text for now
   role: text("role").notNull().default("org_user"), // "org_user" | "platform_admin"
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
-});
-
-export const session = pgTable("session", {
-  id: text("id").primaryKey(),
-  expiresAt: timestamp("expiresAt").notNull(),
-  token: text("token").notNull().unique(),
-  createdAt: timestamp("createdAt").notNull(),
-  updatedAt: timestamp("updatedAt").notNull(),
-  ipAddress: text("ipAddress"),
-  userAgent: text("userAgent"),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-});
-
-// Account table required by BetterAuth (for OAuth providers)
-export const account = pgTable("account", {
-  id: text("id").primaryKey(),
-  accountId: text("accountId").notNull(),
-  providerId: text("providerId").notNull(),
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  accessToken: text("accessToken"),
-  refreshToken: text("refreshToken"),
-  idToken: text("idToken"),
-  accessTokenExpiresAt: timestamp("accessTokenExpiresAt"),
-  refreshTokenExpiresAt: timestamp("refreshTokenExpiresAt"),
-  scope: text("scope"),
-  password: text("password"),
-  createdAt: timestamp("createdAt").notNull(),
-  updatedAt: timestamp("updatedAt").notNull(),
 });

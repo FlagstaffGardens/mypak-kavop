@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,18 +21,30 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      await authClient.signIn.email({
-        email,
-        password,
-        rememberMe,
+      const response = await fetch("/api/auth/sign-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
-      router.push("/");
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Invalid email or password");
+        setLoading(false);
+        return;
+      }
+
+      // Redirect based on user role
+      if (data.user.role === "platform_admin") {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
       router.refresh();
     } catch (err) {
-      setError("Invalid email or password");
+      setError("An error occurred. Please try again.");
       console.error("Sign in error:", err);
-    } finally {
       setLoading(false);
     }
   };

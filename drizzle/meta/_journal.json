@@ -15,6 +15,13 @@
       "when": 1762848500306,
       "tag": "0001_dashing_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762867361157,
+      "tag": "0002_noisy_winter_soldier",
+      "breakpoints": true
     }
   ]
 }

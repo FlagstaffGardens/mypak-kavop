@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { getCurrentUser } from "@/lib/auth/jwt";
 import { generatePassword } from "@/lib/utils/password";
 import { generateNameFromEmail } from "@/lib/utils/name";
 import { z } from "zod";
@@ -16,8 +15,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ org_id: string }> }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || session.user.role !== "platform_admin") {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "platform_admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -28,6 +27,7 @@ export async function POST(
 
     // Generate users data
     const usersData = emails.map((email) => ({
+      id: crypto.randomUUID(),
       orgId: org_id,
       email,
       name: generateNameFromEmail(email),
@@ -64,8 +64,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ org_id: string }> }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || session.user.role !== "platform_admin") {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "platform_admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

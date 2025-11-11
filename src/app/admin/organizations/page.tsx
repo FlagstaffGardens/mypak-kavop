@@ -1,34 +1,52 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { OrganizationCard } from "@/components/admin/OrganizationCard";
+import { getCurrentUser } from "@/lib/auth/jwt";
+import { db } from "@/lib/db";
+import { organizations, users } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 async function getOrganizationsWithUsers() {
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/admin/organizations`,
-    { cache: "no-store" }
-  );
-  const data = await response.json();
-  const orgs = data.organizations || [];
+  // Fetch directly from database with optimized query
+  const orgs = await db.select().from(organizations);
 
-  // Fetch users for each org
-  const orgsWithUsers = await Promise.all(
-    orgs.map(async (org: any) => {
-      const usersResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/admin/organizations/${org.org_id}/users`,
-        { cache: "no-store" }
-      );
-      const usersData = await usersResponse.json();
-      return {
-        ...org,
-        users: usersData.users || [],
-      };
-    })
-  );
+  if (orgs.length === 0) {
+    return [];
+  }
 
-  return orgsWithUsers;
+  // Fetch all users for all orgs in one query
+  const allUsers = await db
+    .select()
+    .from(users)
+    .where(
+      eq(users.role, "org_user") // Only fetch org users, not admins
+    );
+
+  // Group users by org_id
+  const usersByOrg = allUsers.reduce((acc, user) => {
+    if (!user.orgId) return acc;
+    if (!acc[user.orgId]) {
+      acc[user.orgId] = [];
+    }
+    acc[user.orgId].push(user);
+    return acc;
+  }, {} as Record<string, typeof allUsers>);
+
+  // Combine orgs with their users
+  return orgs.map((org) => ({
+    ...org,
+    users: usersByOrg[org.org_id] || [],
+  }));
 }
 
 export default async function OrganizationsPage() {
+  // Check authentication
+  const user = await getCurrentUser();
+  if (!user || user.role !== "platform_admin") {
+    redirect("/sign-in");
+  }
+
   const organizations = await getOrganizationsWithUsers();
 
   return (

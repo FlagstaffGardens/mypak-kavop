@@ -2,153 +2,179 @@
 
 ## Overview
 
-MyPak Connect uses **BetterAuth** for authentication with plain-text password storage (per business requirement - admins must view passwords).
+MyPak Connect uses a **custom JWT-based authentication system** with plain-text password storage (per business requirement - admins must view user passwords for support).
+
+### Key Technologies
+- **jose** library for JWT signing and verification
+- **httpOnly cookies** for secure token storage
+- **Next.js middleware** for route protection
+- **Drizzle ORM** for database queries
 
 ## Database Schema
 
 ### Users Table (`users`)
 ```sql
-user_id         UUID PRIMARY KEY            -- Database column
+user_id         UUID PRIMARY KEY
 org_id          UUID (nullable)             -- NULL for platform_admin
 email           TEXT UNIQUE
 name            TEXT
 password        TEXT                        -- Plain-text (not hashed)
 role            TEXT                        -- 'platform_admin' | 'org_user'
 created_at      TIMESTAMP
-last_login_at   TIMESTAMP
+updated_at      TIMESTAMP
+last_login_at   TIMESTAMP (nullable)
 ```
 
 **Schema Mapping (TypeScript ↔ Database):**
-- `id` ↔ `user_id`
-- `orgId` ↔ `org_id`
-- `createdAt` ↔ `created_at`
-- `lastLoginAt` ↔ `last_login_at`
+- `user_id` (column) ↔ `id` (Drizzle property)
+- `org_id` ↔ `orgId`
+- `created_at` ↔ `createdAt`
+- `updated_at` ↔ `updatedAt`
+- `last_login_at` ↔ `lastLoginAt`
 
-### Account Table (`account`)
-**Purpose:** BetterAuth stores authentication credentials here
+### Removed Tables
+The following tables from the previous BetterAuth implementation have been removed:
+- ~~`account`~~ (no longer needed with custom JWT)
+- ~~`session`~~ (sessions managed via JWT, not database)
 
-```sql
-id                          TEXT PRIMARY KEY
-accountId                   TEXT                    -- Email for credential provider
-providerId                  TEXT                    -- 'credential' for email/password
-user_id                     UUID                    -- FK to users.user_id
-password                    TEXT                    -- Plain-text (for auth)
-accessToken                 TEXT                    -- NULL for credentials
-refreshToken                TEXT                    -- NULL for credentials
-idToken                     TEXT                    -- NULL for credentials
-accessTokenExpiresAt        TIMESTAMP               -- NULL for credentials
-refreshTokenExpiresAt       TIMESTAMP               -- NULL for credentials
-scope                       TEXT                    -- NULL for credentials
-createdAt                   TIMESTAMP
-updatedAt                   TIMESTAMP
-```
+## Architecture
 
-**Schema Mapping:**
-- `userId` ↔ `user_id`
-
-### Session Table (`session`)
-**Purpose:** BetterAuth manages active sessions here
-
-```sql
-id              TEXT PRIMARY KEY
-expiresAt       TIMESTAMP
-token           TEXT UNIQUE
-createdAt       TIMESTAMP
-updatedAt       TIMESTAMP
-ipAddress       TEXT
-userAgent       TEXT
-user_id         UUID                        -- FK to users.user_id
-```
-
-**Schema Mapping:**
-- `userId` ↔ `user_id`
-
-## Why Dual Password Storage?
-
-**Both tables store passwords for different purposes:**
-
-| Table | Purpose | Used By |
-|-------|---------|---------|
-| `users.password` | Admin viewing (password unhide feature) | Admin panel UI |
-| `account.password` | Authentication | BetterAuth sign-in |
-
-**When user changes password:** Update BOTH tables to keep them in sync.
-
-## BetterAuth Configuration
-
-### Custom Password Handling
-
+### JWT Payload Structure
 ```typescript
-// src/lib/auth.ts
-emailAndPassword: {
-  enabled: true,
-  password: {
-    // Hash function: Return plain-text (no hashing)
-    hash: async (password: string) => password,
-
-    // Verify function: Direct comparison
-    verify: async ({ password, hash }) => password === hash,
-  },
+interface JWTPayload {
+  userId: string;
+  email: string;
+  name: string;
+  role: "platform_admin" | "org_user";
+  orgId: string | null;
+  iat: number;    // Issued at (Unix timestamp)
+  exp: number;    // Expires at (Unix timestamp)
 }
 ```
 
-### Session Settings
+### Token Expiration
+- **Default**: 7 days
+- **"Remember Me"**: 365 days (1 year)
+- Configured via environment variable: `BETTER_AUTH_SECRET`
 
+### Cookie Configuration
 ```typescript
-session: {
-  expiresIn: 60 * 60 * 24 * 7,    // 7 days
-  updateAge: 60 * 60 * 24,         // Refresh after 1 day
+{
+  httpOnly: true,                    // Not accessible via JavaScript
+  secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
+  sameSite: 'lax',                   // CSRF protection
+  path: '/',
+  maxAge: 7 * 24 * 60 * 60           // 7 days (or 365 days with Remember Me)
 }
 ```
-
-## Critical Schema Mapping Fix
-
-**Problem:** BetterAuth expects specific TypeScript property names, but our database uses snake_case.
-
-**Solution:** Drizzle schema property names match BetterAuth expectations:
-
-```typescript
-export const users = pgTable("users", {
-  id: uuid("user_id").primaryKey(),           // TS: id, DB: user_id ✅
-  orgId: uuid("org_id"),                      // TS: orgId, DB: org_id ✅
-  email: text("email"),
-  // ...
-});
-
-export const account = pgTable("account", {
-  userId: uuid("user_id").references(() => users.id),  // TS: userId ✅
-  // ...
-});
-```
-
-**Why this works:**
-- TypeScript code uses: `users.id`, `users.orgId`, `account.userId`
-- Database has: `user_id`, `org_id`, `user_id`
-- Drizzle handles the mapping automatically
 
 ## Authentication Flow
 
-### Sign-In
+### Sign-In Process
 1. User submits email/password at `/sign-in`
-2. BetterAuth finds user by email in `users` table
-3. BetterAuth looks up credentials in `account` table (where `providerId = 'credential'`)
-4. BetterAuth verifies password using custom `verify()` function (plain-text comparison)
-5. BetterAuth creates session in `session` table
-6. Session cookie set (httpOnly, secure in production)
-7. User redirected to dashboard
+2. API endpoint (`/api/auth/sign-in`) validates credentials:
+   - Queries `users` table for matching email
+   - Compares password (plain-text comparison)
+3. If valid:
+   - Creates JWT with user data
+   - Sets httpOnly cookie with token
+   - Returns user object to client
+4. User redirected to dashboard (or `/admin` for platform admins)
 
-### Route Protection
-Middleware at `src/middleware.ts`:
-- All routes require authentication (except `/sign-in`)
-- `/admin/*` routes check: `session.user.role === 'platform_admin'`
-- Unauthorized users redirected appropriately
+### Session Verification
+1. Every request includes JWT cookie
+2. Middleware extracts and verifies JWT
+3. Decoded payload provides user identity and role
+4. No database query required for session verification
 
-### Password Change
-1. User goes to `/settings`
-2. Submits current + new password
-3. API verifies current password (plain-text comparison)
-4. API updates `users.password` (for admin viewing)
-5. API should also update `account.password` (for future logins)
+### Sign-Out Process
+1. User clicks "Log out"
+2. Client calls `/api/auth/sign-out`
+3. Server deletes auth cookie
+4. User redirected to `/sign-in`
+
+## Route Protection
+
+### Middleware (`src/middleware.ts`)
+**Protected Routes:**
+- All routes except `/sign-in` require authentication
+- `/admin/*` routes require `role === 'platform_admin'`
+
+**Redirect Rules:**
+- Unauthenticated users → `/sign-in`
+- Platform admins accessing non-admin routes → `/admin`
+- Regular users accessing admin routes → `/`
+
+### API Route Protection
+All admin API routes verify authentication:
+```typescript
+const user = await getCurrentUser();
+if (!user || user.role !== "platform_admin") {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
+```
+
+## Core Files
+
+### Authentication Library
+**`src/lib/auth/jwt.ts`**
+Core JWT utilities:
+- `signJWT()` - Create JWT token
+- `verifyJWT()` - Validate and decode JWT
+- `setAuthCookie()` - Set httpOnly cookie
+- `getAuthCookie()` - Read cookie value
+- `deleteAuthCookie()` - Remove cookie (sign out)
+- `getCurrentUser()` - Get current user from cookie
+
+**`src/lib/auth/password.ts`**
+Password verification:
+- `verifyPassword()` - Plain-text password comparison
+
+### API Endpoints
+**`/api/auth/sign-in`** (POST)
+- Body: `{ email, password, rememberMe? }`
+- Response: `{ user: { id, email, name, role, orgId } }`
+- Sets auth cookie
+
+**`/api/auth/sign-out`** (POST)
+- No body required
+- Deletes auth cookie
+- Response: `{ success: true }`
+
+**`/api/auth/me`** (GET)
+- Returns current user from JWT
+- Response: `{ user: JWTPayload }` or `{ user: null }`
+
+**`/api/user/change-password`** (POST)
+- Body: `{ currentPassword, newPassword, confirmPassword }`
+- Verifies current password, updates `users.password`
+
+**`/api/admin/users/[user_id]`** (DELETE)
+- Admin only
+- Deletes user from database
+
+### React Hooks
+**`src/hooks/useAuth.ts`**
+Client-side authentication hook:
+```typescript
+const { user, loading, signOut } = useAuth();
+```
+- Fetches current user on mount
+- Provides sign-out function
+- Updates state reactively
+
+### UI Components
+- `/src/app/sign-in/page.tsx` - Sign-in form
+- `/src/app/settings/page.tsx` - Password change form
+- `/src/components/shared/Sidebar.tsx` - User dropdown menu
+- `/src/app/admin/layout.tsx` - Admin sidebar
+
+### Middleware
+**`src/middleware.ts`**
+- Runs on every request
+- Verifies JWT from cookie
+- Enforces role-based access control
+- Handles redirects
 
 ## Admin Credentials
 
@@ -162,94 +188,156 @@ Created via: `scripts/create-admin.ts`
 
 ## Security Considerations
 
-### Plain-Text Passwords
-- **Risk:** Database compromise exposes all passwords
-- **Mitigation:**
-  - Restrict database access to authorized personnel
-  - Use VPN/firewall rules
-  - Consider audit logging for password views
-- **Business Decision:** Accepted trade-off for admin password viewing requirement
+### Plain-Text Password Storage
+**Risk:** Database compromise exposes all passwords
 
-### Session Security
-BetterAuth provides:
-- HttpOnly cookies (not accessible via JavaScript)
+**Mitigations:**
+- Restrict database access (VPN, firewall rules)
+- Use secure connection strings (SSL)
+- Monitor database access logs
+- Consider audit logging for password views in admin panel
+
+**Business Decision:** Accepted trade-off for admin password viewing requirement (customer support needs)
+
+### JWT Security
+**Protections:**
+- HttpOnly cookies (prevents XSS attacks)
 - Secure flag in production (HTTPS only)
-- CSRF protection
-- Session expiration (7 days)
-- Session refresh (1 day update age)
+- SameSite=lax (CSRF protection)
+- Short expiration times (7 days default)
+- Secret key stored in environment variable
 
-## Migration History
+**Vulnerabilities:**
+- JWT cannot be revoked (until expiration)
+- Stolen token grants full access until expiry
+- No session revocation mechanism
 
-### Initial Setup (2025-11-11)
-1. Installed BetterAuth + Drizzle adapter
-2. Created `account` and `session` tables
-3. Migrated passwords from `users` to `account` table
-4. Fixed schema field mapping (`user_id` → `id`, `org_id` → `orgId`)
-5. Configured custom plain-text password handlers
+**Future Enhancement:** Add token revocation list (database) for critical operations
 
-**Migration script:** `scripts/create-admin.ts` (creates platform admin + populates account table)
+### Password Change Security
+- Requires current password verification
+- Client-side confirmation matching
+- Server-side validation
+- Updates stored password immediately
 
-## Files Reference
+## Migration from BetterAuth
 
-### Core Auth Files
-- `/src/lib/auth.ts` - BetterAuth server config
-- `/src/lib/auth-client.ts` - Client-side auth hooks
-- `/src/middleware.ts` - Route protection
-- `/src/app/api/auth/[...all]/route.ts` - BetterAuth API handler
+### What Was Removed
+1. **BetterAuth package** (36 dependencies)
+2. **Database tables:** `account`, `session`
+3. **Database columns:** `users.emailVerified`, `users.image`
+4. **Files:**
+   - `src/lib/auth.ts` (BetterAuth config)
+   - `src/lib/auth-client.ts` (BetterAuth React client)
+   - `src/app/api/auth/[...all]/route.ts` (BetterAuth API handler)
+   - Debug scripts: `check-account.ts`, `check-session-table.ts`, `cleanup-auth-tables.ts`
+   - Documentation: `BETTERAUTH_FIX.md`, `migrate-betterauth.ts.bak`
 
-### Auth UI
-- `/src/app/sign-in/page.tsx` - Sign-in form
-- `/src/app/settings/page.tsx` - User settings (password change)
-- `/src/components/shared/Sidebar.tsx` - Shows auth state, sign-out
+### What Was Added
+1. **Custom JWT implementation** (`src/lib/auth/jwt.ts`)
+2. **Password utilities** (`src/lib/auth/password.ts`)
+3. **Auth API endpoints:**
+   - `/api/auth/sign-in`
+   - `/api/auth/sign-out`
+   - `/api/auth/me`
+4. **React hook** (`src/hooks/useAuth.ts`)
+5. **Updated middleware** (JWT-based instead of database sessions)
 
-### Auth APIs
-- `/src/app/api/user/change-password/route.ts` - Password change endpoint
-
-### Database
-- `/src/lib/db/schema.ts` - Drizzle schema (users, account, session tables)
-- `/src/lib/db/index.ts` - Database client
+### Benefits of Custom JWT
+- **Faster:** No database queries for session verification
+- **Simpler:** ~200 lines of code vs 36 packages
+- **Full control:** Customize token payload and expiration
+- **Cleaner database:** No session/account tables to manage
+- **Easier debugging:** Transparent token structure
 
 ## Troubleshooting
 
-### "userId does not exist in schema" Error
-**Cause:** Schema property name doesn't match BetterAuth expectation
-**Fix:** Ensure Drizzle schema uses correct TypeScript property names:
-- Users: `id`, `orgId`, `createdAt`
-- Account: `userId`
-- Session: `userId`
-
-### Sign-in fails with 500 error
+### "Unauthorized" errors on protected routes
 **Check:**
-1. Account table populated? (Run migration script)
-2. Password exists in account table?
-3. Schema field mappings correct?
-4. Database connection working?
+1. Cookie present? (DevTools → Application → Cookies)
+2. JWT valid? (Not expired)
+3. User role correct for admin routes?
+4. Environment variable `BETTER_AUTH_SECRET` set?
 
-### Can't view password in admin panel
+### Sign-in returns 401
 **Check:**
-1. `users.password` field still exists?
-2. UsersTable component not modified?
-3. Password exists for that user?
+1. User exists in database?
+2. Email/password match exactly?
+3. Database connection working?
+
+### Can't access admin panel
+**Check:**
+1. User role is `platform_admin`?
+2. Middleware redirecting correctly?
+3. JWT payload contains correct role?
+
+### Password not visible in admin panel
+**Check:**
+1. `users.password` column exists?
+2. Password field populated for user?
+3. UsersTable component rendering correctly?
 
 ## Future Enhancements
 
-### Potential Improvements
-1. **Password reset flow** (email-based)
-2. **2FA/MFA** (optional for high-security accounts)
-3. **Audit logging** (track who viewed which passwords)
-4. **Encrypted storage** (reversible encryption instead of plain-text)
-5. **Session management UI** (view/revoke active sessions)
-6. **Role permissions** (granular permissions beyond admin/user)
+### Recommended Improvements
+1. **Token Revocation** - Database table to invalidate JWTs before expiration
+2. **Refresh Tokens** - Separate long-lived tokens for session renewal
+3. **Password Reset Flow** - Email-based password recovery
+4. **2FA/MFA** - Optional two-factor authentication
+5. **Audit Logging** - Track who viewed which passwords
+6. **Rate Limiting** - Prevent brute-force attacks
+7. **Password Policy** - Enforce minimum complexity requirements
+8. **Session Management UI** - View and revoke active sessions
 
 ### Adding New Roles
-1. Update `users` table role column (add new role)
-2. Update middleware role checks
-3. Add UI conditional rendering based on role
-4. Update API auth checks
+1. Update `users` table role column enum
+2. Update `JWTPayload` interface
+3. Add middleware checks for new role
+4. Update UI conditional rendering
+5. Add API authorization checks
+
+## Environment Variables
+
+```bash
+# Required
+DATABASE_URL=postgresql://...
+BETTER_AUTH_SECRET=your-secret-key-here  # Used for JWT signing
+
+# Optional (defaults shown)
+NODE_ENV=development  # 'production' enables secure cookies
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+```
+
+## Testing
+
+### Manual Testing
+```bash
+# Sign in
+curl -X POST http://localhost:3000/api/auth/sign-in \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@mypak.com","password":"admin123"}' \
+  -c cookies.txt
+
+# Get current user
+curl http://localhost:3000/api/auth/me -b cookies.txt
+
+# Sign out
+curl -X POST http://localhost:3000/api/auth/sign-out -b cookies.txt
+```
+
+### Common Test Scenarios
+1. ✅ Platform admin can access `/admin/organizations`
+2. ✅ Regular user redirected from `/admin/*` to `/`
+3. ✅ Unauthenticated user redirected to `/sign-in`
+4. ✅ Password change updates database
+5. ✅ Sign out clears cookie and session
+6. ✅ JWT expires after configured time
+7. ✅ "Remember Me" extends JWT to 1 year
 
 ## Notes
 
-- **BetterAuth Version:** Uses Drizzle adapter with Postgres
 - **Next.js Version:** 16.0.1 (App Router)
-- **Drizzle Version:** Latest (check package.json)
+- **JWT Library:** jose (lightweight, modern)
 - **Database:** PostgreSQL (remote staging instance)
+- **Drizzle ORM:** Latest (check package.json)
+- **Migration Date:** 2025-11-11 (removed BetterAuth)
