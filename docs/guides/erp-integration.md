@@ -210,6 +210,156 @@ async function getOrgToken(): Promise<string> {
 
 ERP API returns data in **ERP's format**. We transform it to **our app's format** for consistency.
 
+---
+
+## Date Normalization (CRITICAL)
+
+### Problem: ERP Returns Multiple Date Formats
+
+The ERP backend returns delivery dates in **inconsistent formats**:
+
+```
+"26/01/2026"              // DD/MM/YYYY
+"2025-11-23"              // YYYY-MM-DD
+"5/3/2026"                // D/M/YYYY (loose format)
+"ASAP,Before Christmas"   // Special text
+null                      // Missing dates
+```
+
+Our app needs **one standard format**: `"MMM dd, yyyy"` (e.g., "Jan 26, 2026")
+
+### Solution: Automatic Date Normalization
+
+**Location:** `src/lib/erp/transforms.ts:53-176`
+
+**Function:** `normalizeErpDate(erpDate, orderedDate)`
+
+**How It Works:**
+
+```typescript
+// All these become "Jan 26, 2026":
+normalizeErpDate("26/01/2026", "...")     // DD/MM/YYYY
+normalizeErpDate("2026-01-26", "...")     // YYYY-MM-DD
+normalizeErpDate("26/1/2026", "...")      // D/M/YYYY
+
+// Special handling:
+normalizeErpDate("ASAP,Before Christmas", "2025-11-12")
+// → orderedDate + 8 weeks = "Jan 07, 2026"
+
+normalizeErpDate(null, "2025-11-12")
+// → orderedDate + 8 weeks = "Jan 07, 2026"
+```
+
+### The "ASAP = +8 Weeks" Rule
+
+**WHY 8 WEEKS?**
+
+When ERP returns `"ASAP"`, `"Before Christmas"`, or missing dates, we need a reasonable estimate for when the order will actually arrive. Based on typical lead times:
+
+- **Manufacturing:** ~3-4 weeks
+- **Shipping:** ~3-4 weeks
+- **Buffer:** ~1 week
+
+**Total:** ~8 weeks from order date
+
+**IMPORTANT:** This is an **estimate**, not a guarantee. The actual delivery date depends on production capacity and shipping schedules.
+
+**HOW TO CHANGE:**
+
+If lead times change, update **ONE place**:
+
+```typescript
+// src/lib/erp/transforms.ts:135
+
+function calculateAsapDate(orderedDate: string): string {
+  // Change this number to adjust ASAP calculation
+  const asapDate = addWeeks(orderDate, 8);  // ← Change 8 to new weeks
+  return format(asapDate, 'MMM dd, yyyy');
+}
+```
+
+**DO NOT** hardcode this logic anywhere else in the codebase.
+
+### Fallback Chain (Bulletproof)
+
+The normalization has **multiple safety layers** to guarantee we never lose date info:
+
+```
+1. Try to parse with known formats (DD/MM/YYYY, YYYY-MM-DD, etc.)
+   ↓ Failed?
+2. Use orderedDate + 8 weeks
+   ↓ Can't parse orderedDate?
+3. Use TODAY + 8 weeks
+   ↓ GUARANTEED: Always returns valid date
+```
+
+**Original date preserved** in order `comments` field if unusual:
+```
+comments: "[Original ERP date: "ASAP,Before Christmas"]"
+```
+
+### Logging & Debugging
+
+All date parsing operations log to console:
+
+**Success (📅):**
+```
+📅 [Date Parser] DD/MM/YYYY: "26/01/2026" → "Jan 26, 2026"
+📅 [Date Parser] ASAP/Special date detected: "ASAP,Before Christmas" → Using orderedDate + 8 weeks
+```
+
+**Warnings (⚠️):**
+```
+⚠️ [Date Parser] UNKNOWN FORMAT: "Q4 2026" - Using orderedDate + 8 weeks as fallback. PLEASE CHECK ERP DATA!
+```
+
+**Errors (❌):**
+```
+❌ [Date Parser] PARSING ERROR for "gibberish data"
+❌ Using orderedDate + 8 weeks as fallback. Original date: "gibberish data"
+```
+
+**Check server console** (terminal where `npm run dev` is running) to see these logs.
+
+### Supported Date Formats
+
+| Format | Example | Regex | Notes |
+|--------|---------|-------|-------|
+| DD/MM/YYYY | `"26/01/2026"` | `^\d{2}/\d{2}/\d{4}$` | Standard European |
+| YYYY-MM-DD | `"2025-11-23"` | `^\d{4}-\d{2}-\d{2}$` | ISO 8601 |
+| D/M/YYYY | `"5/3/2026"` | `^\d{1,2}/\d{1,2}/\d{4}$` | Loose format |
+| MMM dd, yyyy | `"Nov 23, 2025"` | `^[A-Za-z]{3}\s+\d{1,2},\s+\d{4}$` | Already normalized |
+| "ASAP" variants | `"ASAP,Before Christmas"` | Contains "ASAP" | orderedDate + 8 weeks |
+| Empty/null | `null` or `""` | N/A | orderedDate + 8 weeks |
+
+**Unrecognized formats** → Fallback to orderedDate + 8 weeks with warning logged.
+
+### For Engineers: Adding New Date Formats
+
+**IF** ERP starts returning a new date format (e.g., "MM-DD-YYYY"):
+
+1. **Add to `normalizeErpDate()`** in `src/lib/erp/transforms.ts`:
+
+```typescript
+// Add after existing format checks
+if (/^\d{2}-\d{2}-\d{4}$/.test(originalDate)) {
+  const parsed = parse(originalDate, 'MM-dd-yyyy', new Date());
+  if (isValidDate(parsed)) {
+    const formatted = format(parsed, 'MMM dd, yyyy');
+    console.log(`📅 [Date Parser] MM-DD-YYYY: "${originalDate}" → "${formatted}"`);
+    return formatted;
+  }
+}
+```
+
+2. **Update documentation** (this section) with new format in table above
+
+3. **DO NOT** add date parsing logic anywhere else
+
+**That's it.** All components automatically use the normalized dates from `transformErpOrder()`.
+
+---
+
 ### Example: Product Transformation
 
 **ERP Format:**
