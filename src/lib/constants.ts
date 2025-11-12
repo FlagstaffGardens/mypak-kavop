@@ -26,8 +26,8 @@ export const DEFAULT_TARGET_SOH = 6;
 /** Maximum allowed target SOH in weeks (one year) */
 export const MAX_TARGET_SOH_WEEKS = 52;
 
-/** Minimum allowed target SOH in weeks */
-export const MIN_TARGET_SOH_WEEKS = 1;
+/** Minimum allowed target SOH in weeks (0 = product no longer needed, won't trigger warnings) */
+export const MIN_TARGET_SOH_WEEKS = 0;
 
 /**
  * Status Thresholds
