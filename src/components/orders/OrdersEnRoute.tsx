@@ -1,12 +1,16 @@
 'use client';
 
-import { mockOrders } from '@/lib/data/mock-containers';
 import { Button } from '@/components/ui/button';
-import { Ship, Package, Clock } from 'lucide-react';
+import { Ship, Package } from 'lucide-react';
+import type { Order } from '@/lib/types';
 
-export function OrdersEnRoute() {
+interface OrdersEnRouteProps {
+  orders: Order[];
+}
+
+export function OrdersEnRoute({ orders }: OrdersEnRouteProps) {
   // Get only in-transit orders
-  const inTransitOrders = mockOrders.filter(order => order.type === 'IN_TRANSIT');
+  const inTransitOrders = orders.filter(order => order.type === 'IN_TRANSIT');
 
   // Status icon mapping
   const getStatusIcon = (status: string) => {

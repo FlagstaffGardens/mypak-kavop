@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { mockOrders } from '@/lib/data/mock-containers';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Search } from 'lucide-react';
 import {
@@ -11,17 +10,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import type { Order } from '@/lib/types';
 
 type StatusFilter = 'all' | 'delivered';
 type TimeFilter = '3months' | '6months' | '12months' | 'all';
 
-export function OrderHistory() {
+interface OrderHistoryProps {
+  orders: Order[];
+}
+
+export function OrderHistory({ orders }: OrderHistoryProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('12months');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Get delivered orders
-  const deliveredOrders = mockOrders.filter(order => order.type === 'DELIVERED');
+  const deliveredOrders = orders.filter(order => order.type === 'DELIVERED');
 
   // Apply filters
   const filteredOrders = deliveredOrders.filter(order => {
