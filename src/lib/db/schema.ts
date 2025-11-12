@@ -10,7 +10,7 @@ export const organizations = pgTable("organizations", {
 });
 
 export const users = pgTable("users", {
-  id: uuid("user_id").primaryKey().defaultRandom(),
+  id: uuid("id").primaryKey().defaultRandom(),
   orgId: uuid("org_id").references(() => organizations.org_id, { onDelete: "cascade" }), // Nullable for platform_admin
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
