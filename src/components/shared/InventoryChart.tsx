@@ -48,7 +48,7 @@ const CustomDot = (props: { cx?: number; cy?: number; payload?: { isDelivery?: b
 };
 
 // Custom tooltip to show delivery information
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { date: string; stock: number; target: number; isDelivery?: boolean; deliveryAmount?: number; orderNumber?: string; orderCount?: number } }> }) => {
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { date: string; stock: number; target: number; isDelivery?: boolean; deliveryAmount?: number; orderNumber?: string; orderNumbers?: string[]; orderCount?: number } }> }) => {
   if (!active || !payload?.length) return null;
 
   const data = payload[0].payload;
@@ -66,7 +66,11 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
           <p className="text-blue-700 dark:text-blue-400 font-bold text-xs uppercase tracking-wide">
             📦 {data.orderCount && data.orderCount > 1 ? `${data.orderCount} Order Arrivals` : 'Order Arrival'}
           </p>
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">{data.orderNumber}</p>
+          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+            {data.orderNumbers && data.orderNumbers.length > 1
+              ? data.orderNumbers.join(', ')  // Show all order numbers
+              : data.orderNumber}
+          </p>
           <p className="text-xs text-blue-700 dark:text-blue-300">+{data.deliveryAmount?.toLocaleString()} cartons total</p>
         </div>
       )}
@@ -154,6 +158,9 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
       ? `${ordersThisPeriod.length} orders`  // e.g., "2 orders"
       : ordersThisPeriod[0]?.orderNumber;    // e.g., "#515862"
 
+    // Collect all order numbers for tooltip
+    const orderNumbers = ordersThisPeriod.map(o => o.orderNumber);
+
     data.push({
       date: format(pointDate, 'MMM dd'),
       stock: Math.max(0, Math.round(runningStock)),
@@ -161,6 +168,7 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
       isDelivery: ordersThisPeriod.length > 0,
       deliveryAmount: totalDeliveryQuantity || undefined,
       orderNumber: deliveryLabel,
+      orderNumbers: orderNumbers.length > 0 ? orderNumbers : undefined,
       orderCount: ordersThisPeriod.length,
     });
 
