@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth/jwt";
 import { db } from "@/lib/db";
 import { organizations, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import type { User } from "@/lib/types";
 
 async function getOrganization(orgId: string) {
   const [org] = await db
@@ -16,12 +17,12 @@ async function getOrganization(orgId: string) {
   return org || null;
 }
 
-async function getOrgUsers(orgId: string) {
+async function getOrgUsers(orgId: string): Promise<User[]> {
   const orgUsers = await db
     .select()
     .from(users)
     .where(eq(users.orgId, orgId));
-  return orgUsers;
+  return orgUsers as User[];
 }
 
 export default async function OrganizationDetailPage({
