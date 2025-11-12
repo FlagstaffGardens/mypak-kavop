@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EditableNumberCell } from './EditableNumberCell';
 import { validateCurrentStock, validateWeeklyConsumption } from '@/lib/validation';
 import { calculateStockoutDate, calculateTargetStock } from '@/lib/calculations';
@@ -39,6 +40,8 @@ export function InventoryEditTable({
     rowIndex: number;
     column: 'stock' | 'consumption' | 'targetSOH';
   } | null>(null);
+
+  const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
 
   // Calculate validation states
   const getValidations = useCallback(() => {
@@ -228,11 +231,23 @@ export function InventoryEditTable({
                     className="border-b border-border hover:bg-muted/30 transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <div className="text-sm font-medium text-foreground truncate">
-                        {product.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {product.size} - {product.packCount}
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-foreground truncate">
+                            {product.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {product.size} - {product.packCount}
+                          </div>
+                        </div>
+                        {product.imageUrl && (
+                          <button
+                            onClick={() => setViewingImage({ url: product.imageUrl!, name: product.name })}
+                            className="flex-shrink-0 mt-0.5"
+                          >
+                            <Info className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-pointer transition-colors" />
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -300,6 +315,41 @@ export function InventoryEditTable({
           </div>
         )}
       </div>
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Product Label Image</DialogTitle>
+            </DialogHeader>
+            <div className="relative w-full h-full flex flex-col">
+              {/* Close button */}
+              <button
+                onClick={() => setViewingImage(null)}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+
+              {/* Image */}
+              <div className="flex-1 flex items-center justify-center p-4 bg-black/95">
+                <img
+                  src={viewingImage.url}
+                  alt={viewingImage.name}
+                  className="max-w-full max-h-[85vh] object-contain"
+                />
+              </div>
+
+              {/* Product name footer */}
+              <div className="bg-card border-t px-6 py-4">
+                <p className="text-sm font-semibold text-center">{viewingImage.name}</p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

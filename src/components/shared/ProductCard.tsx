@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Info, ChevronRight } from 'lucide-react';
+import { Info, ChevronRight, X } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { StatusBadge } from './StatusBadge';
 import { InventoryChart } from './InventoryChart';
 import { ProductDetailModal } from './ProductDetailModal';
@@ -16,6 +17,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
   const [showModal, setShowModal] = useState(false);
+  const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
   const showRunsOut = product.status === 'CRITICAL' || product.status === 'ORDER_NOW';
 
   // Filter live orders for this specific product
@@ -48,22 +50,12 @@ export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
                   {product.sku}
                 </p>
                 {product.imageUrl && (
-                  <div className="relative group">
-                    <Info className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-help transition-colors flex-shrink-0" />
-                    {/* Tooltip with product image */}
-                    <div className="absolute left-0 top-6 z-50 hidden group-hover:block">
-                      <div className="bg-card border-2 border-border rounded-lg shadow-xl overflow-hidden">
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="w-48 h-48 object-cover"
-                        />
-                        <div className="px-3 py-2 bg-muted border-t">
-                          <p className="text-xs font-semibold">{product.name}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => setViewingImage({ url: product.imageUrl!, name: product.name })}
+                    className="flex-shrink-0"
+                  >
+                    <Info className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-pointer transition-colors" />
+                  </button>
                 )}
               </div>
             )}
@@ -155,6 +147,41 @@ export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
         liveOrders={liveOrders}
         onClose={() => setShowModal(false)}
       />
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Product Label Image</DialogTitle>
+            </DialogHeader>
+            <div className="relative w-full h-full flex flex-col">
+              {/* Close button */}
+              <button
+                onClick={() => setViewingImage(null)}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+
+              {/* Image */}
+              <div className="flex-1 flex items-center justify-center p-4 bg-black/95">
+                <img
+                  src={viewingImage.url}
+                  alt={viewingImage.name}
+                  className="max-w-full max-h-[85vh] object-contain"
+                />
+              </div>
+
+              {/* Product name footer */}
+              <div className="bg-card border-t px-6 py-4">
+                <p className="text-sm font-semibold text-center">{viewingImage.name}</p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
