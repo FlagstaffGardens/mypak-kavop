@@ -44,7 +44,7 @@ function OrdersSubNav({ isCollapsed }: { isCollapsed: boolean }) {
             key={subItem.name}
             href={subItem.href}
             className={cn(
-              'block rounded-md px-2 py-1 text-xs font-medium transition-colors cursor-pointer',
+              'block rounded-md px-2 py-1 text-sm font-medium transition-colors cursor-pointer',
               isActive
                 ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50'
@@ -127,11 +127,11 @@ export function Sidebar() {
           "flex flex-col transition-opacity duration-150 ease-out",
           isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
         )}>
-          <span className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-50">
+          <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">
             MyPak
           </span>
           {user?.orgName && (
-            <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+            <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
               {user.orgName}
             </span>
           )}
@@ -161,7 +161,7 @@ export function Sidebar() {
               href={item.href}
               title={isCollapsed ? item.name : undefined}
               className={cn(
-                'group flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer',
+                'group flex items-center rounded-md px-2 py-1.5 text-base font-medium transition-colors cursor-pointer',
                 isCollapsed ? 'justify-center' : '',
                 item.current
                   ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
@@ -245,7 +245,7 @@ export function Sidebar() {
             href="/admin/organizations"
             title={isCollapsed ? 'Admin' : undefined}
             className={cn(
-              'group flex items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer',
+              'group flex items-center rounded-md px-2 py-1.5 text-base font-medium transition-colors cursor-pointer',
               isCollapsed ? 'justify-center' : '',
               pathname.startsWith('/admin')
                 ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
@@ -289,10 +289,10 @@ export function Sidebar() {
                   "flex flex-col items-start flex-1 min-w-0 transition-opacity duration-150 ease-out",
                   isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
                 )}>
-                  <span className="text-xs font-medium text-gray-900 dark:text-gray-50 truncate whitespace-nowrap">
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-50 truncate whitespace-nowrap">
                     {userWithInitials?.name || 'User'}
                   </span>
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate whitespace-nowrap">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate whitespace-nowrap">
                     {userWithInitials?.email || ''}
                   </span>
                 </div>
