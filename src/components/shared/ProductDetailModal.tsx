@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, ExternalLink } from 'lucide-react';
+import { parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from './StatusBadge';
 import { InventoryChart } from './InventoryChart';
@@ -44,7 +45,18 @@ export function ProductDetailModal({ product, liveOrders = [], onClose }: Produc
         shippingMethod: order.shippingMethod,
       };
     })
-    .filter(o => o.quantity > 0);
+    .filter(o => o.quantity > 0)
+    .sort((a, b) => {
+      // Sort by delivery date (soonest first)
+      try {
+        const dateA = parse(a.deliveryDate, 'MMM dd, yyyy', new Date());
+        const dateB = parse(b.deliveryDate, 'MMM dd, yyyy', new Date());
+        return dateA.getTime() - dateB.getTime();
+      } catch {
+        // If parsing fails, keep original order
+        return 0;
+      }
+    });
 
   return (
     <div
