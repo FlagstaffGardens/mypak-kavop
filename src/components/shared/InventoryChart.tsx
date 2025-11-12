@@ -2,7 +2,7 @@
 
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, ReferenceArea } from 'recharts';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
-import { addDays, format, parse } from 'date-fns';
+import { addDays, format, parse, isBefore, startOfDay } from 'date-fns';
 import type { Product, Order } from '@/lib/types';
 
 interface InventoryChartProps {
@@ -45,7 +45,7 @@ const CustomDot = (props: { cx?: number; cy?: number; payload?: { isDelivery?: b
 };
 
 // Custom tooltip to show delivery information
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { date: string; stock: number; target: number; isDelivery?: boolean; deliveryAmount?: number; orderNumber?: string } }> }) => {
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { date: string; stock: number; target: number; isDelivery?: boolean; deliveryAmount?: number; orderNumber?: string; orderCount?: number } }> }) => {
   if (!active || !payload?.length) return null;
 
   const data = payload[0].payload;
@@ -61,10 +61,10 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
       {data.isDelivery && (
         <div className="bg-blue-50 dark:bg-blue-950/30 border-t border-blue-200 dark:border-blue-900/50 px-3 py-2">
           <p className="text-blue-700 dark:text-blue-400 font-bold text-xs uppercase tracking-wide">
-            📦 Order Arrival
+            📦 {data.orderCount && data.orderCount > 1 ? `${data.orderCount} Order Arrivals` : 'Order Arrival'}
           </p>
           <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">{data.orderNumber}</p>
-          <p className="text-xs text-blue-700 dark:text-blue-300">+{data.deliveryAmount?.toLocaleString()} cartons</p>
+          <p className="text-xs text-blue-700 dark:text-blue-300">+{data.deliveryAmount?.toLocaleString()} cartons total</p>
         </div>
       )}
     </div>
@@ -72,6 +72,8 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
 };
 
 export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: InventoryChartProps) {
+  const today = startOfDay(new Date());
+
   // Filter orders that contain this product
   const relevantOrders = liveOrders
     .filter(order =>
@@ -79,8 +81,16 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
     )
     .map(order => {
       const orderProduct = order.products.find(p => p.productId === product.id || p.productName === product.name);
+      const parsedDate = parse(order.deliveryDate, 'MMM dd, yyyy', new Date());
+
+      // If delivery date is in the past, assume it arrives in 5 days for chart calculation
+      const chartDeliveryDate = isBefore(parsedDate, today)
+        ? addDays(today, 5)  // Past orders assumed to arrive in 5 days
+        : parsedDate;
+
       return {
-        deliveryDate: parse(order.deliveryDate, 'MMM dd, yyyy', new Date()),
+        deliveryDate: chartDeliveryDate,  // Date used for chart calculation
+        originalDate: parsedDate,          // Original date for display
         quantity: orderProduct?.recommendedQuantity || 0,
         orderNumber: order.orderNumber,
       };
@@ -89,7 +99,6 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
     .sort((a, b) => a.deliveryDate.getTime() - b.deliveryDate.getTime());
 
   // Generate chart data points
-  const today = new Date();
 
   // Timeframe configuration: weeks and interval in days
   const timeframeConfig = {
@@ -117,23 +126,30 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
       runningStock -= consumption;
     }
 
-    // Find delivery that falls within this period's range
-    const orderThisPeriod = relevantOrders.find(order => {
+    // Find ALL deliveries that fall within this period's range (multiple orders can arrive in same week)
+    const ordersThisPeriod = relevantOrders.filter(order => {
       return order.deliveryDate >= periodStart && order.deliveryDate <= periodEnd;
     });
 
-    // Add order if it arrives this period
-    if (orderThisPeriod) {
-      runningStock += orderThisPeriod.quantity;
+    // Add all orders that arrive this period
+    const totalDeliveryQuantity = ordersThisPeriod.reduce((sum, order) => sum + order.quantity, 0);
+    if (totalDeliveryQuantity > 0) {
+      runningStock += totalDeliveryQuantity;
     }
+
+    // Create label for multiple orders
+    const deliveryLabel = ordersThisPeriod.length > 1
+      ? `${ordersThisPeriod.length} orders`  // e.g., "2 orders"
+      : ordersThisPeriod[0]?.orderNumber;    // e.g., "#515862"
 
     data.push({
       date: format(pointDate, 'MMM dd'),
       stock: Math.max(0, Math.round(runningStock)),
       target: product.targetStock,
-      isDelivery: !!orderThisPeriod,
-      deliveryAmount: orderThisPeriod?.quantity,
-      orderNumber: orderThisPeriod?.orderNumber,
+      isDelivery: ordersThisPeriod.length > 0,
+      deliveryAmount: totalDeliveryQuantity || undefined,
+      orderNumber: deliveryLabel,
+      orderCount: ordersThisPeriod.length,
     });
 
     if (runningStock <= 0) break;
