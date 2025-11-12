@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { OrderDetailsModal } from './OrderDetailsModal';
 import type { Order } from '@/lib/types';
 
 type StatusFilter = 'all' | 'delivered';
@@ -20,6 +21,7 @@ interface OrderHistoryProps {
 }
 
 export function OrderHistory({ orders }: OrderHistoryProps) {
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('12months');
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +56,7 @@ export function OrderHistory({ orders }: OrderHistoryProps) {
   }
 
   return (
+    <>
     <div>
       {/* Filters Row */}
       <div className="mb-6">
@@ -164,24 +167,14 @@ export function OrderHistory({ orders }: OrderHistoryProps) {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled
-                      className="cursor-not-allowed flex-1 sm:flex-initial"
-                    >
-                      View Details
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled
-                      className="cursor-not-allowed flex-1 sm:flex-initial"
-                    >
-                      Reorder
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedOrder(order)}
+                    className="w-full sm:w-auto"
+                  >
+                    View Details
+                  </Button>
                 </div>
               </div>
             </div>
@@ -189,5 +182,12 @@ export function OrderHistory({ orders }: OrderHistoryProps) {
         </div>
       )}
     </div>
+
+    <OrderDetailsModal
+      order={selectedOrder}
+      open={selectedOrder !== null}
+      onOpenChange={(open) => !open && setSelectedOrder(null)}
+    />
+    </>
   );
 }
