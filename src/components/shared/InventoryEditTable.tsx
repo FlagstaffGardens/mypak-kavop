@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { EditableNumberCell } from './EditableNumberCell';
 import { validateCurrentStock, validateWeeklyConsumption } from '@/lib/validation';
 import { calculateStockoutDate, calculateTargetStock } from '@/lib/calculations';
+import { DEFAULT_TARGET_SOH } from '@/lib/constants';
+import { toast } from 'sonner';
 import type { Product } from '@/lib/types';
 
 interface InventoryEditTableProps {
@@ -19,7 +21,7 @@ interface InventoryEditTableProps {
 interface EditableProduct extends Product {
   originalStock: number;
   originalConsumption: number;
-  targetSOH?: number; // Per-product target SOH override (default: 6)
+  targetSOH?: number; // Per-product target SOH override
 }
 
 interface ErpProduct {
@@ -29,6 +31,22 @@ interface ErpProduct {
   piecesPerPallet: number;
 }
 
+/**
+ * Inventory Edit Table - Modal for setting up and updating inventory data
+ *
+ * Features:
+ * - Fetches ERP products and existing inventory from API
+ * - Displays editable table with pallet/carton conversion
+ * - Validates input (warns about zero consumption)
+ * - Saves to database via API
+ * - Blocks dismissal on first visit until data is saved
+ * - Keyboard navigation (Tab, Enter, Escape)
+ *
+ * @param products - Initial products for display during loading
+ * @param onSave - Callback after successful save (typically reloads page)
+ * @param onCancel - Callback when user cancels (ignored on first visit)
+ * @param isFirstVisit - Whether this is first-time setup (blocks dismissal)
+ */
 export function InventoryEditTable({
   products,
   onSave,
@@ -109,7 +127,7 @@ export function InventoryEditTable({
               currentStock,
               weeklyConsumption,
               targetStock: 0,
-              targetSOH: 6, // Default: 6 weeks
+              targetSOH: DEFAULT_TARGET_SOH,
               runsOutDate: '',
               runsOutDays: 0,
               weeksRemaining: 0,
@@ -125,7 +143,7 @@ export function InventoryEditTable({
         setEditableProducts(merged);
       } catch (error) {
         console.error('Failed to load inventory data:', error);
-        alert('Failed to load inventory data. Please try again.');
+        toast.error('Failed to load inventory data. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -171,7 +189,8 @@ export function InventoryEditTable({
           if (field === 'targetSOH') {
             return { ...p, targetSOH: value };
           }
-          // Convert pallets to cartons
+          // Convert pallets to cartons, rounding to nearest carton
+          // Example: 0.33 pallets × 4,544 cartons/pallet = 1,499.52 → 1,500 cartons
           const cartons = Math.round(value * p.piecesPerPallet);
           if (field === 'currentStock') {
             return { ...p, currentStock: cartons, currentPallets: value };
@@ -186,7 +205,7 @@ export function InventoryEditTable({
 
   const handleSave = async () => {
     if (hasErrors) {
-      alert('Please fix all errors before saving');
+      toast.error('Please fix all errors before saving');
       return;
     }
 
@@ -205,7 +224,7 @@ export function InventoryEditTable({
         sku: p.sku,
         currentStock: p.currentStock,
         weeklyConsumption: p.weeklyConsumption,
-        targetSOH: p.targetSOH || 6,
+        targetSOH: p.targetSOH || DEFAULT_TARGET_SOH,
       }));
 
       const response = await fetch('/api/inventory/save', {
@@ -222,7 +241,7 @@ export function InventoryEditTable({
       onSave();
     } catch (error) {
       console.error('Failed to save inventory data:', error);
-      alert('Failed to save inventory data. Please try again.');
+      toast.error('Failed to save inventory data. Please try again.');
       setIsSaving(false);
     }
   };
@@ -405,7 +424,7 @@ export function InventoryEditTable({
                       <td className="px-4 py-3">
                         <div className="space-y-1">
                           <EditableNumberCell
-                            value={product.targetSOH || 6}
+                            value={product.targetSOH || DEFAULT_TARGET_SOH}
                             onChange={(value) => updateProduct(index, 'targetSOH', value)}
                             validation={{ state: 'valid', message: '' }}
                             onKeyDown={(e) => handleKeyDown(e, index, 'targetSOH')}

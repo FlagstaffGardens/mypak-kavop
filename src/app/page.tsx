@@ -1,9 +1,11 @@
+import { redirect } from 'next/navigation';
 import { fetchErpProducts, fetchErpCurrentOrders } from '@/lib/erp/client';
 import { transformErpProduct, transformErpOrder, completeProductWithInventory } from '@/lib/erp/transforms';
 import { getInventoryData } from '@/lib/services/inventory';
 import { getCurrentUser } from '@/lib/auth/jwt';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { mockContainers } from '@/lib/data/mock-containers';
+import { DEFAULT_TARGET_SOH } from '@/lib/constants';
 import type { Product } from '@/lib/types';
 
 export default async function Dashboard() {
@@ -11,7 +13,7 @@ export default async function Dashboard() {
   const user = await getCurrentUser();
 
   if (!user || !user.orgId) {
-    throw new Error('User not authenticated');
+    redirect('/sign-in');
   }
 
   // Fetch data from ERP API
@@ -47,7 +49,7 @@ export default async function Dashboard() {
         currentStock: 0,
         weeklyConsumption: 0,
         targetStock: 0,
-        targetSOH: 6,
+        targetSOH: DEFAULT_TARGET_SOH,
         runsOutDate: 'Not configured',
         runsOutDays: 0,
         weeksRemaining: 0,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/jwt';
 import { upsertInventoryData, type InventoryInput } from '@/lib/services/inventory';
+import { MIN_TARGET_SOH_WEEKS, MAX_TARGET_SOH_WEEKS } from '@/lib/constants';
 import { z } from 'zod';
 
 // Validation schema
@@ -9,7 +10,7 @@ const inventorySchema = z.object({
     sku: z.string().min(1),
     currentStock: z.number().int().min(0),
     weeklyConsumption: z.number().int().min(0),
-    targetSOH: z.number().int().min(1).max(52),
+    targetSOH: z.number().int().min(MIN_TARGET_SOH_WEEKS).max(MAX_TARGET_SOH_WEEKS),
   }))
 });
 
