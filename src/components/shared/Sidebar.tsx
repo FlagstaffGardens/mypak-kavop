@@ -123,12 +123,19 @@ export function Sidebar() {
     )}>
       {/* Logo and Collapse Button */}
       <div className="flex h-14 items-center justify-between border-b dark:border-gray-800 px-3">
-        <span className={cn(
-          "text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-50 transition-opacity duration-150 ease-out",
+        <div className={cn(
+          "flex flex-col transition-opacity duration-150 ease-out",
           isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
         )}>
-          MyPak
-        </span>
+          <span className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-50">
+            MyPak
+          </span>
+          {user?.orgName && (
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+              {user.orgName}
+            </span>
+          )}
+        </div>
         <Button
           variant="ghost"
           size="icon"

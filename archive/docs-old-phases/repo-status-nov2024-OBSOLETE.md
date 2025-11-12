@@ -1,3 +1,13 @@
+> **⚠️ ARCHIVED DOCUMENT - OBSOLETE**
+>
+> **Date Archived:** 2024-11-12
+>
+> **Reason:** This status document describes the development phase from November 2024, before ERP integration was completed. The system has since transitioned to production with live ERP data.
+>
+> **Current Status:** See [docs/PROJECT-STATUS.md](../../docs/PROJECT-STATUS.md) for up-to-date project status.
+>
+> ---
+
 # Repository Status
 
 **Last Updated:** November 8, 2024  

@@ -6,6 +6,7 @@ interface User {
   name: string;
   role: "platform_admin" | "org_user";
   orgId: string | null;
+  orgName: string | null;
 }
 
 export function useAuth() {

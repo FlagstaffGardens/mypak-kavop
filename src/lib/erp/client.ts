@@ -11,6 +11,7 @@ const ERP_BASE_URL = 'http://www.mypak.cn:8088/api/kavop';
  */
 async function getOrgToken(): Promise<string> {
   const user = await getCurrentUser();
+  console.log('🔍 [ERP Client] Current user:', user ? { userId: user.userId, orgId: user.orgId, email: user.email } : 'null');
 
   if (!user || !user.orgId) {
     throw new Error('User not authenticated or no organization');
@@ -21,8 +22,14 @@ async function getOrgToken(): Promise<string> {
     .from(organizations)
     .where(eq(organizations.org_id, user.orgId));
 
+  console.log('🔍 [ERP Client] Organization found:', org ? { org_id: org.org_id, org_name: org.org_name, has_token: !!org.kavop_token, token_length: org.kavop_token?.length || 0 } : 'null');
+
   if (!org) {
     throw new Error('Organization not found');
+  }
+
+  if (!org.kavop_token || org.kavop_token.trim() === '') {
+    throw new Error(`Organization "${org.org_name}" has no kavop_token configured. Please contact support to set up your ERP integration.`);
   }
 
   return org.kavop_token;

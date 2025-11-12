@@ -326,6 +326,156 @@ Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ---
 
+## 5. Batch Create Customer Orders
+
+**Endpoint:** `POST /order/create`
+
+**Purpose:** Create one or multiple orders in a single API call
+
+**Authentication:** Required (JWT token in header)
+
+**Method:** POST
+
+**Request:**
+```http
+POST http://www.mypak.cn:8088/api/kavop/order/create
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+```
+
+**Headers:**
+- `Authorization: {token}` (JWT token from endpoint #1)
+- `Content-Type: application/json`
+
+**Request Body:**
+Array of order objects:
+```json
+[
+  {
+    "comments": "test",
+    "signer": "jj",
+    "requiredEta": "2025-11-23",
+    "customerOrderNumber": "12345678",
+    "shippingTerm": "DDP",
+    "lines": [
+      {
+        "qty": 10000,
+        "sku": "AGI-AWR600a-S12G9C-IL1",
+        "productId": 1003833
+      },
+      {
+        "qty": 20000,
+        "sku": "AGI-AWR700a-S12G9C-IL1",
+        "productId": 1003832
+      }
+    ]
+  }
+]
+```
+
+**Required Fields:**
+- `signer` (string): Name of person creating the order
+- `requiredEta` (string): Required delivery date in ISO 8601 format ("YYYY-MM-DD")
+- `shippingTerm` (enum): Shipping terms - MUST be uppercase
+- `lines` (array): Order line items (at least one required)
+  - `qty` (number): Quantity in cartons
+  - `sku` (string): Product SKU code
+  - `productId` (number): Product ID (from endpoint #2)
+
+**Optional Fields:**
+- `comments` (string): Order notes/comments
+- `customerOrderNumber` (string): Customer's PO number
+
+**Shipping Terms Enum:**
+Valid values (MUST be uppercase):
+- `"DDU"` - Delivered Duty Unpaid
+- `"CIF"` - Cost, Insurance, and Freight
+- `"DDP"` - Delivered Duty Paid
+- `"EXW"` - Ex Works
+- `"FOB"` - Free on Board
+
+**Success Response (200):**
+```json
+{
+  "status": 200,
+  "message": "OK",
+  "success": true,
+  "redirect": null,
+  "error": null,
+  "response": "Successfully created orders"
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "status": 400,
+  "message": "error",
+  "success": false,
+  "redirect": null,
+  "error": "Validation error message here",
+  "response": null
+}
+```
+
+**Validation Rules:**
+- `requiredEta` must be in "YYYY-MM-DD" format
+- `shippingTerm` must be one of the allowed values (case-sensitive, uppercase only)
+- `lines` array cannot be empty
+- Each line must have valid `qty`, `sku`, and `productId`
+- `productId` must exist in customer's product list (from endpoint #2)
+
+**Important Notes:**
+- Request body is a JSON array (can contain multiple orders)
+- All orders in the batch are created or none (atomic operation assumed)
+- Date format is strict: "YYYY-MM-DD" only
+- `shippingTerm` is case-sensitive and must be UPPERCASE
+- New orders will have status "APPROVED" initially
+
+**Example - Single Order:**
+```json
+[
+  {
+    "signer": "John Smith",
+    "requiredEta": "2025-12-15",
+    "shippingTerm": "DDP",
+    "customerOrderNumber": "PO-2025-001",
+    "comments": "Urgent - holiday rush order",
+    "lines": [
+      {
+        "qty": 50000,
+        "sku": "AGI-AWR600a-S12G9C-IL1",
+        "productId": 1003833
+      }
+    ]
+  }
+]
+```
+
+**Example - Multiple Orders:**
+```json
+[
+  {
+    "signer": "John Smith",
+    "requiredEta": "2025-12-15",
+    "shippingTerm": "DDP",
+    "lines": [
+      { "qty": 50000, "sku": "AGI-AWR600a-S12G9C-IL1", "productId": 1003833 }
+    ]
+  },
+  {
+    "signer": "Jane Doe",
+    "requiredEta": "2025-12-20",
+    "shippingTerm": "FOB",
+    "lines": [
+      { "qty": 30000, "sku": "AGI-AWR700a-S12G9C-IL1", "productId": 1003832 }
+    ]
+  }
+]
+```
+
+---
+
 ## Authentication Flow
 
 **Typical Integration Pattern:**
@@ -402,6 +552,7 @@ if (apiResponse.success) {
 
 ## Implementation Checklist
 
+**GET Endpoints (Read Operations):**
 - [ ] Store JWT token securely after authentication
 - [ ] Pass token in `Authorization` header (no "Bearer" prefix)
 - [ ] Check `success` boolean before processing responses
@@ -411,6 +562,17 @@ if (apiResponse.success) {
 - [ ] Implement token refresh on expiration
 - [ ] Display product images from `imageUrl` field
 - [ ] Convert quantities to pallets for display (qty ÷ piecesPerPallet)
+
+**POST Endpoints (Write Operations):**
+- [ ] Validate date format ("YYYY-MM-DD") before sending
+- [ ] Ensure `shippingTerm` is UPPERCASE before sending
+- [ ] Validate required fields: `signer`, `requiredEta`, `shippingTerm`, `lines`
+- [ ] Validate `productId` exists in customer's product list
+- [ ] Set `Content-Type: application/json` header
+- [ ] Wrap single order in array format
+- [ ] Handle batch order creation (multiple orders)
+- [ ] Display success/error messages to user
+- [ ] Refresh order list after successful creation
 
 ---
 
