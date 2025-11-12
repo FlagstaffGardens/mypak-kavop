@@ -1,3 +1,9 @@
+/**
+ * @deprecated Dev mode state switcher has been removed
+ * This file is kept for reference only
+ * Real data now comes from ERP API
+ */
+
 import { addDays, format } from "date-fns";
 import type { ContainerRecommendation, Product } from "../types";
 import { calculateProductStatus } from "../calculations";
@@ -6,6 +12,7 @@ const today = new Date();
 
 /**
  * Different mock data scenarios for demonstrating UI states
+ * NOTE: These are deprecated - real data comes from ERP API
  */
 
 // SCENARIO 1: Healthy - All containers well ahead, no urgent actions
