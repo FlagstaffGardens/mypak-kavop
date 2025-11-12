@@ -7,8 +7,8 @@ async function createAdmin() {
     const [admin] = await db
       .insert(users)
       .values({
-        id: crypto.randomUUID(),
-        orgId: null,
+        user_id: crypto.randomUUID(),
+        org_id: null,
         email: "admin@mypak.com",
         name: "Platform Admin",
         password: "admin123",

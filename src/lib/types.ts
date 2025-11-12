@@ -123,13 +123,13 @@ export interface Organization {
 }
 
 export interface User {
-  id: string;
-  orgId: string | null;
+  user_id: string;
+  org_id: string | null;
   email: string;
   name: string;
   password: string;
   role: "org_user" | "platform_admin";
-  createdAt: Date;
-  updatedAt: Date;
-  lastLoginAt: Date | null;
+  created_at: Date;
+  updated_at: Date;
+  last_login_at: Date | null;
 }

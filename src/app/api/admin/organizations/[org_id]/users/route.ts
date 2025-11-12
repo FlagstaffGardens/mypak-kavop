@@ -74,7 +74,7 @@ export async function GET(
     const orgUsers = await db
       .select()
       .from(users)
-      .where(eq(users.orgId, org_id));
+      .where(eq(users.org_id, org_id));
 
     return NextResponse.json({
       success: true,

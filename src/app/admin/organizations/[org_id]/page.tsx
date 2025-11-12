@@ -21,7 +21,7 @@ async function getOrgUsers(orgId: string): Promise<User[]> {
   const orgUsers = await db
     .select()
     .from(users)
-    .where(eq(users.orgId, orgId));
+    .where(eq(users.org_id, orgId));
   return orgUsers as User[];
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { X, Info } from 'lucide-react';
+import { X, Info, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { EditableNumberCell } from './EditableNumberCell';
@@ -10,9 +10,10 @@ import { calculateStockoutDate, calculateTargetStock } from '@/lib/calculations'
 import type { Product } from '@/lib/types';
 
 interface InventoryEditTableProps {
-  products: Product[];
-  onSave: (products: Product[]) => void;
+  products: Product[]; // Initial products from page (used for display while loading)
+  onSave: () => void; // Callback to reload page after save
   onCancel: () => void;
+  isFirstVisit: boolean;
 }
 
 interface EditableProduct extends Product {
@@ -21,20 +22,22 @@ interface EditableProduct extends Product {
   targetSOH?: number; // Per-product target SOH override (default: 6)
 }
 
+interface ErpProduct {
+  id: number;
+  sku: string;
+  name: string;
+  piecesPerPallet: number;
+}
+
 export function InventoryEditTable({
   products,
   onSave,
   onCancel,
+  isFirstVisit,
 }: InventoryEditTableProps) {
-  // Initialize editable products with original values for validation
-  const [editableProducts, setEditableProducts] = useState<EditableProduct[]>(
-    products.map((p) => ({
-      ...p,
-      originalStock: p.currentStock,
-      originalConsumption: p.weeklyConsumption,
-      targetSOH: p.targetSOH || 6, // Default to 6 weeks if not set
-    }))
-  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editableProducts, setEditableProducts] = useState<EditableProduct[]>([]);
 
   const [focusedCell, setFocusedCell] = useState<{
     rowIndex: number;
@@ -42,6 +45,94 @@ export function InventoryEditTable({
   } | null>(null);
 
   const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
+
+  // Load data from API on mount
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/inventory/list');
+
+        if (!response.ok) {
+          throw new Error('Failed to load inventory data');
+        }
+
+        const data = await response.json();
+
+        // Merge ERP products with inventory data (or smart defaults)
+        const merged: EditableProduct[] = data.erpProducts.map((erpProduct: ErpProduct) => {
+          const inventory = data.inventoryMap[erpProduct.sku];
+
+          if (inventory) {
+            // Has inventory data - use it
+            const currentPallets = inventory.current_stock / erpProduct.piecesPerPallet;
+            const weeklyPallets = inventory.weekly_consumption / erpProduct.piecesPerPallet;
+
+            // Find matching product from initial products for additional fields
+            const matchingProduct = products.find(p => p.sku === erpProduct.sku);
+
+            return {
+              ...erpProduct,
+              brand: matchingProduct?.brand || '',
+              type: matchingProduct?.type || '',
+              size: matchingProduct?.size || '',
+              packCount: matchingProduct?.packCount || '',
+              imageUrl: matchingProduct?.imageUrl,
+              currentStock: inventory.current_stock,
+              weeklyConsumption: inventory.weekly_consumption,
+              targetStock: 0,
+              targetSOH: inventory.target_soh,
+              runsOutDate: '',
+              runsOutDays: 0,
+              weeksRemaining: 0,
+              status: 'HEALTHY' as const,
+              currentPallets,
+              weeklyPallets,
+              originalStock: inventory.current_stock,
+              originalConsumption: inventory.weekly_consumption,
+            };
+          } else {
+            // No inventory data - use smart defaults
+            const matchingProduct = products.find(p => p.sku === erpProduct.sku);
+            const currentPallets = 1; // Default: 1 pallet
+            const weeklyPallets = 0; // Default: 0 (must be set)
+            const currentStock = Math.round(currentPallets * erpProduct.piecesPerPallet);
+            const weeklyConsumption = Math.round(weeklyPallets * erpProduct.piecesPerPallet);
+
+            return {
+              ...erpProduct,
+              brand: matchingProduct?.brand || '',
+              type: matchingProduct?.type || '',
+              size: matchingProduct?.size || '',
+              packCount: matchingProduct?.packCount || '',
+              imageUrl: matchingProduct?.imageUrl,
+              currentStock,
+              weeklyConsumption,
+              targetStock: 0,
+              targetSOH: 6, // Default: 6 weeks
+              runsOutDate: '',
+              runsOutDays: 0,
+              weeksRemaining: 0,
+              status: 'CRITICAL' as const,
+              currentPallets,
+              weeklyPallets,
+              originalStock: currentStock,
+              originalConsumption: weeklyConsumption,
+            };
+          }
+        });
+
+        setEditableProducts(merged);
+      } catch (error) {
+        console.error('Failed to load inventory data:', error);
+        alert('Failed to load inventory data. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, [products]);
 
   // Calculate validation states
   const getValidations = useCallback(() => {
@@ -81,7 +172,7 @@ export function InventoryEditTable({
             return { ...p, targetSOH: value };
           }
           // Convert pallets to cartons
-          const cartons = value * p.piecesPerPallet;
+          const cartons = Math.round(value * p.piecesPerPallet);
           if (field === 'currentStock') {
             return { ...p, currentStock: cartons, currentPallets: value };
           } else {
@@ -93,7 +184,7 @@ export function InventoryEditTable({
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (hasErrors) {
       alert('Please fix all errors before saving');
       return;
@@ -106,25 +197,34 @@ export function InventoryEditTable({
       if (!confirmed) return;
     }
 
-    // Recalculate derived fields and remove validation fields
-    const productsToSave = editableProducts.map(({ originalStock, originalConsumption, ...product }) => {
-      // Recalculate stockout metrics
-      const stockoutCalc = calculateStockoutDate(product.currentStock, product.weeklyConsumption);
+    try {
+      setIsSaving(true);
 
-      // Recalculate target stock (10 weeks buffer)
-      const targetStock = calculateTargetStock(product.weeklyConsumption, 10);
+      // Convert to API format (cartons)
+      const dataToSave = editableProducts.map(p => ({
+        sku: p.sku,
+        currentStock: p.currentStock,
+        weeklyConsumption: p.weeklyConsumption,
+        targetSOH: p.targetSOH || 6,
+      }));
 
-      return {
-        ...product,
-        runsOutDate: stockoutCalc.runsOutDate,
-        runsOutDays: stockoutCalc.runsOutDays,
-        weeksRemaining: stockoutCalc.weeksRemaining,
-        status: stockoutCalc.status,
-        targetStock,
-      };
-    });
+      const response = await fetch('/api/inventory/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products: dataToSave }),
+      });
 
-    onSave(productsToSave);
+      if (!response.ok) {
+        throw new Error('Failed to save inventory data');
+      }
+
+      // Success - call onSave to reload page
+      onSave();
+    } catch (error) {
+      console.error('Failed to save inventory data:', error);
+      alert('Failed to save inventory data. Please try again.');
+      setIsSaving(false);
+    }
   };
 
   const handleKeyDown = (
@@ -159,12 +259,11 @@ export function InventoryEditTable({
       if (rowIndex < editableProducts.length - 1) {
         setFocusedCell({ rowIndex: rowIndex + 1, column });
       }
-    } else if (e.key === 'Escape') {
+    } else if (e.key === 'Escape' && !isFirstVisit) {
       e.preventDefault();
       onCancel();
     }
   };
-
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -172,135 +271,161 @@ export function InventoryEditTable({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Update Inventory Data</h2>
+            <h2 className="text-xl font-bold text-foreground">
+              {isFirstVisit ? 'Set Up Inventory Data' : 'Update Inventory Data'}
+            </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Edit current stock, weekly consumption, and target SOH for your products
+              {isFirstVisit
+                ? 'Configure inventory for your products to get started'
+                : 'Edit current stock, weekly consumption, and target SOH for your products'
+              }
             </p>
           </div>
-          <Button variant="ghost" size="icon" onClick={onCancel}>
-            <X className="h-5 w-5" />
-          </Button>
+          {!isFirstVisit && (
+            <Button variant="ghost" size="icon" onClick={onCancel} disabled={isSaving}>
+              <X className="h-5 w-5" />
+            </Button>
+          )}
         </div>
 
         {/* Actions Bar */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-muted/30">
           <div className="text-sm text-muted-foreground">
-            {editableProducts.length} products • Use Tab to navigate, Enter to move down, Esc to cancel
+            {isLoading ? (
+              'Loading products...'
+            ) : (
+              `${editableProducts.length} products • Use Tab to navigate, Enter to move down${!isFirstVisit ? ', Esc to cancel' : ''}`
+            )}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={hasErrors}>
-              Save Changes
+            {!isFirstVisit && (
+              <Button variant="outline" onClick={onCancel} disabled={isSaving || isLoading}>
+                Cancel
+              </Button>
+            )}
+            <Button onClick={handleSave} disabled={hasErrors || isSaving || isLoading}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
             </Button>
           </div>
         </div>
 
         {/* Table */}
         <div className="flex-1 overflow-auto">
-          <table className="w-full">
-            <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-sm">
-              <tr>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[40%]">
-                  Product Name
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
-                  Current Stock (Pallets)
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
-                  Weekly Consumption (Pallets)
-                </th>
-                <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[10%]">
-                  Target SOH (Weeks)
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {editableProducts.map((product, index) => {
-                const isStockFocused =
-                  focusedCell?.rowIndex === index && focusedCell?.column === 'stock';
-                const isConsumptionFocused =
-                  focusedCell?.rowIndex === index && focusedCell?.column === 'consumption';
-                const isTargetSOHFocused =
-                  focusedCell?.rowIndex === index && focusedCell?.column === 'targetSOH';
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-sm">
+                <tr>
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[40%]">
+                    Product Name
+                  </th>
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
+                    Current Stock (Pallets)
+                  </th>
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
+                    Weekly Consumption (Pallets)
+                  </th>
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[10%]">
+                    Target SOH (Weeks)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {editableProducts.map((product, index) => {
+                  const isStockFocused =
+                    focusedCell?.rowIndex === index && focusedCell?.column === 'stock';
+                  const isConsumptionFocused =
+                    focusedCell?.rowIndex === index && focusedCell?.column === 'consumption';
+                  const isTargetSOHFocused =
+                    focusedCell?.rowIndex === index && focusedCell?.column === 'targetSOH';
 
-                return (
-                  <tr
-                    key={product.id}
-                    className="border-b border-border hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-foreground truncate">
-                            {product.name}
+                  return (
+                    <tr
+                      key={product.id}
+                      className="border-b border-border hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-foreground truncate">
+                              {product.name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {product.size} - {product.packCount}
+                            </div>
                           </div>
+                          {product.imageUrl && (
+                            <button
+                              onClick={() => setViewingImage({ url: product.imageUrl!, name: product.name })}
+                              className="flex-shrink-0 mt-0.5"
+                            >
+                              <Info className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-pointer transition-colors" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-1">
+                          <EditableNumberCell
+                            value={product.currentPallets}
+                            onChange={(value) => updateProduct(index, 'currentStock', value)}
+                            validation={validations[index].stock}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'stock')}
+                            autoFocus={isStockFocused}
+                          />
                           <div className="text-xs text-muted-foreground">
-                            {product.size} - {product.packCount}
+                            pallets = {product.currentStock.toLocaleString()} cartons ({product.piecesPerPallet.toLocaleString()}/pallet)
                           </div>
                         </div>
-                        {product.imageUrl && (
-                          <button
-                            onClick={() => setViewingImage({ url: product.imageUrl!, name: product.name })}
-                            className="flex-shrink-0 mt-0.5"
-                          >
-                            <Info className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-pointer transition-colors" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="space-y-1">
-                        <EditableNumberCell
-                          value={product.currentPallets}
-                          onChange={(value) => updateProduct(index, 'currentStock', value)}
-                          validation={validations[index].stock}
-                          onKeyDown={(e) => handleKeyDown(e, index, 'stock')}
-                          autoFocus={isStockFocused}
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          pallets = {product.currentStock.toLocaleString()} cartons ({product.piecesPerPallet.toLocaleString()}/pallet)
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-1">
+                          <EditableNumberCell
+                            value={product.weeklyPallets}
+                            onChange={(value) => updateProduct(index, 'weeklyConsumption', value)}
+                            validation={validations[index].consumption}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'consumption')}
+                            autoFocus={isConsumptionFocused}
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            pallets/week = {product.weeklyConsumption.toLocaleString()} cartons/week
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="space-y-1">
-                        <EditableNumberCell
-                          value={product.weeklyPallets}
-                          onChange={(value) => updateProduct(index, 'weeklyConsumption', value)}
-                          validation={validations[index].consumption}
-                          onKeyDown={(e) => handleKeyDown(e, index, 'consumption')}
-                          autoFocus={isConsumptionFocused}
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          pallets/week = {product.weeklyConsumption.toLocaleString()} cartons/week
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="space-y-1">
+                          <EditableNumberCell
+                            value={product.targetSOH || 6}
+                            onChange={(value) => updateProduct(index, 'targetSOH', value)}
+                            validation={{ state: 'valid', message: '' }}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'targetSOH')}
+                            autoFocus={isTargetSOHFocused}
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            weeks target
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="space-y-1">
-                        <EditableNumberCell
-                          value={product.targetSOH || 6}
-                          onChange={(value) => updateProduct(index, 'targetSOH', value)}
-                          validation={{ state: 'valid', message: '' }}
-                          onKeyDown={(e) => handleKeyDown(e, index, 'targetSOH')}
-                          autoFocus={isTargetSOHFocused}
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          weeks target
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Footer Summary */}
-        {(hasErrors || warnings.length > 0) && (
+        {!isLoading && (hasErrors || warnings.length > 0) && (
           <div className="px-6 py-3 border-t border-border bg-muted/30">
             {hasErrors && (
               <div className="text-sm text-red-600 font-medium">

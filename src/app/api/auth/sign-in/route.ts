@@ -42,11 +42,11 @@ export async function POST(request: NextRequest) {
 
     // Create JWT payload
     const payload = {
-      userId: user.id,
+      userId: user.user_id,
       email: user.email,
       name: user.name,
       role: user.role as "platform_admin" | "org_user",
-      orgId: user.orgId,
+      orgId: user.org_id,
     };
 
     // Sign JWT
@@ -58,11 +58,11 @@ export async function POST(request: NextRequest) {
     // Return user data (without password)
     return NextResponse.json({
       user: {
-        id: user.id,
+        id: user.user_id,
         email: user.email,
         name: user.name,
         role: user.role,
-        orgId: user.orgId,
+        orgId: user.org_id,
       },
     });
   } catch (error) {

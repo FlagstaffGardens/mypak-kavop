@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Edit3 } from 'lucide-react';
+import { Edit3, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/shared/ProductCard';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
@@ -13,6 +13,8 @@ interface DashboardClientProps {
   containers: ContainerRecommendation[];
   liveOrders: Order[];
   lastUpdated: Date | null;
+  isFirstVisit: boolean;
+  newProductCount: number;
 }
 
 export function DashboardClient({
@@ -20,10 +22,13 @@ export function DashboardClient({
   containers,
   liveOrders,
   lastUpdated,
+  isFirstVisit,
+  newProductCount,
 }: DashboardClientProps) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [showEditTable, setShowEditTable] = useState(false);
+  const [showEditTable, setShowEditTable] = useState(isFirstVisit); // Auto-show on first visit
   const [lastUpdatedTime, setLastUpdatedTime] = useState<Date | null>(lastUpdated);
+  const [showNewProductsBanner, setShowNewProductsBanner] = useState(newProductCount > 0 && !isFirstVisit);
 
   // Calculate worst product
   const worstProduct = products.length > 0
@@ -37,15 +42,9 @@ export function DashboardClient({
   const orderNowProducts = products.filter(p => p.status === 'ORDER_NOW');
   const healthyProducts = products.filter(p => p.status === 'HEALTHY');
 
-  // Handle inventory data save
-  const handleSaveInventory = (updatedProducts: Product[]) => {
-    const now = new Date();
-    setProducts(updatedProducts);
-    setLastUpdatedTime(now);
-    setShowEditTable(false);
-
-    // Save timestamp to localStorage
-    localStorage.setItem('inventoryLastUpdated', now.toISOString());
+  // Handle inventory data save - reload page to get fresh data
+  const handleSaveInventory = () => {
+    window.location.reload();
   };
 
   // Format last updated timestamp
@@ -95,6 +94,45 @@ export function DashboardClient({
           </p>
         </div>
       </div>
+
+      {/* New Products Banner */}
+      {showNewProductsBanner && (
+        <div className="flex items-center justify-between gap-4 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-blue-900 dark:text-blue-100">
+                New products detected
+              </p>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                {newProductCount} new {newProductCount === 1 ? 'product' : 'products'} found in ERP.
+                Update your inventory data to see accurate status on the dashboard.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              onClick={() => {
+                setShowEditTable(true);
+                setShowNewProductsBanner(false);
+              }}
+              size="sm"
+              variant="outline"
+              className="bg-white dark:bg-gray-800"
+            >
+              Update Now
+            </Button>
+            <Button
+              onClick={() => setShowNewProductsBanner(false)}
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Dashboard Command Center */}
       <DashboardOverview
@@ -160,7 +198,8 @@ export function DashboardClient({
         <InventoryEditTable
           products={products}
           onSave={handleSaveInventory}
-          onCancel={() => setShowEditTable(false)}
+          onCancel={() => !isFirstVisit && setShowEditTable(false)}
+          isFirstVisit={isFirstVisit}
         />
       )}
     </div>

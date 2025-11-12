@@ -1,43 +1,106 @@
 /**
- * Temporary inventory service
- * TODO: Replace with real inventory tracking from ERP or separate inventory system
- *
- * For now, we'll use placeholder values based on product ID
- * This simulates inventory levels until we have real data
+ * Inventory service - Database-backed inventory tracking
+ * Stores current stock, weekly consumption, and target SOH per organization per SKU
  */
 
-interface InventoryData {
-  currentStock: number;
-  weeklyConsumption: number;
+import { db } from '@/lib/db';
+import { productData } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+
+export interface InventoryData {
+  sku: string;
+  current_stock: number; // cartons
+  weekly_consumption: number; // cartons
+  target_soh: number; // weeks
+  updated_at: Date;
+}
+
+export interface InventoryInput {
+  sku: string;
+  currentStock: number; // cartons
+  weeklyConsumption: number; // cartons
+  targetSOH: number; // weeks
 }
 
 /**
- * Get inventory data for a product
- * TEMPORARY: Returns mock data based on product ID
+ * Get all inventory data for an organization
  */
-export function getInventoryForProduct(productId: number): InventoryData {
-  // Generate consistent mock data based on product ID
-  const seed = productId;
+export async function getInventoryData(orgId: string): Promise<InventoryData[]> {
+  const data = await db
+    .select()
+    .from(productData)
+    .where(eq(productData.org_id, orgId));
 
-  // Random but consistent values
-  const currentStock = 5000 + (seed % 50000);
-  const weeklyConsumption = 500 + (seed % 3000);
-
-  return {
-    currentStock,
-    weeklyConsumption,
-  };
+  return data;
 }
 
 /**
- * Batch get inventory for multiple products
+ * Get inventory data for a specific product
  */
-export function getInventoryForProducts(productIds: number[]): Map<number, InventoryData> {
-  const inventory = new Map<number, InventoryData>();
+export async function getInventoryForProduct(
+  orgId: string,
+  sku: string
+): Promise<InventoryData | undefined> {
+  const [data] = await db
+    .select()
+    .from(productData)
+    .where(
+      and(
+        eq(productData.org_id, orgId),
+        eq(productData.sku, sku)
+      )
+    );
 
-  for (const productId of productIds) {
-    inventory.set(productId, getInventoryForProduct(productId));
-  }
+  return data;
+}
 
-  return inventory;
+/**
+ * Upsert inventory data for multiple products
+ * Used by the inventory setup/update modal
+ */
+export async function upsertInventoryData(
+  orgId: string,
+  products: InventoryInput[]
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    for (const product of products) {
+      await tx
+        .insert(productData)
+        .values({
+          org_id: orgId,
+          sku: product.sku,
+          current_stock: product.currentStock,
+          weekly_consumption: product.weeklyConsumption,
+          target_soh: product.targetSOH,
+          updated_at: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [productData.org_id, productData.sku],
+          set: {
+            current_stock: product.currentStock,
+            weekly_consumption: product.weeklyConsumption,
+            target_soh: product.targetSOH,
+            updated_at: new Date(),
+          },
+        });
+    }
+  });
+}
+
+/**
+ * Delete inventory data for a specific product
+ * Rarely used - mainly for cleanup
+ */
+export async function deleteInventoryData(
+  orgId: string,
+  sku: string
+): Promise<void> {
+  await db
+    .delete(productData)
+    .where(
+      and(
+        eq(productData.org_id, orgId),
+        eq(productData.sku, sku)
+      )
+    );
 }

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Get user from database
-  const [user] = await db.select().from(users).where(eq(users.id, currentUser.userId));
+  const [user] = await db.select().from(users).where(eq(users.user_id, currentUser.userId));
 
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Update password (plain-text)
-  await db.update(users).set({ password: newPassword }).where(eq(users.id, currentUser.userId));
+  await db.update(users).set({ password: newPassword }).where(eq(users.user_id, currentUser.userId));
 
   return NextResponse.json({ success: true });
 }

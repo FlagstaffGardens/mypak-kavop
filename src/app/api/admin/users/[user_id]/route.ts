@@ -37,7 +37,7 @@ export async function DELETE(
     const [userToDelete] = await db
       .select()
       .from(users)
-      .where(eq(users.id, user_id))
+      .where(eq(users.user_id, user_id))
       .limit(1);
 
     if (!userToDelete) {
@@ -48,7 +48,7 @@ export async function DELETE(
     }
 
     // Delete the user
-    await db.delete(users).where(eq(users.id, user_id));
+    await db.delete(users).where(eq(users.user_id, user_id));
 
     return NextResponse.json({ success: true });
   } catch (error) {

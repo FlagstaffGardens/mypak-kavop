@@ -1,32 +1,68 @@
 import { fetchErpProducts, fetchErpCurrentOrders } from '@/lib/erp/client';
 import { transformErpProduct, transformErpOrder, completeProductWithInventory } from '@/lib/erp/transforms';
-import { getInventoryForProducts } from '@/lib/services/inventory';
+import { getInventoryData } from '@/lib/services/inventory';
+import { getCurrentUser } from '@/lib/auth/jwt';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { mockContainers } from '@/lib/data/mock-containers';
 import type { Product } from '@/lib/types';
 
 export default async function Dashboard() {
+  // Get current user
+  const user = await getCurrentUser();
+
+  if (!user || !user.orgId) {
+    throw new Error('User not authenticated');
+  }
+
   // Fetch data from ERP API
   const erpProducts = await fetchErpProducts();
   const erpOrders = await fetchErpCurrentOrders();
 
+  // Fetch inventory from database
+  const inventoryRows = await getInventoryData(user.orgId);
+
+  // Check first visit (no inventory data)
+  const isFirstVisit = inventoryRows.length === 0;
+
+  // Detect new products (in ERP but not in DB)
+  const dbSkus = new Set(inventoryRows.map(row => row.sku));
+  const newProducts = erpProducts.filter(p => !dbSkus.has(p.sku));
+
   // Transform products
   const partialProducts = erpProducts.map(transformErpProduct);
 
-  // Get inventory data (temporary mock)
-  const productIds = partialProducts.map(p => p.id);
-  const inventoryMap = getInventoryForProducts(productIds);
+  // Create inventory map by SKU
+  const inventoryMap = new Map(
+    inventoryRows.map(row => [row.sku, row])
+  );
 
   // Complete products with inventory
   const products: Product[] = partialProducts.map(partial => {
-    const inventory = inventoryMap.get(partial.id);
+    const inventory = inventoryMap.get(partial.sku);
+
     if (!inventory) {
-      throw new Error(`Missing inventory for product ${partial.id}`);
+      // Product not configured yet - return placeholder
+      return {
+        ...partial,
+        currentStock: 0,
+        weeklyConsumption: 0,
+        targetStock: 0,
+        targetSOH: 6,
+        runsOutDate: 'Not configured',
+        runsOutDays: 0,
+        weeksRemaining: 0,
+        status: 'CRITICAL' as const,
+        currentPallets: 0,
+        weeklyPallets: 0,
+      };
     }
+
+    // Complete with real inventory data
     return completeProductWithInventory(
       partial,
-      inventory.currentStock,
-      inventory.weeklyConsumption
+      inventory.current_stock,
+      inventory.weekly_consumption,
+      inventory.target_soh
     );
   });
 
@@ -45,6 +81,8 @@ export default async function Dashboard() {
       containers={containers}
       liveOrders={liveOrders}
       lastUpdated={lastUpdated}
+      isFirstVisit={isFirstVisit}
+      newProductCount={newProducts.length}
     />
   );
 }

@@ -25,11 +25,11 @@ async function getOrganizationsWithUsers() {
 
   // Group users by org_id
   const usersByOrg = allUsers.reduce((acc, user) => {
-    if (!user.orgId) return acc;
-    if (!acc[user.orgId]) {
-      acc[user.orgId] = [];
+    if (!user.org_id) return acc;
+    if (!acc[user.org_id]) {
+      acc[user.org_id] = [];
     }
-    acc[user.orgId].push(user);
+    acc[user.org_id].push(user);
     return acc;
   }, {} as Record<string, typeof allUsers>);
 
