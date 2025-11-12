@@ -1,9 +1,19 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { X, Info, Loader2 } from 'lucide-react';
+import { X, Info, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { EditableNumberCell } from './EditableNumberCell';
 import { validateCurrentStock, validateWeeklyConsumption } from '@/lib/validation';
 import { calculateStockoutDate, calculateTargetStock } from '@/lib/calculations';
@@ -56,6 +66,7 @@ export function InventoryEditTable({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [editableProducts, setEditableProducts] = useState<EditableProduct[]>([]);
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
 
   const [focusedCell, setFocusedCell] = useState<{
     rowIndex: number;
@@ -209,13 +220,17 @@ export function InventoryEditTable({
       return;
     }
 
+    // Show warning dialog if there are warnings
     if (warnings.length > 0) {
-      const confirmed = confirm(
-        `⚠️ ${warnings.length} warning(s) detected:\n\n${warnings.slice(0, 5).join('\n')}\n\nSave anyway?`
-      );
-      if (!confirmed) return;
+      setShowWarningDialog(true);
+      return;
     }
 
+    // No warnings, proceed with save
+    await performSave();
+  };
+
+  const performSave = async () => {
     try {
       setIsSaving(true);
 
@@ -494,6 +509,46 @@ export function InventoryEditTable({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Warning Confirmation Dialog */}
+      <AlertDialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" />
+              {warnings.length} Warning{warnings.length !== 1 ? 's' : ''} Detected
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>The following products have warnings:</p>
+              <ul className="space-y-2">
+                {warnings.slice(0, 5).map((warning, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <span className="text-foreground">{warning}</span>
+                  </li>
+                ))}
+                {warnings.length > 5 && (
+                  <li className="text-sm text-muted-foreground italic">
+                    ...and {warnings.length - 5} more warning{warnings.length - 5 !== 1 ? 's' : ''}
+                  </li>
+                )}
+              </ul>
+              <p className="text-sm font-medium">Do you want to save anyway?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowWarningDialog(false);
+                performSave();
+              }}
+            >
+              Save Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
