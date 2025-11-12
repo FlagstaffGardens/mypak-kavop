@@ -10,13 +10,13 @@ export const organizations = pgTable("organizations", {
 });
 
 export const users = pgTable("users", {
-  id: uuid("user_id").primaryKey().defaultRandom(),
+  id: text("id").primaryKey(),
   orgId: uuid("org_id").references(() => organizations.org_id, { onDelete: "cascade" }),
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   password: text("password").notNull(),
   role: text("role").notNull().default("org_user"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("created_at").notNull().defaultNow(), // Alias to created_at (no updated_at column in DB)
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at"),
 });
