@@ -16,7 +16,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   password: text("password").notNull(), // Plain-text for now
   role: text("role").notNull().default("org_user"), // "org_user" | "platform_admin"
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  lastLoginAt: timestamp("lastLoginAt"),
 });
