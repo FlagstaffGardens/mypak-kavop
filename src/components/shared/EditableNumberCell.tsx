@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { ValidationResult } from '@/lib/validation';
@@ -23,6 +23,13 @@ export function EditableNumberCell({
   const [editValue, setEditValue] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Focus input when autoFocus prop changes to true
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [autoFocus]);
 
   // When focused, use editValue; when not focused, derive from value prop
   const displayValue = isFocused && editValue !== null ? editValue : value.toLocaleString();
