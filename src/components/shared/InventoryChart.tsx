@@ -2,8 +2,11 @@
 
 import { Line, LineChart, XAxis, YAxis, CartesianGrid, ReferenceArea } from 'recharts';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
-import { addDays, format, parse, isBefore, startOfDay } from 'date-fns';
+import { addDays, format, parse, isBefore, startOfDay, isValid } from 'date-fns';
 import type { Product, Order } from '@/lib/types';
+
+// Orders with past delivery dates are assumed to arrive within this many days
+const PAST_ORDER_ARRIVAL_DAYS = 5;
 
 interface InventoryChartProps {
   product: Product;
@@ -72,6 +75,7 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
 };
 
 export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: InventoryChartProps) {
+  // Note: All date comparisons use local timezone. ERP dates are assumed to be in local time.
   const today = startOfDay(new Date());
 
   // Filter orders that contain this product
@@ -83,19 +87,27 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
       const orderProduct = order.products.find(p => p.productId === product.id || p.productName === product.name);
       const parsedDate = parse(order.deliveryDate, 'MMM dd, yyyy', new Date());
 
-      // If delivery date is in the past, assume it arrives in 5 days for chart calculation
-      const chartDeliveryDate = isBefore(parsedDate, today)
-        ? addDays(today, 5)  // Past orders assumed to arrive in 5 days
+      // Validate that the date parsed successfully
+      if (!isValid(parsedDate)) {
+        console.warn(`[InventoryChart] Invalid delivery date for order ${order.orderNumber}: "${order.deliveryDate}"`);
+        return null;
+      }
+
+      // Normalize parsed date to start of day for consistent comparison
+      const parsedDay = startOfDay(parsedDate);
+
+      // If delivery date is in the past, assume it arrives soon for chart calculation
+      const chartDeliveryDate = isBefore(parsedDay, today)
+        ? addDays(today, PAST_ORDER_ARRIVAL_DAYS)
         : parsedDate;
 
       return {
-        deliveryDate: chartDeliveryDate,  // Date used for chart calculation
-        originalDate: parsedDate,          // Original date for display
+        deliveryDate: chartDeliveryDate,  // Adjusted date for chart projection
         quantity: orderProduct?.recommendedQuantity || 0,
         orderNumber: order.orderNumber,
       };
     })
-    .filter(o => o.quantity > 0)
+    .filter((o): o is NonNullable<typeof o> => o !== null && o.quantity > 0)
     .sort((a, b) => a.deliveryDate.getTime() - b.deliveryDate.getTime());
 
   // Generate chart data points
