@@ -8,6 +8,7 @@ export interface JWTPayload {
   name: string;
   role: "platform_admin" | "org_user";
   orgId: string | null;
+  [key: string]: unknown;
 }
 
 // Get secret as Uint8Array for jose
