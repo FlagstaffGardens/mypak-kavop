@@ -42,6 +42,7 @@ export interface ApprovedOrder {
 // Container Product (Product within a container recommendation)
 export interface ContainerProduct {
   productId: number;
+  sku?: string; // SKU from ERP
   productName: string;
   currentStock: number;
   weeklyConsumption: number;
@@ -49,6 +50,8 @@ export interface ContainerProduct {
   afterDeliveryStock: number;
   weeksSupply: number;
   runsOutDate: string;
+  piecesPerPallet?: number; // For calculating pallets from quantity
+  imageUrl?: string; // Product label image
 }
 
 // Container Recommendation
@@ -83,6 +86,7 @@ export interface Order {
   productCount: number;
   products: ContainerProduct[];
   status: OrderStatus;
+  erpStatus?: string; // Original ERP status string for display
   shippingTerm?: ShippingTerm;
   customerOrderNumber?: string;
   comments?: string;

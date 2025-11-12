@@ -65,6 +65,7 @@ export function transformErpOrder(erpOrder: ErpOrder): Order {
     productCount: erpOrder.lines.length,
     products: erpOrder.lines.map(line => ({
       productId: 0, // We don't have productId from ERP, will need to map by SKU
+      sku: line.sku,
       productName: line.productName,
       currentStock: 0,
       weeklyConsumption: 0,
@@ -74,6 +75,7 @@ export function transformErpOrder(erpOrder: ErpOrder): Order {
       runsOutDate: '',
     })),
     status: mapErpStatusToOrderType(erpOrder.status),
+    erpStatus: erpOrder.status, // Pass through raw ERP status
     shippingTerm: erpOrder.shippingTerm as 'DDP' | 'FOB' | 'CIF',
     customerOrderNumber: erpOrder.customerOrderNumber || undefined,
     comments: erpOrder.comments || undefined,
