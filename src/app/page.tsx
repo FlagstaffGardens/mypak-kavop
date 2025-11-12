@@ -1,191 +1,50 @@
-'use client';
+import { fetchErpProducts, fetchErpCurrentOrders } from '@/lib/erp/client';
+import { transformErpProduct, transformErpOrder, completeProductWithInventory } from '@/lib/erp/transforms';
+import { getInventoryForProducts } from '@/lib/services/inventory';
+import { DashboardClient } from '@/components/dashboard/DashboardClient';
+import { mockContainers } from '@/lib/data/mock-containers';
+import type { Product } from '@/lib/types';
 
-import { useState, useEffect, useMemo } from 'react';
-import { Edit3 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ProductCard } from '@/components/shared/ProductCard';
-import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
-import { InventoryEditTable } from '@/components/shared/InventoryEditTable';
-import { mockProducts } from '@/lib/data/mock-products';
-import { SCENARIOS } from '@/lib/data/mock-scenarios';
-import { mockLiveOrders } from '@/lib/data/mock-orders';
-import type { Product, ContainerRecommendation } from '@/lib/types';
+export default async function Dashboard() {
+  // Fetch data from ERP API
+  const erpProducts = await fetchErpProducts();
+  const erpOrders = await fetchErpCurrentOrders();
 
-type DemoState = 'healthy' | 'single_urgent' | 'multiple_urgent';
+  // Transform products
+  const partialProducts = erpProducts.map(transformErpProduct);
 
-export default function Dashboard() {
-  // Always start with multiple_urgent data to avoid hydration mismatch
-  const [demoState, setDemoState] = useState<DemoState>('multiple_urgent');
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [containers, setContainers] = useState<ContainerRecommendation[]>(SCENARIOS.multiple_urgent.containers);
-  const [showEditTable, setShowEditTable] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
+  // Get inventory data (temporary mock)
+  const productIds = partialProducts.map(p => p.id);
+  const inventoryMap = getInventoryForProducts(productIds);
 
-  // Load data from localStorage after hydration to avoid mismatch
-  // This is the correct pattern to prevent hydration mismatches - server and client
-  // must render identically on first pass, then update from localStorage after mount
-  useEffect(() => {
-    /* eslint-disable react-hooks/exhaustive-deps */
-    setIsMounted(true);
-    const savedState = (localStorage.getItem('demoState') as DemoState) || 'multiple_urgent';
-    setDemoState(savedState);
-
-    // Load scenario data
-    if (SCENARIOS[savedState]) {
-      const scenario = SCENARIOS[savedState];
-      setProducts(scenario.products.length > 0 ? scenario.products : mockProducts);
-      setContainers(scenario.containers);
+  // Complete products with inventory
+  const products: Product[] = partialProducts.map(partial => {
+    const inventory = inventoryMap.get(partial.id);
+    if (!inventory) {
+      throw new Error(`Missing inventory for product ${partial.id}`);
     }
-
-    // Load lastUpdated timestamp
-    const savedTimestamp = localStorage.getItem('inventoryLastUpdated');
-    if (savedTimestamp) {
-      setLastUpdated(new Date(savedTimestamp));
-    }
-    /* eslint-enable react-hooks/exhaustive-deps */
-  }, []);
-
-  // Calculate worst product
-  const worstProduct = useMemo(() => {
-    if (products.length === 0) return null;
-    return products.reduce((worst, product) =>
-      product.weeksRemaining < worst.weeksRemaining ? product : worst
+    return completeProductWithInventory(
+      partial,
+      inventory.currentStock,
+      inventory.weeklyConsumption
     );
-  }, [products]);
+  });
 
-  // Group products by status
-  const criticalProducts = products.filter(p => p.status === 'CRITICAL');
-  const orderNowProducts = products.filter(p => p.status === 'ORDER_NOW');
-  const healthyProducts = products.filter(p => p.status === 'HEALTHY');
+  // Transform orders
+  const liveOrders = erpOrders.map(transformErpOrder);
 
-  // Handle inventory data save
-  const handleSaveInventory = (updatedProducts: Product[]) => {
-    const now = new Date();
-    setProducts(updatedProducts);
-    setLastUpdated(now);
-    setShowEditTable(false);
+  // TODO: Replace mock containers with calculated recommendations
+  const containers = mockContainers;
 
-    // Save timestamp to localStorage
-    localStorage.setItem('inventoryLastUpdated', now.toISOString());
-  };
-
-  // Format last updated timestamp
-  const formatLastUpdated = (date: Date | null) => {
-    if (!date) return 'Never';
-
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} ${diffMins === 1 ? 'min' : 'mins'} ago`;
-    if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
-    if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`;
-
-    // Format as "Nov 8, 2:30 PM"
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
+  // Get last updated from localStorage (client-side only)
+  const lastUpdated = null; // Will be hydrated on client
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Inventory Dashboard
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Monitor your egg carton inventory and receive order recommendations
-          </p>
-        </div>
-        <div className="flex flex-col items-start sm:items-end gap-2">
-          <Button onClick={() => setShowEditTable(true)} size="lg" className="gap-2 w-full sm:w-auto">
-            <Edit3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Update Inventory Data</span>
-            <span className="sm:hidden">Update Inventory</span>
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Last updated: <span className="font-medium">{isMounted && lastUpdated ? formatLastUpdated(lastUpdated) : 'Never'}</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Dashboard Command Center */}
-      <DashboardOverview
-        worstProduct={worstProduct}
-        containers={containers}
-        products={products}
-        liveOrders={mockLiveOrders}
-      />
-
-      {/* Critical Products */}
-      {criticalProducts.length > 0 && (
-        <div>
-          <h2 className="mb-4 text-sm font-semibold text-foreground/70 uppercase tracking-wider">
-            Critical - Immediate Action Required
-          </h2>
-          <div className="grid gap-5 md:grid-cols-2">
-            {criticalProducts.map((product) => (
-              <div key={product.id} id={`product-${product.id}`}>
-                <ProductCard product={product} liveOrders={mockLiveOrders} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Order Now Products */}
-      {orderNowProducts.length > 0 && (
-        <div>
-          <h2 className="mb-4 text-sm font-semibold text-foreground/70 uppercase tracking-wider">
-            Order Now - Running Low
-          </h2>
-          <div className="grid gap-5 md:grid-cols-2">
-            {orderNowProducts.map((product) => (
-              <div key={product.id} id={`product-${product.id}`}>
-                <ProductCard product={product} liveOrders={mockLiveOrders} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Healthy Products */}
-      {healthyProducts.length > 0 && (
-        <div className="mt-8">
-          <div className="flex justify-between items-center p-4 px-6 bg-card border rounded mb-6">
-            <h2 className="text-sm font-semibold text-green-600 dark:text-green-500 uppercase tracking-wider">
-              ✓ {healthyProducts.length} HEALTHY PRODUCTS (16+ weeks supply)
-            </h2>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-2">
-            {healthyProducts.map((product) => (
-              <div key={product.id} id={`product-${product.id}`}>
-                <ProductCard product={product} liveOrders={mockLiveOrders} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Inventory Edit Table */}
-      {showEditTable && (
-        <InventoryEditTable
-          products={products}
-          onSave={handleSaveInventory}
-          onCancel={() => setShowEditTable(false)}
-        />
-      )}
-    </div>
+    <DashboardClient
+      initialProducts={products}
+      containers={containers}
+      liveOrders={liveOrders}
+      lastUpdated={lastUpdated}
+    />
   );
 }
