@@ -39,15 +39,17 @@ export function ProductQuantityRow({
 
   const handleChange = (value: string) => {
     // Allow empty string while typing
-    setInputValue(value);
-
-    // Only update parent if we have a valid number
     if (value === '') {
+      setInputValue('');
       onQuantityChange(0);
       return;
     }
 
-    const numValue = parseFloat(value);
+    // Strip leading zeros (e.g., "02" becomes "2")
+    const strippedValue = value.replace(/^0+(?=\d)/, '');
+    setInputValue(strippedValue);
+
+    const numValue = parseFloat(strippedValue);
     if (isNaN(numValue)) return;
 
     if (unit === 'pallets') {
@@ -61,7 +63,7 @@ export function ProductQuantityRow({
   };
 
   const handleBlur = () => {
-    // Reset input value to match actual quantity on blur
+    // Reset input value to show calculated displayValue on blur
     setInputValue('');
   };
 
