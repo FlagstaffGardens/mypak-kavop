@@ -22,6 +22,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   // Data state
   const [container, setContainer] = useState<ContainerRecommendation | null>(null);
   const [addedProducts, setAddedProducts] = useState<ContainerProduct[]>([]);
+  const [allAvailableProducts, setAllAvailableProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Form state
@@ -44,15 +45,23 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
       try {
         setIsLoading(true);
 
-        // Fetch recommendations from API
-        const response = await fetch('/api/recommendations');
-        if (!response.ok) {
-          throw new Error('Failed to fetch recommendations');
+        // Fetch both recommendations and all products in parallel
+        const [recommendationsResponse, productsResponse] = await Promise.all([
+          fetch('/api/recommendations'),
+          fetch('/api/products'),
+        ]);
+
+        if (!recommendationsResponse.ok || !productsResponse.ok) {
+          throw new Error('Failed to fetch data');
         }
 
-        const data = await response.json();
+        const [recommendationsData, productsData] = await Promise.all([
+          recommendationsResponse.json(),
+          productsResponse.json(),
+        ]);
+
         // Find container by container number (which is now the ID)
-        const containerData = data.containers.find(
+        const containerData = recommendationsData.containers.find(
           (c: ContainerRecommendation) => c.containerNumber.toString() === containerId
         );
 
@@ -66,10 +75,13 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
           });
           setQuantities(initialQuantities);
         }
+
+        // Store all available products for adding
+        setAllAvailableProducts(productsData.products || []);
       } catch (error) {
         console.error('Failed to load container:', error);
         toast({
-          title: 'Error loading container',
+          title: 'Error loading data',
           description: 'Failed to load container data. Please try again.',
           variant: 'destructive',
         });
@@ -81,30 +93,34 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
     loadContainer();
   }, [containerId, toast]);
 
+  // All products in the order (container + added)
+  const allProducts = useMemo(() => {
+    if (!container) return [];
+    return [...container.products, ...addedProducts];
+  }, [container, addedProducts]);
+
   // Computed values
   const totalCartons = useMemo(() => {
     return Object.values(quantities).reduce((sum, qty) => sum + qty, 0);
   }, [quantities]);
 
   const totalPallets = useMemo(() => {
-    if (!container) return 0;
     // Calculate pallets per product using actual piecesPerPallet, then sum
-    return container.products.reduce((sum, product) => {
+    return allProducts.reduce((sum, product) => {
       const productQuantity = quantities[product.productId.toString()] || 0;
       const productPallets = productQuantity / product.piecesPerPallet;
       return sum + productPallets;
     }, 0);
-  }, [quantities, container]);
+  }, [quantities, allProducts]);
 
   const totalVolume = useMemo(() => {
-    if (!container) return 0;
     // Calculate volume per product using volumePerCarton, then sum
-    return container.products.reduce((sum, product) => {
+    return allProducts.reduce((sum, product) => {
       const productQuantity = quantities[product.productId.toString()] || 0;
       const volumePerCarton = product.volumePerCarton || 0;
       return sum + (productQuantity * volumePerCarton);
     }, 0);
-  }, [quantities, container]);
+  }, [quantities, allProducts]);
 
   const capacityValidation = useMemo(() => {
     return validateCapacity(totalVolume);
@@ -119,23 +135,18 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
     return format(addDays(new Date(), weeksToAdd * 7), 'MMM dd, yyyy');
   }, [shippingDetails.arrivalPreference, shippingDetails.specificDate]);
 
-  // All products in the order (container + added)
-  const allProducts = useMemo(() => {
-    if (!container) return [];
-    return [...container.products, ...addedProducts];
-  }, [container, addedProducts]);
-
-  // Available products for adding - disabled for now
-  // In the future, this could fetch from ERP and allow adding more products
+  // Available products for adding (exclude ones already in the order)
   const availableProducts = useMemo(() => {
-    return [];
-  }, []);
+    const productsInOrder = new Set(allProducts.map(p => p.productId));
+    return allAvailableProducts.filter(p => !productsInOrder.has(p.id));
+  }, [allAvailableProducts, allProducts]);
 
   // Handlers
   const handleProductAdd = (product: Product) => {
     // Convert Product to ContainerProduct format
     const containerProduct: ContainerProduct = {
       productId: product.id,
+      sku: product.sku,
       productName: product.name,
       currentStock: product.currentStock,
       weeklyConsumption: product.weeklyConsumption,
@@ -144,6 +155,8 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
       recommendedQuantity: 0, // User will set this
       afterDeliveryStock: product.currentStock, // Will be updated when quantity changes
       piecesPerPallet: product.piecesPerPallet,
+      volumePerCarton: product.volumePerPallet / product.piecesPerPallet,
+      imageUrl: product.imageUrl,
     };
 
     setAddedProducts(prev => [...prev, containerProduct]);
