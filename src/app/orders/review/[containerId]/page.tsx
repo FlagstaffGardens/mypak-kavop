@@ -159,6 +159,34 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
     setQuantities((prev) => ({ ...prev, [productId]: quantity }));
   };
 
+  const handleProductRemove = (productId: number) => {
+    if (!container) return;
+
+    // Remove from container products
+    setContainer(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        products: prev.products.filter(p => p.productId !== productId)
+      };
+    });
+
+    // Remove from added products
+    setAddedProducts(prev => prev.filter(p => p.productId !== productId));
+
+    // Remove quantity
+    setQuantities(prev => {
+      const newQuantities = { ...prev };
+      delete newQuantities[productId.toString()];
+      return newQuantities;
+    });
+
+    toast({
+      title: 'Product removed',
+      description: 'Product has been removed from the order.',
+    });
+  };
+
   const handleShippingChange = (updates: Partial<ShippingDetails>) => {
     setShippingDetails((prev) => ({ ...prev, ...updates }));
   };
@@ -342,6 +370,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
                 quantity={quantities[product.productId.toString()] || 0}
                 onQuantityChange={(qty) => handleQuantityChange(product.productId.toString(), qty)}
                 piecesPerPallet={product.piecesPerPallet}
+                onRemove={() => handleProductRemove(product.productId)}
               />
             ))}
 

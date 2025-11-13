@@ -20,10 +20,12 @@ export function validateCapacity(totalVolume: number): CapacityValidation {
   const MAX_VOLUME = CONTAINER_CAPACITY; // 75.98 m³ for 40HC
   const SMALL_ORDER_THRESHOLD = MAX_VOLUME * 0.5; // 50% of capacity
   const NEAR_CAPACITY_THRESHOLD = MAX_VOLUME * 0.95; // 95% of capacity
+  const TOLERANCE = 0.01; // Allow small floating point errors (0.01 m³ ≈ 0.013%)
 
   const percentFull = (totalVolume / MAX_VOLUME) * 100;
 
-  if (totalVolume > MAX_VOLUME) {
+  // Only invalid if TRULY exceeds capacity (accounting for floating point precision)
+  if (totalVolume > MAX_VOLUME + TOLERANCE) {
     return {
       isValid: false,
       currentVolume: totalVolume,
