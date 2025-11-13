@@ -18,7 +18,7 @@ export function CompactStatusBar({
 
     // Filter out unconfigured products (weekly consumption or target SOH = 0)
     const validProducts = products.filter(
-      p => p.weeklyConsumption > 0 && p.targetSOH > 0
+      p => p.weeklyConsumption > 0 && (p.targetSOH ?? 0) > 0
     );
 
     if (validProducts.length === 0) {

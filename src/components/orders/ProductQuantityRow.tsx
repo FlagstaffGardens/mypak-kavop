@@ -25,6 +25,7 @@ export function ProductQuantityRow({
   unit = 'cartons',
 }: ProductQuantityRowProps) {
   const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
+  const [inputValue, setInputValue] = useState<string>('');
 
   const pallets = quantity / piecesPerPallet;
   const afterDeliveryStock = product.currentStock + quantity;
@@ -37,7 +38,18 @@ export function ProductQuantityRow({
   const step = unit === 'pallets' ? 1 : 1000;
 
   const handleChange = (value: string) => {
-    const numValue = parseFloat(value) || 0;
+    // Allow empty string while typing
+    setInputValue(value);
+
+    // Only update parent if we have a valid number
+    if (value === '') {
+      onQuantityChange(0);
+      return;
+    }
+
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return;
+
     if (unit === 'pallets') {
       // Convert pallets to cartons
       const cartons = Math.round(numValue * piecesPerPallet);
@@ -46,6 +58,11 @@ export function ProductQuantityRow({
       // Direct cartons input
       onQuantityChange(Math.max(0, Math.round(numValue)));
     }
+  };
+
+  const handleBlur = () => {
+    // Reset input value to match actual quantity on blur
+    setInputValue('');
   };
 
   return (
@@ -107,8 +124,10 @@ export function ProductQuantityRow({
             <Input
               id={`quantity-${product.productId}`}
               type="number"
-              value={displayValue}
+              value={inputValue || displayValue}
               onChange={(e) => handleChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              onBlur={handleBlur}
               className="text-base font-medium h-12"
               min="0"
               step={step}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, forwardRef, useImperativeHandle } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,28 +16,38 @@ interface ProductSelectorProps {
   isEmptyState?: boolean;
 }
 
-export function ProductSelector({ availableProducts, onProductAdd, isEmptyState = false }: ProductSelectorProps) {
-  const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [isOpen, setIsOpen] = useState(false);
+export interface ProductSelectorRef {
+  openDropdown: () => void;
+}
 
-  const handleProductSelect = (productId: string) => {
-    setSelectedProductId(productId);
+export const ProductSelector = forwardRef<ProductSelectorRef, ProductSelectorProps>(
+  ({ availableProducts, onProductAdd, isEmptyState = false }, ref) => {
+    const [selectedProductId, setSelectedProductId] = useState<string>('');
+    const [isOpen, setIsOpen] = useState(false);
 
-    // Immediately add product when selected
-    const product = availableProducts.find(p => p.id.toString() === productId);
-    if (product) {
-      onProductAdd(product);
+    // Expose method to open dropdown from parent
+    useImperativeHandle(ref, () => ({
+      openDropdown: () => setIsOpen(true),
+    }));
 
-      // Reset selection after a brief delay so dropdown closes smoothly
-      setTimeout(() => setSelectedProductId(''), 100);
+    const handleProductSelect = (productId: string) => {
+      setSelectedProductId(productId);
+
+      // Immediately add product when selected
+      const product = availableProducts.find(p => p.id.toString() === productId);
+      if (product) {
+        onProductAdd(product);
+
+        // Reset selection after a brief delay so dropdown closes smoothly
+        setTimeout(() => setSelectedProductId(''), 100);
+      }
+    };
+
+    if (availableProducts.length === 0) {
+      return null;
     }
-  };
 
-  if (availableProducts.length === 0) {
-    return null;
-  }
-
-  return (
+    return (
     <div className="flex gap-3 items-center">
       {!isEmptyState && (
         <button
@@ -74,5 +84,8 @@ export function ProductSelector({ availableProducts, onProductAdd, isEmptyState 
         </Select>
       </div>
     </div>
-  );
-}
+    );
+  }
+);
+
+ProductSelector.displayName = 'ProductSelector';

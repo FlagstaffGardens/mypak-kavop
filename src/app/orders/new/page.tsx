@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ContainerSummary } from '@/components/orders/ContainerSummary';
 import { ProductQuantityRow } from '@/components/orders/ProductQuantityRow';
-import { ProductSelector } from '@/components/orders/ProductSelector';
+import { ProductSelector, type ProductSelectorRef } from '@/components/orders/ProductSelector';
 import { ShippingDetailsForm } from '@/components/orders/ShippingDetailsForm';
 import { OrderConfirmationModal } from '@/components/orders/OrderConfirmationModal';
 import { validateCapacity, validateOrder } from '@/lib/validations';
@@ -17,6 +17,7 @@ import type { ShippingDetails, Product, ContainerProduct } from '@/lib/types';
 export default function NewOrderPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const productSelectorRef = useRef<ProductSelectorRef>(null);
 
   // Data state
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -314,7 +315,10 @@ export default function NewOrderPage() {
             {/* Add Product Selector - Show prominently when empty */}
             {orderProducts.length === 0 ? (
               <div className="space-y-3">
-                <div className="border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 px-6 py-10 text-center">
+                <div
+                  className="border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 px-6 py-10 text-center cursor-pointer hover:bg-blue-100/50 dark:hover:bg-blue-950/30 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                  onClick={() => productSelectorRef.current?.openDropdown()}
+                >
                   <div className="mb-4">
                     <svg className="mx-auto h-12 w-12 text-blue-400 dark:text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
@@ -326,8 +330,14 @@ export default function NewOrderPage() {
                   <p className="text-sm text-muted-foreground mb-6">
                     Click the dropdown below to select products
                   </p>
-                  <div className="max-w-md mx-auto">
+                  <div
+                    className="max-w-md mx-auto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
                     <ProductSelector
+                      ref={productSelectorRef}
                       availableProducts={filteredAvailableProducts}
                       onProductAdd={handleProductAdd}
                       isEmptyState={true}
