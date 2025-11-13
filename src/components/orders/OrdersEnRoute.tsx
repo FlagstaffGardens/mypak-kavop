@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Ship, Package, Factory } from 'lucide-react';
 import { OrderDetailsModal } from './OrderDetailsModal';
@@ -8,10 +8,35 @@ import type { Order } from '@/lib/types';
 
 interface OrdersEnRouteProps {
   orders: Order[];
+  highlightOrderNumber?: string | null;
 }
 
-export function OrdersEnRoute({ orders }: OrdersEnRouteProps) {
+export function OrdersEnRoute({ orders, highlightOrderNumber }: OrdersEnRouteProps) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const orderRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Handle highlighting and auto-opening modal
+  useEffect(() => {
+    if (highlightOrderNumber) {
+      const inTransitOrders = orders.filter(order => order.type === 'IN_TRANSIT');
+      const orderToHighlight = inTransitOrders.find(
+        order => order.orderNumber === highlightOrderNumber
+      );
+
+      if (orderToHighlight) {
+        // Open the modal
+        setSelectedOrder(orderToHighlight);
+
+        // Scroll to the order on next animation frame (faster than setTimeout)
+        requestAnimationFrame(() => {
+          const orderElement = orderRefs.current.get(highlightOrderNumber);
+          if (orderElement) {
+            orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      }
+    }
+  }, [highlightOrderNumber, orders]);
 
   // Get only in-transit orders (includes both APPROVED and IN_TRANSIT from ERP)
   const inTransitOrders = orders.filter(order => order.type === 'IN_TRANSIT');
@@ -66,6 +91,13 @@ export function OrdersEnRoute({ orders }: OrdersEnRouteProps) {
         {inTransitOrders.map((order) => (
           <div
             key={order.id}
+            ref={(el) => {
+              if (el) {
+                orderRefs.current.set(order.orderNumber, el);
+              } else {
+                orderRefs.current.delete(order.orderNumber);
+              }
+            }}
             className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded overflow-hidden hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md transition-all"
           >
             <div className="px-6 py-5">

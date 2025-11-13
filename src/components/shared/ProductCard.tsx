@@ -160,7 +160,7 @@ export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
             </div>
             {productLiveOrders.map((order) => (
               <p key={order.orderNumber} className="text-foreground/70 text-xs mt-1">
-                • Order #{order.orderNumber}: {Math.round(order.quantity / 1000)} pallets ({order.quantity.toLocaleString()} cartons) → {order.deliveryDate}
+                • Order #{order.orderNumber}: {(order.quantity / product.piecesPerPallet).toFixed(1)} pallets ({order.quantity.toLocaleString()} cartons) → {order.deliveryDate}
               </p>
             ))}
           </div>

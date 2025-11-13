@@ -22,7 +22,9 @@ function OrdersTabs({
   completedOrders
 }: OrdersPageClientProps) {
   const searchParams = useSearchParams();
-  const currentTab = searchParams.get('tab') || 'recommended';
+  const highlightOrderNumber = searchParams.get('highlight');
+  // If highlight param exists, default to live tab, otherwise use tab param or recommended
+  const currentTab = highlightOrderNumber ? 'live' : (searchParams.get('tab') || 'recommended');
 
   return (
     <Tabs value={currentTab} className="w-full">
@@ -59,7 +61,7 @@ function OrdersTabs({
       </TabsContent>
 
       <TabsContent value="live" className="mt-6">
-        <OrdersEnRoute orders={liveOrders} />
+        <OrdersEnRoute orders={liveOrders} highlightOrderNumber={highlightOrderNumber} />
       </TabsContent>
 
       <TabsContent value="completed" className="mt-6">
