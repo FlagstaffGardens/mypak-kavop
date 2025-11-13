@@ -108,6 +108,16 @@ export default function NewOrderPage() {
 
   // Handlers
   const handleProductAdd = (product: Product) => {
+    // Calculate smart default quantity:
+    // - If has weekly consumption: 4 weeks worth (rounded to nearest 1000)
+    // - Otherwise: 5000 cartons (minimum 1 pallet)
+    let defaultQuantity = 5000;
+    if (product.weeklyConsumption > 0) {
+      const fourWeeksWorth = product.weeklyConsumption * 4;
+      defaultQuantity = Math.round(fourWeeksWorth / 1000) * 1000;
+      defaultQuantity = Math.max(defaultQuantity, 5000); // Minimum 5000
+    }
+
     // Convert Product to ContainerProduct format
     const containerProduct: ContainerProduct = {
       productId: product.id,
@@ -117,19 +127,19 @@ export default function NewOrderPage() {
       weeklyConsumption: product.weeklyConsumption,
       weeksSupply: product.weeksRemaining,
       runsOutDate: product.runsOutDate,
-      recommendedQuantity: 0,
-      afterDeliveryStock: product.currentStock,
+      recommendedQuantity: defaultQuantity,
+      afterDeliveryStock: product.currentStock + defaultQuantity,
       piecesPerPallet: product.piecesPerPallet,
       volumePerCarton: product.volumePerPallet / product.piecesPerPallet,
       imageUrl: product.imageUrl,
     };
 
     setOrderProducts(prev => [...prev, containerProduct]);
-    setQuantities(prev => ({ ...prev, [product.id.toString()]: 0 }));
+    setQuantities(prev => ({ ...prev, [product.id.toString()]: defaultQuantity }));
 
     toast({
       title: 'Product added',
-      description: `${product.name} has been added to the order.`,
+      description: `${product.name} added with ${(defaultQuantity / 1000).toFixed(0)}k cartons.`,
     });
   };
 

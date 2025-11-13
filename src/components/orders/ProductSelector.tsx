@@ -18,13 +18,16 @@ interface ProductSelectorProps {
 export function ProductSelector({ availableProducts, onProductAdd }: ProductSelectorProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>('');
 
-  const handleAdd = () => {
-    if (!selectedProductId) return;
+  const handleProductSelect = (productId: string) => {
+    setSelectedProductId(productId);
 
-    const product = availableProducts.find(p => p.id.toString() === selectedProductId);
+    // Immediately add product when selected
+    const product = availableProducts.find(p => p.id.toString() === productId);
     if (product) {
       onProductAdd(product);
-      setSelectedProductId(''); // Reset selection
+
+      // Reset selection after a brief delay so dropdown closes smoothly
+      setTimeout(() => setSelectedProductId(''), 100);
     }
   };
 
@@ -35,9 +38,9 @@ export function ProductSelector({ availableProducts, onProductAdd }: ProductSele
   return (
     <div className="flex gap-2 items-end">
       <div className="flex-1">
-        <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+        <Select value={selectedProductId} onValueChange={handleProductSelect}>
           <SelectTrigger className="w-full cursor-pointer">
-            <SelectValue placeholder="Select a product to add..." />
+            <SelectValue placeholder="Click to add a product..." />
           </SelectTrigger>
           <SelectContent>
             {availableProducts.map((product) => (
@@ -48,14 +51,6 @@ export function ProductSelector({ availableProducts, onProductAdd }: ProductSele
           </SelectContent>
         </Select>
       </div>
-      <Button
-        onClick={handleAdd}
-        disabled={!selectedProductId}
-        className="gap-2"
-      >
-        <Plus className="h-4 w-4" />
-        Add Product
-      </Button>
     </div>
   );
 }
