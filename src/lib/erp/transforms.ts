@@ -244,6 +244,7 @@ export function transformErpOrder(erpOrder: ErpOrder): Order {
       afterDeliveryStock: 0,
       weeksSupply: 0,
       runsOutDate: '',
+      piecesPerPallet: 5000, // Default, will be enriched with actual value later
     })),
     status: mapErpStatusToOrderType(erpOrder.status),
     erpStatus: erpOrder.status, // Pass through raw ERP status

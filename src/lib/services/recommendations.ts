@@ -42,6 +42,7 @@ export interface ContainerRecommendation {
     productName: string;
     quantity: number;
     volume: number;
+    piecesPerPallet: number;
   }[];
   generatedAt: Date;
 }
@@ -190,6 +191,7 @@ function transformOrders(erpOrders: ErpOrder[]): Order[] {
         afterDeliveryStock: 0,
         weeksSupply: 0,
         runsOutDate: '',
+        piecesPerPallet: 5000, // Default, will be enriched with actual value later
       })) || [],
     status: 'IN_TRANSIT' as const,
   }));

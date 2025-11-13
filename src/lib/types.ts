@@ -51,7 +51,7 @@ export interface ContainerProduct {
   afterDeliveryStock: number;
   weeksSupply: number;
   runsOutDate: string;
-  piecesPerPallet?: number; // For calculating pallets from quantity
+  piecesPerPallet: number; // For calculating pallets from quantity (always provided by algorithm)
   imageUrl?: string; // Product label image
 }
 

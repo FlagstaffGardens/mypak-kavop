@@ -151,6 +151,12 @@ function simulateProductOrders(
     return events;
   }
 
+  // Skip products with invalid piecesPerPallet
+  if (!product.piecesPerPallet || product.piecesPerPallet <= 0) {
+    console.warn(`[Algorithm] Skipping product ${product.sku}: invalid piecesPerPallet (${product.piecesPerPallet})`);
+    return events;
+  }
+
   // Calculate safety threshold per product
   const safetyThreshold = product.targetSOH + SHIPPING_LEAD_TIME_WEEKS;
 

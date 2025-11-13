@@ -35,7 +35,7 @@ export default async function OrdersPage() {
       const productInfo = product.sku ? skuToProductInfo.get(product.sku) : undefined;
       return {
         ...product,
-        piecesPerPallet: productInfo?.piecesPerPallet,
+        piecesPerPallet: productInfo?.piecesPerPallet || 5000, // Default if product info not found
         imageUrl: productInfo?.imageUrl || undefined,
       };
     }),
@@ -82,7 +82,7 @@ export default async function OrdersPage() {
             ? ((inventory.current_stock || 0) + p.quantity) / inventory.weekly_consumption
             : 999,
           runsOutDate: '',
-          piecesPerPallet: productInfo?.piecesPerPallet,
+          piecesPerPallet: p.piecesPerPallet, // From algorithm output (always present)
           imageUrl: productInfo?.imageUrl || undefined,
         };
       }),

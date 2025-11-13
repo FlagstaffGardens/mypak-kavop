@@ -16,7 +16,7 @@ export function ProductQuantityRow({
   onQuantityChange,
   piecesPerPallet,
 }: ProductQuantityRowProps) {
-  const pallets = Math.ceil(quantity / piecesPerPallet);
+  const pallets = (quantity / piecesPerPallet).toFixed(1);
   const afterDeliveryStock = product.currentStock + quantity;
   const afterDeliveryWeeks = product.weeklyConsumption > 0
     ? (afterDeliveryStock / product.weeklyConsumption).toFixed(1)

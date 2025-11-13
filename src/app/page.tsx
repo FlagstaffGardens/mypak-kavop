@@ -101,7 +101,7 @@ export default async function Dashboard() {
             ? ((product.currentStock || 0) + p.quantity) / product.weeklyConsumption
             : 999,
           runsOutDate: '',
-          piecesPerPallet: product?.piecesPerPallet,
+          piecesPerPallet: p.piecesPerPallet, // From algorithm output (always present)
           imageUrl: product?.imageUrl,
         };
       }),

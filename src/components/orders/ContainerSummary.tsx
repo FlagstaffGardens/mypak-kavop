@@ -51,7 +51,7 @@ export function ContainerSummary({
               {totalCartons.toLocaleString()}
             </p>
             <p className="text-sm text-muted-foreground">
-              cartons ({totalPallets} pallets)
+              cartons ({totalPallets.toFixed(1)} pallets)
             </p>
           </div>
         </div>
