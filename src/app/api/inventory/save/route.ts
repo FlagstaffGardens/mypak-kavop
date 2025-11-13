@@ -4,6 +4,9 @@ import { upsertInventoryData, type InventoryInput } from '@/lib/services/invento
 import { generateAndSaveRecommendations } from '@/lib/services/recommendations';
 import { MIN_TARGET_SOH_WEEKS, MAX_TARGET_SOH_WEEKS } from '@/lib/constants';
 import { z } from 'zod';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Validation schema
 const inventorySchema = z.object({
@@ -43,7 +46,14 @@ export async function POST(request: Request) {
     await upsertInventoryData(user.orgId, validated.products as InventoryInput[]);
     console.log('[API] Inventory data saved');
 
-    // 2. Regenerate recommendations (synchronous - user waits)
+    // 2. Update organization's last_inventory_update timestamp
+    await db
+      .update(organizations)
+      .set({ last_inventory_update: new Date() })
+      .where(eq(organizations.org_id, user.orgId));
+    console.log('[API] Updated last_inventory_update timestamp');
+
+    // 3. Regenerate recommendations (synchronous - user waits)
     console.log('[API] Recalculating recommendations...');
     await generateAndSaveRecommendations(user.orgId);
     console.log('[API] Recommendations updated successfully');

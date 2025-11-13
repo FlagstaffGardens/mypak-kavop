@@ -1,0 +1,1 @@
+ALTER TABLE "organizations" ADD COLUMN "last_inventory_update" timestamp;

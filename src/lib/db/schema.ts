@@ -7,6 +7,7 @@ export const organizations = pgTable("organizations", {
   kavop_token: text("kavop_token").notNull(),
   created_at: timestamp("created_at").defaultNow().notNull(),
   updated_at: timestamp("updated_at").defaultNow().notNull(),
+  last_inventory_update: timestamp("last_inventory_update"),
 });
 
 export const users = pgTable("users", {

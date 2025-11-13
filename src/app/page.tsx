@@ -7,6 +7,9 @@ import { getCurrentUser } from '@/lib/auth/jwt';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { DEFAULT_TARGET_SOH } from '@/lib/constants';
 import type { Product, ContainerRecommendation } from '@/lib/types';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 export default async function Dashboard() {
   // Get current user
@@ -16,12 +19,16 @@ export default async function Dashboard() {
     redirect('/sign-in');
   }
 
-  // Fetch data from ERP API
-  const erpProducts = await fetchErpProducts();
-  const erpOrders = await fetchErpCurrentOrders();
+  // Fetch data from ERP API and database
+  const [erpProducts, erpOrders, inventoryRows, org] = await Promise.all([
+    fetchErpProducts(),
+    fetchErpCurrentOrders(),
+    getInventoryData(user.orgId),
+    db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1),
+  ]);
 
-  // Fetch inventory from database
-  const inventoryRows = await getInventoryData(user.orgId);
+  // Get last updated timestamp from organization
+  const lastUpdated = org[0]?.last_inventory_update || null;
 
   // Check first visit (no inventory data)
   const isFirstVisit = inventoryRows.length === 0;
@@ -109,9 +116,6 @@ export default async function Dashboard() {
       }),
     };
   });
-
-  // Get last updated from localStorage (client-side only)
-  const lastUpdated = null; // Will be hydrated on client
 
   return (
     <DashboardClient
