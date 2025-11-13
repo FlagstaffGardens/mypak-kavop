@@ -22,6 +22,8 @@ const inventorySchema = z.object({
  */
 export async function POST(request: Request) {
   try {
+    console.log('[API] Inventory save started');
+
     // Get current user
     const user = await getCurrentUser();
 
@@ -37,16 +39,18 @@ export async function POST(request: Request) {
     const validated = inventorySchema.parse(body);
 
     // 1. Upsert inventory data
+    console.log('[API] Saving inventory data...');
     await upsertInventoryData(user.orgId, validated.products as InventoryInput[]);
+    console.log('[API] Inventory data saved');
 
     // 2. Regenerate recommendations (synchronous - user waits)
-    console.log('[API] Regenerating recommendations...');
+    console.log('[API] Recalculating recommendations...');
     await generateAndSaveRecommendations(user.orgId);
-    console.log('[API] Recommendations regenerated successfully');
+    console.log('[API] Recommendations updated successfully');
 
     return NextResponse.json({
       success: true,
-      message: 'Inventory saved and recommendations updated',
+      message: 'Inventory and recommendations updated successfully',
     });
   } catch (error) {
     console.error('[API] /api/inventory/save error:', error);

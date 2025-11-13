@@ -230,17 +230,14 @@ function transformRecommendationRow(row: typeof recommendations.$inferSelect): C
 export async function generateAndSaveRecommendations(orgId: string): Promise<void> {
   console.log(`[Recommendations] Generating for org: ${orgId}`);
 
-  // 1. Fetch ERP data
-  const [erpProducts, erpOrders] = await Promise.all([
+  // 1. Fetch all data in parallel (ERP + DB)
+  const [erpProducts, erpOrders, inventoryData] = await Promise.all([
     fetchErpProductsForOrg(orgId),
     fetchErpCurrentOrdersForOrg(orgId),
+    getInventoryData(orgId),
   ]);
 
-  console.log(`[Recommendations] Fetched ${erpProducts.length} products, ${erpOrders.length} orders`);
-
-  // 2. Fetch inventory from database
-  const inventoryData = await getInventoryData(orgId);
-  console.log(`[Recommendations] Fetched ${inventoryData.length} inventory records`);
+  console.log(`[Recommendations] Fetched ${erpProducts.length} products, ${erpOrders.length} orders, ${inventoryData.length} inventory records`);
 
   // 3. Merge ERP + inventory
   const products = mergeProductData(erpProducts, inventoryData);

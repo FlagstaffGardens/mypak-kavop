@@ -57,6 +57,8 @@ interface ErpProduct {
  * @param onCancel - Callback when user cancels (ignored on first visit)
  * @param isFirstVisit - Whether this is first-time setup (blocks dismissal)
  */
+type SaveStage = 'idle' | 'saving' | 'calculating' | 'success';
+
 export function InventoryEditTable({
   products,
   onSave,
@@ -64,7 +66,7 @@ export function InventoryEditTable({
   isFirstVisit,
 }: InventoryEditTableProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveStage, setSaveStage] = useState<SaveStage>('idle');
   const [editableProducts, setEditableProducts] = useState<EditableProduct[]>([]);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
 
@@ -232,7 +234,7 @@ export function InventoryEditTable({
 
   const performSave = async () => {
     try {
-      setIsSaving(true);
+      setSaveStage('saving');
 
       // Convert to API format (cartons)
       const dataToSave = editableProducts.map(p => ({
@@ -242,22 +244,35 @@ export function InventoryEditTable({
         targetSOH: p.targetSOH || DEFAULT_TARGET_SOH,
       }));
 
+      // Show "calculating" stage after 1.5s to indicate progress
+      const calculatingTimer = setTimeout(() => {
+        setSaveStage('calculating');
+      }, 1500);
+
       const response = await fetch('/api/inventory/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: dataToSave }),
       });
 
+      // Clear timer if request finishes early
+      clearTimeout(calculatingTimer);
+
       if (!response.ok) {
         throw new Error('Failed to save inventory data');
       }
 
-      // Success - call onSave to reload page
-      onSave();
+      // Show success state briefly
+      setSaveStage('success');
+
+      // Call onSave after brief success display
+      setTimeout(() => {
+        onSave();
+      }, 800);
     } catch (error) {
       console.error('Failed to save inventory data:', error);
       toast.error('Failed to save inventory data. Please try again.');
-      setIsSaving(false);
+      setSaveStage('idle');
     }
   };
 
@@ -316,7 +331,7 @@ export function InventoryEditTable({
             </p>
           </div>
           {!isFirstVisit && (
-            <Button variant="ghost" size="icon" onClick={onCancel} disabled={isSaving}>
+            <Button variant="ghost" size="icon" onClick={onCancel} disabled={saveStage !== 'idle'}>
               <X className="h-5 w-5" />
             </Button>
           )}
@@ -333,25 +348,61 @@ export function InventoryEditTable({
           </div>
           <div className="flex gap-2">
             {!isFirstVisit && (
-              <Button variant="outline" onClick={onCancel} disabled={isSaving || isLoading}>
+              <Button variant="outline" onClick={onCancel} disabled={saveStage !== 'idle' || isLoading}>
                 Cancel
               </Button>
             )}
-            <Button onClick={handleSave} disabled={hasErrors || isSaving || isLoading}>
-              {isSaving ? (
+            <Button
+              onClick={handleSave}
+              disabled={hasErrors || saveStage !== 'idle' || isLoading}
+              className={saveStage === 'success' ? 'bg-green-600 hover:bg-green-700' : ''}
+            >
+              {saveStage === 'saving' && (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  Saving inventory...
                 </>
-              ) : (
-                'Save Changes'
               )}
+              {saveStage === 'calculating' && (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Recalculating recommendations...
+                </>
+              )}
+              {saveStage === 'success' && (
+                <>
+                  <span className="mr-2">✓</span>
+                  Saved!
+                </>
+              )}
+              {saveStage === 'idle' && 'Save Changes'}
             </Button>
           </div>
         </div>
 
         {/* Table */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto relative">
+          {/* Saving Overlay */}
+          {saveStage !== 'idle' && (
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="bg-card border border-border rounded-lg p-6 shadow-lg">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="text-center">
+                    <p className="font-medium">
+                      {saveStage === 'saving' && 'Saving inventory...'}
+                      {saveStage === 'calculating' && 'Recalculating recommendations...'}
+                      {saveStage === 'success' && '✓ Complete!'}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {saveStage === 'calculating' && 'This may take a few seconds...'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
