@@ -13,9 +13,10 @@ import type { Product } from '@/lib/types';
 interface ProductSelectorProps {
   availableProducts: Product[];
   onProductAdd: (product: Product) => void;
+  isEmptyState?: boolean;
 }
 
-export function ProductSelector({ availableProducts, onProductAdd }: ProductSelectorProps) {
+export function ProductSelector({ availableProducts, onProductAdd, isEmptyState = false }: ProductSelectorProps) {
   const [selectedProductId, setSelectedProductId] = useState<string>('');
 
   const handleProductSelect = (productId: string) => {
@@ -39,8 +40,20 @@ export function ProductSelector({ availableProducts, onProductAdd }: ProductSele
     <div className="flex gap-2 items-end">
       <div className="flex-1">
         <Select value={selectedProductId} onValueChange={handleProductSelect}>
-          <SelectTrigger className="w-full cursor-pointer">
-            <SelectValue placeholder="Click to add a product..." />
+          <SelectTrigger
+            className={`w-full cursor-pointer transition-all ${
+              isEmptyState
+                ? 'h-14 text-base border-2 border-blue-500 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 shadow-sm'
+                : 'h-11'
+            }`}
+          >
+            <SelectValue
+              placeholder={
+                isEmptyState
+                  ? "Click here to select a product..."
+                  : "Click to add a product..."
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {availableProducts.map((product) => (

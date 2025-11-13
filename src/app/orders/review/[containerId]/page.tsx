@@ -401,6 +401,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
             <ProductSelector
               availableProducts={availableProducts}
               onProductAdd={handleProductAdd}
+              isEmptyState={false}
             />
           </div>
 

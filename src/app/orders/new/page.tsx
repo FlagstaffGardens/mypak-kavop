@@ -308,33 +308,50 @@ export default function NewOrderPage() {
               </span>
             </div>
 
+            {/* Add Product Selector - Show prominently when empty */}
             {orderProducts.length === 0 ? (
-              <div className="border border-dashed border-border rounded-lg bg-muted/30 px-8 py-12 text-center">
-                <p className="text-base font-medium text-muted-foreground mb-2">
-                  No products added yet
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Use the selector below to add products to your order
-                </p>
+              <div className="space-y-3">
+                <div className="border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 px-6 py-10 text-center">
+                  <div className="mb-4">
+                    <svg className="mx-auto h-12 w-12 text-blue-400 dark:text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </div>
+                  <p className="text-lg font-semibold text-foreground mb-1">
+                    Add products to start your order
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Click the dropdown below to select products
+                  </p>
+                  <div className="max-w-md mx-auto">
+                    <ProductSelector
+                      availableProducts={filteredAvailableProducts}
+                      onProductAdd={handleProductAdd}
+                      isEmptyState={true}
+                    />
+                  </div>
+                </div>
               </div>
             ) : (
-              orderProducts.map((product) => (
-                <ProductQuantityRow
-                  key={product.productId}
-                  product={product}
-                  quantity={quantities[product.productId.toString()] || 0}
-                  onQuantityChange={(qty) => handleQuantityChange(product.productId.toString(), qty)}
-                  piecesPerPallet={product.piecesPerPallet}
-                  onRemove={() => handleProductRemove(product.productId)}
+              <>
+                {orderProducts.map((product) => (
+                  <ProductQuantityRow
+                    key={product.productId}
+                    product={product}
+                    quantity={quantities[product.productId.toString()] || 0}
+                    onQuantityChange={(qty) => handleQuantityChange(product.productId.toString(), qty)}
+                    piecesPerPallet={product.piecesPerPallet}
+                    onRemove={() => handleProductRemove(product.productId)}
+                  />
+                ))}
+                {/* Add Product Selector - Compact version when products exist */}
+                <ProductSelector
+                  availableProducts={filteredAvailableProducts}
+                  onProductAdd={handleProductAdd}
+                  isEmptyState={false}
                 />
-              ))
+              </>
             )}
-
-            {/* Add Product Selector */}
-            <ProductSelector
-              availableProducts={filteredAvailableProducts}
-              onProductAdd={handleProductAdd}
-            />
           </div>
 
           {/* Shipping Details */}
