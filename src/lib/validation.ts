@@ -34,12 +34,17 @@ export function validateWeeklyConsumption(
   consumption: number,
   previousValue?: number
 ): ValidationResult {
-  if (consumption <= 0) {
-    return { state: 'error', message: 'Consumption must be greater than 0' };
+  if (consumption < 0) {
+    return { state: 'error', message: 'Consumption cannot be negative' };
   }
 
   if (isNaN(consumption)) {
     return { state: 'error', message: 'Please enter a valid number' };
+  }
+
+  // Allow 0 consumption (indicates discontinued/inactive product)
+  if (consumption === 0) {
+    return { state: 'valid' };
   }
 
   // Warning if changed by more than 50% from previous value
