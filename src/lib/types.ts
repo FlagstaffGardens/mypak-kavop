@@ -26,6 +26,7 @@ export interface Product {
   status: ProductStatus;
   // Pallet information
   piecesPerPallet: number;
+  volumePerPallet: number; // m³ per pallet (from ERP)
   currentPallets: number;
   weeklyPallets: number;
   approvedOrders?: ApprovedOrder[];

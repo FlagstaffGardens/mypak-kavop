@@ -39,3 +39,19 @@ export const MIN_TARGET_SOH_WEEKS = 0;
 
 /** Weeks remaining threshold for HEALTHY status */
 export const HEALTHY_THRESHOLD_WEEKS = 16;
+
+/**
+ * Shipping & Logistics
+ */
+
+/** Container capacity in cubic meters (40HC standard) */
+export const CONTAINER_CAPACITY = 76;
+
+/** Shipping lead time from China to New Zealand in weeks */
+export const SHIPPING_LEAD_TIME_WEEKS = 8;
+
+/** Planning horizon for recommendations in weeks (12 months) */
+export const PLANNING_HORIZON_WEEKS = 52;
+
+/** Coalescing window for grouping orders (business week) */
+export const COALESCING_WINDOW_DAYS = 7;

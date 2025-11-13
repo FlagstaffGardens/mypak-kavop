@@ -34,6 +34,7 @@ export function transformErpProduct(erpProduct: ErpProduct): Omit<Product, 'curr
     sku: erpProduct.sku,
     imageUrl: erpProduct.imageUrl || undefined,
     piecesPerPallet: erpProduct.piecesPerPallet,
+    volumePerPallet: erpProduct.volumePerPallet,
   };
 }
 
