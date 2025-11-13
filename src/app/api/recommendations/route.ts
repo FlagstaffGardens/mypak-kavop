@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/jwt';
 import { getRecommendations } from '@/lib/services/recommendations';
 import { fetchErpProducts } from '@/lib/erp/client';
 import { getInventoryData } from '@/lib/services/inventory';
+import { addDays, format } from 'date-fns';
 import type { ContainerRecommendation } from '@/lib/types';
 
 /**
@@ -56,20 +57,29 @@ export async function GET() {
       products: rec.products.map(p => {
         const inventory = inventoryMap.get(p.sku);
         const productInfo = productInfoMap.get(p.sku);
+
+        const currentStock = inventory?.current_stock || 0;
+        const weeklyConsumption = inventory?.weekly_consumption || 0;
+
+        // Calculate CURRENT weeks supply and runs out date
+        const weeksSupply = weeklyConsumption > 0 ? currentStock / weeklyConsumption : 999;
+        const daysRemaining = Math.floor(weeksSupply * 7);
+        const runsOutDate = weeklyConsumption > 0
+          ? format(addDays(new Date(), daysRemaining), 'MMM dd, yyyy')
+          : 'Never';
+
         return {
           productId: p.productId,
           sku: p.sku,
           productName: p.productName,
-          currentStock: inventory?.current_stock || 0,
-          weeklyConsumption: inventory?.weekly_consumption || 0,
+          currentStock,
+          weeklyConsumption,
           recommendedQuantity: p.quantity,
-          afterDeliveryStock: (inventory?.current_stock || 0) + p.quantity,
-          weeksSupply: inventory?.weekly_consumption
-            ? ((inventory.current_stock || 0) + p.quantity) / inventory.weekly_consumption
-            : 999,
-          runsOutDate: '',
+          afterDeliveryStock: currentStock + p.quantity,
+          weeksSupply, // Current weeks supply (not after delivery)
+          runsOutDate,
           piecesPerPallet: p.piecesPerPallet,
-          volumePerCarton: productInfo?.volumePerCarton, // Add volume per carton
+          volumePerCarton: productInfo?.volumePerCarton,
           imageUrl: productInfo?.imageUrl || undefined,
         };
       }),
