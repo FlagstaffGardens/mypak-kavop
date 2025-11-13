@@ -44,8 +44,19 @@ export const HEALTHY_THRESHOLD_WEEKS = 16;
  * Shipping & Logistics
  */
 
-/** Container capacity in cubic meters (40HC standard) */
-export const CONTAINER_CAPACITY = 76;
+/**
+ * Container Specifications
+ *
+ * MyPak uses two standard container types for shipping from China to NZ.
+ * The algorithm currently uses 40HC only for all recommendations.
+ */
+export const CONTAINER_TYPES = {
+  '40HC': 75.98, // m³ - High Cube 40ft (USED BY ALGORITHM)
+  '20GP': 33.42, // m³ - General Purpose 20ft (reference only)
+} as const;
+
+/** Container capacity used by recommendation algorithm (40HC) */
+export const CONTAINER_CAPACITY = CONTAINER_TYPES['40HC']; // 75.98 m³
 
 /** Shipping lead time from China to New Zealand in weeks */
 export const SHIPPING_LEAD_TIME_WEEKS = 8;

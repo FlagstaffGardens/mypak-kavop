@@ -71,10 +71,15 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
 
   const totalPallets = useMemo(() => {
     if (!container) return 0;
-    // Use first product's piecesPerPallet as default, or 200
-    const piecesPerPallet = 200; // Could be refined per product
-    return Math.ceil(totalCartons / piecesPerPallet);
-  }, [totalCartons, container]);
+    // Calculate pallets per product using actual piecesPerPallet, then sum
+    return container.products.reduce((sum, product) => {
+      const productQuantity = quantities[product.productId.toString()] || 0;
+      const productPallets = product.piecesPerPallet
+        ? productQuantity / product.piecesPerPallet
+        : 0;
+      return sum + productPallets;
+    }, 0);
+  }, [quantities, container]);
 
   const capacityValidation = useMemo(() => {
     return validateCapacity(totalCartons);
@@ -302,7 +307,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
                 product={product}
                 quantity={quantities[product.productId.toString()] || 0}
                 onQuantityChange={(qty) => handleQuantityChange(product.productId.toString(), qty)}
-                piecesPerPallet={200}
+                piecesPerPallet={product.piecesPerPallet || 200}
               />
             ))}
 
@@ -354,7 +359,9 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
           .map((p) => ({
             name: p.productName,
             quantity: quantities[p.productId.toString()],
-            pallets: Math.ceil(quantities[p.productId.toString()] / 200),
+            pallets: p.piecesPerPallet
+              ? quantities[p.productId.toString()] / p.piecesPerPallet
+              : Math.ceil(quantities[p.productId.toString()] / 200),
           }))}
         totalCartons={totalCartons}
         totalPallets={totalPallets}
