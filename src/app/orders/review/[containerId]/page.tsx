@@ -123,7 +123,8 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   }, [quantities, allProducts]);
 
   const capacityValidation = useMemo(() => {
-    return validateCapacity(totalVolume);
+    // Review orders also require 100-105% capacity range (same as new orders)
+    return validateCapacity(totalVolume, true);
   }, [totalVolume]);
 
   const estimatedDelivery = useMemo(() => {
