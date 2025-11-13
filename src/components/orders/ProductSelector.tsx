@@ -36,12 +36,12 @@ export function ProductSelector({ availableProducts, onProductAdd }: ProductSele
     <div className="flex gap-2 items-end">
       <div className="flex-1">
         <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-          <SelectTrigger className="w-full">
+          <SelectTrigger className="w-full cursor-pointer">
             <SelectValue placeholder="Select a product to add..." />
           </SelectTrigger>
           <SelectContent>
             {availableProducts.map((product) => (
-              <SelectItem key={product.id} value={product.id.toString()}>
+              <SelectItem key={product.id} value={product.id.toString()} className="cursor-pointer">
                 {product.name}
               </SelectItem>
             ))}
