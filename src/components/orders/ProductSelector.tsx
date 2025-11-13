@@ -31,15 +31,13 @@ export const ProductSelector = forwardRef<ProductSelectorRef, ProductSelectorPro
     }));
 
     const handleProductSelect = (productId: string) => {
-      setSelectedProductId(productId);
-
       // Immediately add product when selected
       const product = availableProducts.find(p => p.id.toString() === productId);
       if (product) {
         onProductAdd(product);
 
-        // Reset selection after a brief delay so dropdown closes smoothly
-        setTimeout(() => setSelectedProductId(''), 100);
+        // Reset selection immediately - no timeout needed to avoid race conditions
+        setSelectedProductId('');
       }
     };
 
