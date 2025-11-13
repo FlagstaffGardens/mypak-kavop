@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/testsuite
 
 # next.js
 /.next/
@@ -23,6 +24,9 @@
 # misc
 .DS_Store
 *.pem
+
+# worktrees
+.worktrees/
 
 # debug
 npm-debug.log*

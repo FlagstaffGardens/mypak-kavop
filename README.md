@@ -1,37 +1,85 @@
-# MyPak Connect VMI
+# MyPak Connect
 
-**Vendor Managed Inventory System for Egg Carton Distribution**
+**Vendor-Managed Inventory System for Egg Carton Distribution**
 
-A Next.js web application that helps egg farms monitor inventory levels and receive automated container order recommendations before stockouts occur.
+A Next.js application that helps egg farms monitor inventory levels and manage container orders through live integration with the MyPak ERP API.
 
 ---
 
 ## Project Status
 
-**Phase: Foundation Complete ✅**
+**Phase: Production with Live ERP Integration** ✅
 
-The project infrastructure is fully set up and ready for component development. The foundation includes:
+The application is deployed with:
+- ✅ Live data fetching from MyPak ERP API
+- ✅ JWT-based authentication system
+- ✅ Server Components architecture (Next.js 15)
+- ✅ Multi-tenant SaaS database model
+- ✅ Real-time product and order data
+- 🚧 Temporary mock data for inventory tracking & recommendations (planned for Phase 2)
 
-- ✅ Next.js 15 with TypeScript
-- ✅ Tailwind CSS v4
-- ✅ shadcn/ui components with Vercel theme
-- ✅ Type-safe data structures
-- ✅ Calculation engine
-- ✅ Realistic mock data (10 products, 5 containers)
-- ✅ Project structure organized
+**Current Version:** v1.0  
+**Last Updated:** November 12, 2024
 
 ---
 
-## Tech Stack
+## Quick Start
 
-- **Framework:** Next.js 15 (App Router)
-- **Language:** TypeScript
-- **Styling:** Tailwind CSS v4
-- **UI Components:** shadcn/ui with Vercel theme
-- **Charts:** Recharts (shadcn/ui charts)
-- **Date Handling:** date-fns
-- **Icons:** Lucide React
-- **Notifications:** Sonner (toast notifications)
+### Prerequisites
+
+- Node.js 18+ and npm
+- PostgreSQL database
+- MyPak ERP API access (kavop_token)
+
+### Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your DATABASE_URL and BETTER_AUTH_SECRET
+```
+
+### Development
+
+```bash
+# Start dev server
+npm run dev
+# Open http://localhost:3000
+```
+
+### Build for Production
+
+```bash
+npm run build    # TypeScript check + production build
+npm start        # Run production server
+npm run lint     # Run ESLint
+```
+
+---
+
+## Architecture Overview
+
+### Data Flow
+
+```
+Browser → Next.js Server Components → ERP Client → MyPak ERP API
+   ↑                                       ↓
+   └─────────── Client Components ←────────┘
+```
+
+**Server Components** fetch data from ERP API and pass to **Client Components** for interactivity.
+
+### Key Technologies
+
+- **Framework:** Next.js 15 (App Router, Server Components)
+- **Language:** TypeScript 5.x
+- **Database:** PostgreSQL with Drizzle ORM
+- **Styling:** Tailwind CSS v4 + shadcn/ui (Vercel theme)
+- **Authentication:** Custom JWT (jose library)
+- **ERP Integration:** REST API client with transforms
 
 ---
 
@@ -39,346 +87,249 @@ The project infrastructure is fully set up and ready for component development. 
 
 ```
 mypak-kavop/
-├── docs/                       # All documentation
-│   ├── KNOWLEDGE.md            # Product knowledge base
-│   ├── RESEARCH.md             # Industry research
-│   ├── SPEC.md                 # Product specification
-│   ├── PRODUCT-OVERVIEW.md     # UX flow and design
-│   ├── high-fi-demo/           # Original HTML prototype
-│   ├── wireframes/             # UI wireframes
-│   └── meeting-notes/          # Product discussions
 ├── src/
-│   ├── app/                    # Next.js pages
-│   │   ├── page.tsx            # Dashboard (TODO)
-│   │   ├── orders/             # Orders page (TODO)
-│   │   ├── containers/[id]/    # Container flows (TODO)
-│   │   └── layout.tsx          # Root layout
+│   ├── app/                    # Next.js App Router
+│   │   ├── page.tsx            # Dashboard (Server Component)
+│   │   ├── orders/page.tsx     # Orders (Server Component)
+│   │   ├── sign-in/            # Authentication
+│   │   └── api/auth/           # Auth API routes
+│   │
 │   ├── components/
-│   │   ├── ui/                 # shadcn/ui components (✅ installed)
-│   │   ├── dashboard/          # Dashboard components (TODO)
-│   │   ├── orders/             # Orders components (TODO)
-│   │   └── shared/             # Shared components (TODO)
-│   └── lib/
-│       ├── types.ts            # ✅ TypeScript types
-│       ├── calculations.ts     # ✅ Calculation functions
-│       ├── utils.ts            # ✅ Utility functions
-│       └── data/
-│           ├── mock-products.ts    # ✅ 10 realistic products
-│           └── mock-containers.ts  # ✅ 5 containers + orders
-├── package.json
-└── tsconfig.json
+│   │   ├── ui/                 # shadcn/ui components
+│   │   ├── shared/             # Sidebar, ProductCard, etc.
+│   │   ├── dashboard/          # Dashboard components
+│   │   └── orders/             # Orders components
+│   │
+│   ├── lib/
+│   │   ├── auth/               # JWT authentication
+│   │   ├── db/                 # Database (Drizzle ORM)
+│   │   ├── erp/                # ERP API client
+│   │   │   ├── client.ts       # Fetch functions
+│   │   │   ├── types.ts        # ERP response types
+│   │   │   └── transforms.ts   # ERP → App transforms
+│   │   ├── services/           # Business logic
+│   │   ├── types.ts            # TypeScript interfaces
+│   │   └── calculations.ts     # Business calculations
+│   │
+│   └── hooks/
+│       └── useAuth.ts          # Client auth hook
+│
+├── docs/                       # Complete documentation
+│   ├── PROJECT-STATUS.md       # Implementation status
+│   ├── guides/                 # Developer guides
+│   ├── design/                 # Design system
+│   └── backend-planning/       # Technical specs
+│
+├── CLAUDE.md                   # AI assistant guidance (most accurate)
+└── README.md                   # This file
 ```
 
 ---
 
-## What's Been Built
+## Key Concepts
 
-### 1. Types (`src/lib/types.ts`)
+### 1. Server Components Pattern
 
-Comprehensive TypeScript interfaces for:
-- `Product` - Product with inventory data
-- `ContainerRecommendation` - Container orders
-- `Order` - Order tracking
-- `ShippingDetails` - Shipping configuration
-- `ChartDataPoint` - Chart visualization data
-- `StockoutCalculation` - Calculation results
+Pages fetch data from ERP API on the server:
 
-### 2. Calculations (`src/lib/calculations.ts`)
-
-Core business logic functions:
-- `calculateStockoutDate()` - When product runs out
-- `calculateTargetStock()` - 10-week buffer calculation
-- `calculateRecommendedQuantity()` - Order recommendations
-- `calculateWeeksSupply()` - Weeks of inventory remaining
-- `calculateBurnRate()` - Average weekly consumption
-- `groupProductsIntoContainers()` - Container grouping logic
-
-### 3. Mock Data
-
-**Products (`src/lib/data/mock-products.ts`):**
-- 10 realistic egg carton products
-- Mix of brands (Better Eggs, Josh's Eggs, Valley Park, Agenbrook)
-- Varied statuses: 2 CRITICAL, 4 ORDER_NOW, 4 HEALTHY
-- Realistic stock levels and consumption rates
-
-**Containers & Orders (`src/lib/data/mock-containers.ts`):**
-- 5 container recommendations with varied urgency
-- 2 in-transit orders
-- 2 delivered orders (history)
-- Realistic dates, quantities, and shipping details
-
-### 4. UI Components (shadcn/ui)
-
-Installed and configured:
-- `card`, `button`, `input`, `select`, `textarea`
-- `badge`, `radio-group`, `tabs`, `collapsible`
-- `form` (with react-hook-form)
-- `chart` (built on Recharts)
-- `sonner` (toast notifications)
-
----
-
-## What Needs to Be Built
-
-### Phase 1: Core Components (High Priority)
-
-1. **Navigation Component** (`src/components/shared/Navigation.tsx`)
-   - Top nav bar with MyPak logo
-   - Tab navigation (Dashboard / Orders)
-   - Matches high-fi demo aesthetic
-
-2. **StatusBadge Component** (`src/components/shared/StatusBadge.tsx`)
-   - Color-coded badges (CRITICAL = red, ORDER NOW = orange, HEALTHY = green)
-   - Additional badges: URGENT, IN TRANSIT, DELIVERED
-
-3. **InventoryChart Component** (`src/components/shared/InventoryChart.tsx`)
-   - Line chart showing stock projection
-   - Uses Recharts (shadcn/ui chart)
-   - Shows: current stock, decline, target line, stockout point, deliveries
-   - Should match the SVG charts from `docs/high-fi-demo/index.html`
-
-### Phase 2: Dashboard Screen
-
-4. **ProductCard Component** (`src/components/dashboard/ProductCard.tsx`)
-   - Display product info + chart
-   - Inline editing (stock, consumption)
-   - Save/cancel actions
-   - Real-time calculation updates
-
-5. **RecommendationCard Component** (`src/components/dashboard/RecommendationCard.tsx`)
-   - Shows 3 urgent containers
-   - "Review →" button for each
-   - Links to Orders page with highlight
-
-6. **Dashboard Page** (`src/app/page.tsx`)
-   - Fetch and display mock products
-   - Group by status (CRITICAL, ORDER_NOW, HEALTHY)
-   - Collapsible "Healthy Products" section
-   - Recommendation card at top
-
-### Phase 3: Orders Screen
-
-7. **ContainerCard Component** (`src/components/orders/ContainerCard.tsx`)
-   - Expandable container details
-   - Shows: order-by date, delivery, total cartons, products
-   - "Proceed to Full Review & Order" button
-
-8. **OrderCard Component** (`src/components/orders/OrderCard.tsx`)
-   - In-transit orders with status badges
-   - Delivered orders (history)
-   - "View Details" button
-
-9. **Orders Page** (`src/app/orders/page.tsx`)
-   - 3 sections: Recommended Containers, En Route, History
-   - Filters and search for history
-   - Highlight animation when navigated from Dashboard
-
-### Phase 4: Container Flow
-
-10. **Container Review Page** (`src/app/containers/[id]/review/page.tsx`)
-    - Container summary
-    - Editable product quantities
-    - Live total calculation
-    - Shipping details form
-    - "Approve Order" button
-
-11. **Confirmation Page** (`src/app/containers/[id]/confirm/page.tsx`)
-    - Order summary
-    - Product breakdown
-    - Shipping details display
-    - "Confirm & Submit" button
-
-12. **Success Page** (`src/app/success/page.tsx`)
-    - Order confirmation
-    - Order number display
-    - Navigation options (Back to Dashboard / View Orders)
-
-### Phase 5: Polish & Features
-
-13. **Interactive Features**
-    - Inline editing with save/cancel
-    - Real-time calculations
-    - Container highlighting/scrolling
-    - Toast notifications (using Sonner)
-    - Collapsible sections
-
-14. **Styling Refinement**
-    - Match high-fi demo aesthetic (`docs/high-fi-demo/index.html`)
-    - Professional/consulting style
-    - Proper spacing, shadows, transitions
-    - Responsive design (desktop-first)
-
----
-
-## Quick Start
-
-### Installation
-
-Already complete! All dependencies are installed.
-
-### Development
-
-```bash
-# Start the dev server
-npm run dev
-
-# Open http://localhost:3000
-```
-
-### Testing Different UI States
-
-The app includes a **dev-only state switcher** in the sidebar to test different scenarios:
-
-1. Look for the purple "Dev Mode" panel at the bottom of the sidebar
-2. Click the dropdown to select a state:
-   - 🔴 **Production** - Default mock data
-   - ✅ **Healthy** - All inventory well-stocked
-   - ⚠️ **Single Urgent** - One container needs ordering
-   - 🚨 **Multiple Urgent** - Multiple containers critical
-   - 🔶 **Mixed** - Some urgent, some healthy
-3. Page reloads with the selected demo data
-4. Test your UI changes in each state
-
-**📖 Read the full guide:** [docs-dev/guides/state-management.md](docs-dev/guides/state-management.md)
-
-### Build
-
-```bash
-# Type check
-npm run build
-
-# Run production build
-npm start
-```
-
----
-
-## Development Guidelines
-
-### 1. Use Mock Data
-
-Import from `src/lib/data/`:
 ```typescript
-import { mockProducts } from "@/lib/data/mock-products";
-import { mockContainers, mockOrders } from "@/lib/data/mock-containers";
-```
-
-### 2. Use Calculations
-
-Import from `src/lib/calculations.ts`:
-```typescript
-import { calculateStockoutDate, calculateWeeksSupply } from "@/lib/calculations";
-```
-
-### 3. Use shadcn/ui Components
-
-Import from `@/components/ui/`:
-```typescript
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-```
-
-### 4. Match High-Fi Demo
-
-Refer to `docs/high-fi-demo/index.html` for:
-- Exact UI structure
-- Color palette
-- Typography
-- Spacing
-- Interactive behaviors
-
-### 5. Component Structure
-
-Follow this pattern:
-```typescript
-'use client'; // If using client features
-
-import { ... } from '@/components/ui/...';
-import type { Product } from '@/lib/types';
-
-interface ProductCardProps {
-  product: Product;
-  onUpdate?: (product: Product) => void;
-}
-
-export function ProductCard({ product, onUpdate }: ProductCardProps) {
-  // Component logic
-  return (
-    <Card>
-      {/* Component UI */}
-    </Card>
-  );
+// src/app/page.tsx (Server Component)
+export default async function Dashboard() {
+  const erpProducts = await fetchErpProducts();
+  const erpOrders = await fetchErpCurrentOrders();
+  
+  // Transform and pass to client
+  return <DashboardClient products={products} orders={orders} />;
 }
 ```
 
----
+### 2. Component Design System
 
-## Design System (from Vercel Theme)
+**One component with adaptive styling** - not separate components per state:
 
-The Vercel theme provides a professional, minimal aesthetic matching the high-fi demo.
+```typescript
+// ✅ DO
+<RecommendationCard state="healthy" />
+<RecommendationCard state="urgent" />
 
-### Colors
+// ❌ DON'T
+<HealthyCard />
+<UrgentCard />
+```
 
-Refer to `src/app/globals.css` for CSS variables.
+See: [docs/design/component-system.md](docs/design/component-system.md)
 
-Key colors:
-- **Primary Blue:** For CTAs and brand
-- **Status Colors:**
-  - Red: CRITICAL
-  - Orange/Pink: ORDER NOW
-  - Green: HEALTHY
-  - Cyan: IN TRANSIT
-- **Neutrals:** Grays for text and borders
+### 3. Status System
 
-### Typography
+Product status based on weeks remaining vs. target SOH:
 
-- **Headings:** Sans-serif, various weights (400-700)
-- **Body:** 0.85rem - 0.95rem
-- **Small:** 0.7rem - 0.8rem
+- 🔴 **CRITICAL**: Below target stock level
+- 🟠 **ORDER_NOW**: At target, should plan ahead  
+- 🟢 **HEALTHY**: Well stocked (16+ weeks)
 
----
+See: [docs/design/status-system.md](docs/design/status-system.md)
 
-## Next Steps
+### 4. ERP Integration
 
-1. **Start with Navigation** - Build the top nav bar first
-2. **Build StatusBadge** - Simple, reusable component
-3. **Build InventoryChart** - Critical for product visualization
-4. **Build Dashboard** - Main screen with ProductCard
-5. **Continue with Orders page**
-6. **Implement container flow**
-7. **Polish and refine**
+Live data from MyPak ERP API:
+- `GET /product/list` - Product catalog
+- `GET /order/current` - In-transit & approved orders
+- `GET /order/complete` - Order history
+- `POST /order/create` - Create orders (planned)
+
+See: [docs/backend-planning/ERP-API-ENDPOINTS.md](docs/backend-planning/ERP-API-ENDPOINTS.md)
 
 ---
 
 ## Documentation
 
-### Development Docs (`docs-dev/`)
-- **[Quick Start Guide](docs-dev/guides/walkthrough.md)** - Developer onboarding (15 min read)
-- **[State Management](docs-dev/guides/state-management.md)** - How to test different UI states
-- **[Repo Status](docs-dev/repo-status.md)** - What's built, what's not
-- **[UI States](docs-dev/states/)** - Detailed design for each state
-  - [Healthy State](docs-dev/states/healthy.md) - Complete design proposal
-  - [Single Urgent](docs-dev/states/single-urgent.md) - To be documented
-  - [Multiple Urgent](docs-dev/states/multiple-urgent.md) - To be documented
-  - [Mixed](docs-dev/states/mixed.md) - To be documented
-- **[Implementation Report](docs-dev/design/implementation-report.md)** - Original design decisions
+### For New Developers
+1. **Start here:** [docs/guides/developer-onboarding.md](docs/guides/developer-onboarding.md)
+2. **Architecture:** [CLAUDE.md](CLAUDE.md) ← Most accurate, always up-to-date
+3. **ERP integration:** [docs/guides/erp-integration.md](docs/guides/erp-integration.md)
 
-### Product Docs (`docs/`)
-- **Original Demo:** `docs/high-fi-demo/index.html`
-- **Product Spec:** `docs/SPEC.md`
-- **Product Knowledge:** `docs/KNOWLEDGE.md`
-- **Wireframes:** `docs/wireframes/`
+### For Product/Design
+- [docs/design/component-system.md](docs/design/component-system.md) - Component architecture
+- [docs/design/status-system.md](docs/design/status-system.md) - Status calculation logic
+- [docs/states/](docs/states/) - UI state designs
 
----
+### For Backend/API
+- [docs/backend-planning/ERP-API-ENDPOINTS.md](docs/backend-planning/ERP-API-ENDPOINTS.md) - Complete API reference
+- [docs/backend-planning/DATABASE-MODELS.md](docs/backend-planning/DATABASE-MODELS.md) - Database schema
+- [docs/backend-planning/AUTHENTICATION.md](docs/backend-planning/AUTHENTICATION.md) - Auth system
 
-## Notes
-
-- This is a **testing/demo version** with mock data
-- Real ERP integration will come later
-- Focus on matching the high-fi demo UX exactly
-- User will provide real data structure for integration
+### Documentation Index
+**See:** [docs/README.md](docs/README.md) for complete documentation map
 
 ---
 
-**Built with Next.js, TypeScript, and shadcn/ui**
+## Development Workflow
+
+### Adding a Feature
+
+1. Check design docs ([docs/design/](docs/design/))
+2. Check if ERP data needed ([ERP-API-ENDPOINTS.md](docs/backend-planning/ERP-API-ENDPOINTS.md))
+3. Follow Server Component pattern
+4. Use adaptive component styling
+5. Test with live ERP data
+
+### Common Tasks
+
+**Add ERP endpoint:**
+- Add function to `src/lib/erp/client.ts`
+- Add types to `src/lib/erp/types.ts`  
+- Add transform to `src/lib/erp/transforms.ts`
+
+**Modify component:**
+- Read `docs/design/component-system.md`
+- Follow adaptive styling pattern
+- Test light + dark modes
+
+---
+
+## Design System
+
+### Colors (Vercel Theme)
+
+| Purpose | Color | Tailwind |
+|---------|-------|----------|
+| Healthy | Green | `text-green-500` |
+| Order Now | Amber | `text-amber-500` |
+| Critical | Red | `text-red-500` |
+| Primary CTA | Blue | `bg-blue-600` |
+
+### Typography
+
+- Product names: `text-xl font-semibold`
+- Pallet counts: `text-base font-medium`
+- Carton counts: `text-sm text-gray-500`
+
+### Component Heights
+
+- Primary CTAs: `h-14` (56px)
+- Standard buttons: `h-10` (40px)
+- Small buttons: `h-8` (32px)
+
+---
+
+## Roadmap
+
+### Phase 1: Foundation (✅ Complete)
+- ✅ ERP integration (products, orders)
+- ✅ Authentication system
+- ✅ Dashboard with live data
+- ✅ Orders page with live data
+
+### Phase 2: Enhanced Features (🚧 In Progress)
+- 🚧 Real inventory tracking (temp mock data)
+- 🚧 Container recommendation algorithm (temp mock data)
+- 📝 Order creation (POST to ERP)
+- 📝 User settings
+- 📝 Target SOH configuration
+
+### Phase 3: Advanced (📝 Planned)
+- 📝 Order submission workflow
+- 📝 Email notifications
+- 📝 Historical analytics
+- 📝 Export functionality
+
+See: [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md)
+
+---
+
+## Important Notes
+
+### Temporary Mock Data
+
+ERP integration is live, but these still use mock data:
+- Inventory levels (`currentStock`, `weeklyConsumption`)
+- Container recommendations
+
+Will be replaced with real algorithms in Phase 2.
+
+### Pallet-First Display
+
+Backend calculates in cartons. Frontend displays pallets first:
+
+```typescript
+<span className="font-medium">{pallets} pallets</span>
+<span className="text-gray-500">({cartons.toLocaleString()} cartons)</span>
+```
+
+### Design Philosophy
+
+**Ruthless simplicity** - Every element must earn its place.
+
+---
+
+## Contributing
+
+### Code Standards
+
+- TypeScript strict mode
+- Server Components for data fetching
+- Adaptive component styling (not separate components)
+- JWT verification for protected resources
+
+### Before Committing
+
+```bash
+npm run build  # Type check
+npm run lint   # ESLint
+# Manual test: Sign in, Dashboard, Orders, Dark mode
+```
+
+---
+
+## Support
+
+- **AI Assistant:** [CLAUDE.md](CLAUDE.md) - Most accurate reference
+- **ERP API:** [docs/backend-planning/ERP-API-ENDPOINTS.md](docs/backend-planning/ERP-API-ENDPOINTS.md)
+- **Auth Issues:** [docs/backend-planning/AUTHENTICATION.md](docs/backend-planning/AUTHENTICATION.md)
+- **Onboarding:** [docs/guides/developer-onboarding.md](docs/guides/developer-onboarding.md)
+
+---
+
+**Built with Next.js 15, TypeScript, PostgreSQL, and shadcn/ui**
+
+Last Updated: November 12, 2024

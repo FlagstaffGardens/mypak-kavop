@@ -1,106 +1,99 @@
-'use client';
+import { fetchErpCurrentOrders, fetchErpCompletedOrders, fetchErpProducts } from '@/lib/erp/client';
+import { transformErpOrder } from '@/lib/erp/transforms';
+import { getRecommendations } from '@/lib/services/recommendations';
+import { getInventoryData } from '@/lib/services/inventory';
+import { getCurrentUser } from '@/lib/auth/jwt';
+import { OrdersPageClient } from '@/components/orders/OrdersPageClient';
+import type { Order, ContainerRecommendation } from '@/lib/types';
+import { redirect } from 'next/navigation';
 
-import { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { RecommendedContainers } from '@/components/orders/RecommendedContainers';
-import { OrdersEnRoute } from '@/components/orders/OrdersEnRoute';
-import { OrderHistory } from '@/components/orders/OrderHistory';
-import { SCENARIOS } from '@/lib/data/mock-scenarios';
-import { mockLiveOrders } from '@/lib/data/mock-orders';
+export default async function OrdersPage() {
+  // Get current user
+  const user = await getCurrentUser();
 
-type DemoState = 'healthy' | 'single_urgent' | 'multiple_urgent';
+  if (!user || !user.orgId) {
+    redirect('/sign-in');
+  }
 
-// Component that uses useSearchParams
-function OrdersTabs({ recommendedCount, liveCount }: { recommendedCount: number; liveCount: number }) {
-  const searchParams = useSearchParams();
-  const currentTab = searchParams.get('tab') || 'recommended';
+  // Fetch data from ERP API and database
+  const [currentOrders, completedOrders, erpProducts, inventoryData] = await Promise.all([
+    fetchErpCurrentOrders(),
+    fetchErpCompletedOrders(),
+    fetchErpProducts(),
+    getInventoryData(user.orgId),
+  ]);
 
-  return (
-    <Tabs value={currentTab} className="w-full">
-      <TabsList className="h-auto p-1 bg-muted">
-        <Link href="/orders?tab=recommended" className="inline-block cursor-pointer">
-          <TabsTrigger value="recommended" className="data-[state=active]:bg-background cursor-pointer">
-            Recommended Orders
-            {recommendedCount > 0 && (
-              <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
-                {recommendedCount}
-              </span>
-            )}
-          </TabsTrigger>
-        </Link>
-        <Link href="/orders?tab=live" className="inline-block cursor-pointer">
-          <TabsTrigger value="live" className="data-[state=active]:bg-background cursor-pointer">
-            Live Orders
-            {liveCount > 0 && (
-              <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
-                {liveCount}
-              </span>
-            )}
-          </TabsTrigger>
-        </Link>
-        <Link href="/orders?tab=completed" className="inline-block cursor-pointer">
-          <TabsTrigger value="completed" className="data-[state=active]:bg-background cursor-pointer">
-            Completed Orders
-          </TabsTrigger>
-        </Link>
-      </TabsList>
-
-      <TabsContent value="recommended" className="mt-6">
-        <RecommendedContainers />
-      </TabsContent>
-
-      <TabsContent value="live" className="mt-6">
-        <OrdersEnRoute />
-      </TabsContent>
-
-      <TabsContent value="completed" className="mt-6">
-        <OrderHistory />
-      </TabsContent>
-    </Tabs>
+  // Create SKU to product info lookup map
+  const skuToProductInfo = new Map(
+    erpProducts.map(p => [p.sku, { piecesPerPallet: p.piecesPerPallet, imageUrl: p.imageUrl }])
   );
-}
 
-export default function OrdersPage() {
-  const [recommendedCount, setRecommendedCount] = useState(0);
-  const [firstContainerId, setFirstContainerId] = useState<number | null>(null);
-  const [liveCount] = useState(mockLiveOrders.length);
+  // Helper to enrich order with product info
+  const enrichOrder = (order: Order): Order => ({
+    ...order,
+    products: order.products.map(product => {
+      const productInfo = product.sku ? skuToProductInfo.get(product.sku) : undefined;
+      return {
+        ...product,
+        piecesPerPallet: productInfo?.piecesPerPallet,
+        imageUrl: productInfo?.imageUrl || undefined,
+      };
+    }),
+  });
 
-  useEffect(() => {
-    const savedState = (localStorage.getItem('demoState') as DemoState) || 'multiple_urgent';
-    if (SCENARIOS[savedState]) {
-      setRecommendedCount(SCENARIOS[savedState].containers.length);
-      setFirstContainerId(SCENARIOS[savedState].containers[0]?.id || null);
-    }
-  }, []);
+  // Transform and enrich orders
+  const liveOrders = currentOrders.map(transformErpOrder).map(enrichOrder);
+  const completedOrdersTransformed = completedOrders.map(transformErpOrder).map(enrichOrder);
+
+  // Fetch recommendations from database
+  const dbRecommendations = await getRecommendations(user.orgId);
+
+  // Create inventory map for product data lookups
+  const inventoryMap = new Map(
+    inventoryData.map(inv => [inv.sku, inv])
+  );
+
+  // Transform recommendations to UI format
+  const containers: ContainerRecommendation[] = dbRecommendations.map((rec, index) => {
+    const productInfoMap = new Map(
+      erpProducts.map(p => [p.sku, { piecesPerPallet: p.piecesPerPallet, imageUrl: p.imageUrl }])
+    );
+
+    return {
+      id: index + 1,
+      containerNumber: rec.containerNumber,
+      orderByDate: rec.orderByDate.toISOString().split('T')[0],
+      deliveryDate: rec.deliveryDate.toISOString().split('T')[0],
+      totalCartons: rec.totalCartons,
+      productCount: rec.products.length,
+      urgency: rec.urgency === 'URGENT' || rec.urgency === 'OVERDUE' ? 'URGENT' : null,
+      products: rec.products.map(p => {
+        const inventory = inventoryMap.get(p.sku);
+        const productInfo = productInfoMap.get(p.sku);
+        return {
+          productId: p.productId,
+          sku: p.sku,
+          productName: p.productName,
+          currentStock: inventory?.current_stock || 0,
+          weeklyConsumption: inventory?.weekly_consumption || 0,
+          recommendedQuantity: p.quantity,
+          afterDeliveryStock: (inventory?.current_stock || 0) + p.quantity,
+          weeksSupply: inventory?.weekly_consumption
+            ? ((inventory.current_stock || 0) + p.quantity) / inventory.weekly_consumption
+            : 999,
+          runsOutDate: '',
+          piecesPerPallet: productInfo?.piecesPerPallet,
+          imageUrl: productInfo?.imageUrl || undefined,
+        };
+      }),
+    };
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Orders
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            View recommended containers, track shipments, and manage order history
-          </p>
-        </div>
-        {firstContainerId && (
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link href={`/orders/review/${firstContainerId}`}>
-              + Create New Order
-            </Link>
-          </Button>
-        )}
-      </div>
-
-      {/* Tabs */}
-      <Suspense fallback={<div className="h-64 flex items-center justify-center text-muted-foreground">Loading...</div>}>
-        <OrdersTabs recommendedCount={recommendedCount} liveCount={liveCount} />
-      </Suspense>
-    </div>
+    <OrdersPageClient
+      containers={containers}
+      liveOrders={liveOrders}
+      completedOrders={completedOrdersTransformed}
+    />
   );
 }

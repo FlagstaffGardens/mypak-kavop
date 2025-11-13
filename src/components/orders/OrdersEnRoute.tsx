@@ -1,29 +1,53 @@
 'use client';
 
-import { mockOrders } from '@/lib/data/mock-containers';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Ship, Package, Clock } from 'lucide-react';
+import { Ship, Package, Factory } from 'lucide-react';
+import { OrderDetailsModal } from './OrderDetailsModal';
+import type { Order } from '@/lib/types';
 
-export function OrdersEnRoute() {
-  // Get only in-transit orders
-  const inTransitOrders = mockOrders.filter(order => order.type === 'IN_TRANSIT');
+interface OrdersEnRouteProps {
+  orders: Order[];
+}
+
+export function OrdersEnRoute({ orders }: OrdersEnRouteProps) {
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Get only in-transit orders (includes both APPROVED and IN_TRANSIT from ERP)
+  const inTransitOrders = orders.filter(order => order.type === 'IN_TRANSIT');
 
   // Status icon mapping
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'APPROVED':
+        return <Factory className="flex-shrink-0 w-5 h-5 text-amber-600 dark:text-amber-500" />;
       case 'IN_TRANSIT':
         return <Ship className="flex-shrink-0 w-5 h-5 text-blue-600 dark:text-blue-500" />;
+      case 'COMPLETE':
+        return <Package className="flex-shrink-0 w-5 h-5 text-green-600 dark:text-green-500" />;
       default:
         return <Package className="flex-shrink-0 w-5 h-5 text-gray-500 dark:text-gray-400" />;
     }
   };
 
   const getStatusLabel = (status: string) => {
+    // Format the status for display
+    return status
+      .split('_')
+      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  const getStatusBadgeClasses = (status: string) => {
     switch (status) {
+      case 'APPROVED':
+        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200';
       case 'IN_TRANSIT':
-        return 'In Transit';
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-200';
+      case 'COMPLETE':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-900 dark:text-green-200';
       default:
-        return status;
+        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-900 dark:text-gray-200';
     }
   };
 
@@ -37,6 +61,7 @@ export function OrdersEnRoute() {
   }
 
   return (
+    <>
     <div className="space-y-4">
         {inTransitOrders.map((order) => (
           <div
@@ -47,14 +72,14 @@ export function OrdersEnRoute() {
               {/* Order Header */}
               <div className="flex items-start justify-between gap-4 mb-4">
                 <div className="flex items-start gap-3">
-                  {getStatusIcon(order.status)}
+                  {getStatusIcon(order.erpStatus || order.status)}
                   <div>
                     <div className="flex items-center gap-3">
                       <h3 className="text-base font-bold text-gray-900 dark:text-gray-50">
                         Order #{order.orderNumber}
                       </h3>
-                      <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-200 text-xs font-bold uppercase tracking-wider rounded">
-                        {getStatusLabel(order.status)}
+                      <span className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider rounded ${getStatusBadgeClasses(order.erpStatus || order.status)}`}>
+                        {getStatusLabel(order.erpStatus || order.status)}
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -102,8 +127,8 @@ export function OrdersEnRoute() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled
-                  className="cursor-not-allowed w-full sm:w-auto"
+                  onClick={() => setSelectedOrder(order)}
+                  className="w-full sm:w-auto"
                 >
                   View Details
                 </Button>
@@ -112,5 +137,12 @@ export function OrdersEnRoute() {
           </div>
         ))}
     </div>
+
+    <OrderDetailsModal
+      order={selectedOrder}
+      open={selectedOrder !== null}
+      onOpenChange={(open) => !open && setSelectedOrder(null)}
+    />
+    </>
   );
 }

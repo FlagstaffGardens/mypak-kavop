@@ -1,3 +1,15 @@
+> **⚠️ ARCHIVED DOCUMENT - OBSOLETE**
+>
+> **Date Archived:** 2024-11-12
+>
+> **Reason:** This document describes a dev mode state switcher feature that was **removed from the codebase** when the system transitioned to live ERP integration in November 2024.
+>
+> **Current System:** MyPak Connect now uses **live data from the MyPak ERP API**. There is no mock data system or state switcher in production.
+>
+> **For Current Information:** See [docs/guides/erp-integration.md](../../docs/guides/erp-integration.md) and [CLAUDE.md](../../CLAUDE.md)
+>
+> ---
+
 # State Management & Development Workflow
 
 ## Overview
@@ -196,7 +208,7 @@ src/
    → Verify red styling, condensed layout, count shown
 
 4. Select "Mixed" state
-   → Verify prioritization logic works
+   → Verify prioritization logic
 
 5. Switch back to "Production"
    → Verify default data still works

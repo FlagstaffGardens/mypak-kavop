@@ -1,9 +1,12 @@
 'use client';
 
-import { Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceArea } from 'recharts';
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, ReferenceArea } from 'recharts';
 import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
-import { addDays, format, parse } from 'date-fns';
+import { addDays, format, parse, isBefore, startOfDay, isValid } from 'date-fns';
 import type { Product, Order } from '@/lib/types';
+
+// Orders with past delivery dates are assumed to arrive within this many days
+const PAST_ORDER_ARRIVAL_DAYS = 5;
 
 interface InventoryChartProps {
   product: Product;
@@ -45,7 +48,7 @@ const CustomDot = (props: { cx?: number; cy?: number; payload?: { isDelivery?: b
 };
 
 // Custom tooltip to show delivery information
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { date: string; stock: number; target: number; isDelivery?: boolean; deliveryAmount?: number; orderNumber?: string } }> }) => {
+const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: { date: string; stock: number; target: number; isDelivery?: boolean; deliveryAmount?: number; orderNumber?: string; orderNumbers?: string[]; orderCount?: number } }> }) => {
   if (!active || !payload?.length) return null;
 
   const data = payload[0].payload;
@@ -61,10 +64,14 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
       {data.isDelivery && (
         <div className="bg-blue-50 dark:bg-blue-950/30 border-t border-blue-200 dark:border-blue-900/50 px-3 py-2">
           <p className="text-blue-700 dark:text-blue-400 font-bold text-xs uppercase tracking-wide">
-            📦 Order Arrival
+            📦 {data.orderCount && data.orderCount > 1 ? `${data.orderCount} Order Arrivals` : 'Order Arrival'}
           </p>
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">{data.orderNumber}</p>
-          <p className="text-xs text-blue-700 dark:text-blue-300">+{data.deliveryAmount?.toLocaleString()} cartons</p>
+          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+            {data.orderNumbers && data.orderNumbers.length > 1
+              ? data.orderNumbers.join(', ')  // Show all order numbers
+              : data.orderNumber}
+          </p>
+          <p className="text-xs text-blue-700 dark:text-blue-300">+{data.deliveryAmount?.toLocaleString()} cartons total</p>
         </div>
       )}
     </div>
@@ -72,6 +79,9 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
 };
 
 export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: InventoryChartProps) {
+  // Note: All date comparisons use local timezone. ERP dates are assumed to be in local time.
+  const today = startOfDay(new Date());
+
   // Filter orders that contain this product
   const relevantOrders = liveOrders
     .filter(order =>
@@ -79,17 +89,32 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
     )
     .map(order => {
       const orderProduct = order.products.find(p => p.productId === product.id || p.productName === product.name);
+      const parsedDate = parse(order.deliveryDate, 'MMM dd, yyyy', new Date());
+
+      // Validate that the date parsed successfully
+      if (!isValid(parsedDate)) {
+        console.warn(`[InventoryChart] Invalid delivery date for order ${order.orderNumber}: "${order.deliveryDate}"`);
+        return null;
+      }
+
+      // Normalize parsed date to start of day for consistent comparison
+      const parsedDay = startOfDay(parsedDate);
+
+      // If delivery date is in the past, assume it arrives soon for chart calculation
+      const chartDeliveryDate = isBefore(parsedDay, today)
+        ? addDays(today, PAST_ORDER_ARRIVAL_DAYS)
+        : parsedDate;
+
       return {
-        deliveryDate: parse(order.deliveryDate, 'MMM dd, yyyy', new Date()),
+        deliveryDate: chartDeliveryDate,  // Adjusted date for chart projection
         quantity: orderProduct?.recommendedQuantity || 0,
         orderNumber: order.orderNumber,
       };
     })
-    .filter(o => o.quantity > 0)
+    .filter((o): o is NonNullable<typeof o> => o !== null && o.quantity > 0)
     .sort((a, b) => a.deliveryDate.getTime() - b.deliveryDate.getTime());
 
   // Generate chart data points
-  const today = new Date();
 
   // Timeframe configuration: weeks and interval in days
   const timeframeConfig = {
@@ -117,23 +142,34 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
       runningStock -= consumption;
     }
 
-    // Find delivery that falls within this period's range
-    const orderThisPeriod = relevantOrders.find(order => {
+    // Find ALL deliveries that fall within this period's range (multiple orders can arrive in same week)
+    const ordersThisPeriod = relevantOrders.filter(order => {
       return order.deliveryDate >= periodStart && order.deliveryDate <= periodEnd;
     });
 
-    // Add order if it arrives this period
-    if (orderThisPeriod) {
-      runningStock += orderThisPeriod.quantity;
+    // Add all orders that arrive this period
+    const totalDeliveryQuantity = ordersThisPeriod.reduce((sum, order) => sum + order.quantity, 0);
+    if (totalDeliveryQuantity > 0) {
+      runningStock += totalDeliveryQuantity;
     }
+
+    // Create label for multiple orders
+    const deliveryLabel = ordersThisPeriod.length > 1
+      ? `${ordersThisPeriod.length} orders`  // e.g., "2 orders"
+      : ordersThisPeriod[0]?.orderNumber;    // e.g., "#515862"
+
+    // Collect all order numbers for tooltip
+    const orderNumbers = ordersThisPeriod.map(o => o.orderNumber);
 
     data.push({
       date: format(pointDate, 'MMM dd'),
       stock: Math.max(0, Math.round(runningStock)),
       target: product.targetStock,
-      isDelivery: !!orderThisPeriod,
-      deliveryAmount: orderThisPeriod?.quantity,
-      orderNumber: orderThisPeriod?.orderNumber,
+      isDelivery: ordersThisPeriod.length > 0,
+      deliveryAmount: totalDeliveryQuantity || undefined,
+      orderNumber: deliveryLabel,
+      orderNumbers: orderNumbers.length > 0 ? orderNumbers : undefined,
+      orderCount: ordersThisPeriod.length,
     });
 
     if (runningStock <= 0) break;
@@ -152,70 +188,68 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
 
   return (
     <ChartContainer config={chartConfig} className="h-full w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 20, right: 5, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(215, 20%, 90%)" vertical={false} />
-          <XAxis
-            dataKey="date"
-            tick={{ fontSize: 10 }}
-            tickLine={false}
-            axisLine={false}
-            interval="preserveStartEnd"
-            allowDuplicatedCategory={false}
-          />
-          <YAxis
-            tick={{ fontSize: 10 }}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-          />
-          <ChartTooltip content={<CustomTooltip />} />
+      <LineChart data={data} margin={{ top: 20, right: 5, left: -20, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(215, 20%, 90%)" vertical={false} />
+        <XAxis
+          dataKey="date"
+          tick={{ fontSize: 10 }}
+          tickLine={false}
+          axisLine={false}
+          interval="preserveStartEnd"
+          allowDuplicatedCategory={false}
+        />
+        <YAxis
+          tick={{ fontSize: 10 }}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+        />
+        <ChartTooltip content={<CustomTooltip />} />
 
-          {/* Order arrival areas */}
-          {data.map((point, idx) => {
-            if (point.isDelivery) {
-              return (
-                <ReferenceArea
-                  key={`delivery-${idx}`}
-                  x1={point.date}
-                  x2={point.date}
-                  fill="hsl(217, 91%, 60%)"
-                  fillOpacity={0.08}
-                  stroke="hsl(217, 91%, 60%)"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  label={{
-                    value: `↑ ${point.orderNumber}`,
-                    position: 'top',
-                    fill: 'hsl(217, 91%, 40%)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    offset: 8,
-                  }}
-                />
-              );
-            }
-            return null;
-          })}
+        {/* Order arrival areas */}
+        {data.map((point, idx) => {
+          if (point.isDelivery) {
+            return (
+              <ReferenceArea
+                key={`delivery-${idx}`}
+                x1={point.date}
+                x2={point.date}
+                fill="hsl(217, 91%, 60%)"
+                fillOpacity={0.08}
+                stroke="hsl(217, 91%, 60%)"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                label={{
+                  value: `↑ ${point.orderNumber}`,
+                  position: 'top',
+                  fill: 'hsl(217, 91%, 40%)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  offset: 8,
+                }}
+              />
+            );
+          }
+          return null;
+        })}
 
-          <Line
-            type="monotone"
-            dataKey="target"
-            stroke="var(--color-target)"
-            strokeWidth={1}
-            strokeDasharray="5 5"
-            dot={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="stock"
-            stroke="var(--color-stock)"
-            strokeWidth={2}
-            dot={<CustomDot />}
-            activeDot={{ r: 5 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+        <Line
+          type="monotone"
+          dataKey="target"
+          stroke="var(--color-target)"
+          strokeWidth={1}
+          strokeDasharray="5 5"
+          dot={false}
+        />
+        <Line
+          type="monotone"
+          dataKey="stock"
+          stroke="var(--color-stock)"
+          strokeWidth={2}
+          dot={<CustomDot />}
+          activeDot={{ r: 5 }}
+        />
+      </LineChart>
     </ChartContainer>
   );
 }

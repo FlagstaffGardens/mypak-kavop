@@ -1,28 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { SCENARIOS } from '@/lib/data/mock-scenarios';
 import { Badge } from '@/components/ui/badge';
 import { ContainerCard } from '@/components/dashboard/ContainerCard';
 import type { ContainerRecommendation } from '@/lib/types';
 
-type DemoState = 'healthy' | 'single_urgent' | 'multiple_urgent';
+interface RecommendedContainersProps {
+  containers: ContainerRecommendation[];
+}
 
-export function RecommendedContainers() {
+export function RecommendedContainers({ containers }: RecommendedContainersProps) {
   const router = useRouter();
-  const [containers, setContainers] = useState(SCENARIOS.healthy.containers);
-
-  // Load from localStorage after hydration
-  useEffect(() => {
-    /* eslint-disable react-hooks/exhaustive-deps */
-    const savedState = (localStorage.getItem('demoState') as DemoState) || 'healthy';
-
-    if (SCENARIOS[savedState]) {
-      setContainers(SCENARIOS[savedState].containers);
-    }
-    /* eslint-enable react-hooks/exhaustive-deps */
-  }, []);
 
   // Separate urgent and non-urgent containers
   const urgentContainers = containers.filter(c => c.urgency === 'URGENT');

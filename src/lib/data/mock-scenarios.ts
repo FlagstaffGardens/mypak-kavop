@@ -1,3 +1,9 @@
+/**
+ * @deprecated Dev mode state switcher has been removed
+ * This file is kept for reference only
+ * Real data now comes from ERP API
+ */
+
 import { addDays, format } from "date-fns";
 import type { ContainerRecommendation, Product } from "../types";
 import { calculateProductStatus } from "../calculations";
@@ -6,6 +12,7 @@ const today = new Date();
 
 /**
  * Different mock data scenarios for demonstrating UI states
+ * NOTE: These are deprecated - real data comes from ERP API
  */
 
 // SCENARIO 1: Healthy - All containers well ahead, no urgent actions
@@ -276,6 +283,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 25000,
     targetStock: 150000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(400000 / 5760),
     weeklyPallets: parseFloat((25000 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, 16 * 7), "MMM dd, yyyy"),
@@ -296,6 +304,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 18000,
     targetStock: 108000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(320000 / 5760),
     weeklyPallets: parseFloat((18000 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor(17.8 * 7)), "MMM dd, yyyy"),
@@ -316,6 +325,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 3350,
     targetStock: 20100,
     piecesPerPallet: 5120,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(60000 / 5120),
     weeklyPallets: parseFloat((3350 / 5120).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor(17.9 * 7)), "MMM dd, yyyy"),
@@ -336,6 +346,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 450,
     targetStock: 2700,
     piecesPerPallet: 3200,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(210000 / 3200),
     weeklyPallets: parseFloat((450 / 3200).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor(466.7 * 7)), "MMM dd, yyyy"),
@@ -356,6 +367,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 8500,
     targetStock: 51000,
     piecesPerPallet: 5832,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(140000 / 5832),
     weeklyPallets: parseFloat((8500 / 5832).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor(16.5 * 7)), "MMM dd, yyyy"),
@@ -376,6 +388,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 22500,
     targetStock: 135000,
     piecesPerPallet: 5832,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(360000 / 5832),
     weeklyPallets: parseFloat((22500 / 5832).toFixed(2)),
     runsOutDate: format(addDays(today, 16 * 7), "MMM dd, yyyy"),
@@ -396,6 +409,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 35000,
     targetStock: 210000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(580000 / 5760),
     weeklyPallets: parseFloat((35000 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor(16.6 * 7)), "MMM dd, yyyy"),
@@ -416,6 +430,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 25000,
     targetStock: 150000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(400000 / 5760),
     weeklyPallets: parseFloat((25000 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, 16 * 7), "MMM dd, yyyy"),
@@ -436,6 +451,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 18000,
     targetStock: 108000,
     piecesPerPallet: 3200,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(300000 / 3200),
     weeklyPallets: parseFloat((18000 / 3200).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor(16.7 * 7)), "MMM dd, yyyy"),
@@ -456,6 +472,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 10000,
     targetStock: 60000,
     piecesPerPallet: 3200,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(170000 / 3200),
     weeklyPallets: parseFloat((10000 / 3200).toFixed(2)),
     runsOutDate: format(addDays(today, 17 * 7), "MMM dd, yyyy"),
@@ -476,6 +493,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 42500,
     targetStock: 255000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(680000 / 5760),
     weeklyPallets: parseFloat((42500 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, 16 * 7), "MMM dd, yyyy"),
@@ -496,6 +514,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 23500,
     targetStock: 141000,
     piecesPerPallet: 3200,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(380000 / 3200),
     weeklyPallets: parseFloat((23500 / 3200).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor(16.2 * 7)), "MMM dd, yyyy"),
@@ -516,6 +535,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 15250,
     targetStock: 91500,
     piecesPerPallet: 3400,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(250000 / 3400),
     weeklyPallets: parseFloat((15250 / 3400).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor(16.4 * 7)), "MMM dd, yyyy"),
@@ -536,6 +556,7 @@ export const healthyStateProducts: Product[] = [
     weeklyConsumption: 1500,
     targetStock: 9000,
     piecesPerPallet: 3400,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(80000 / 3400),
     weeklyPallets: parseFloat((1500 / 3400).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor(53.3 * 7)), "MMM dd, yyyy"),

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MyPak Connect is a vendor-managed inventory (VMI) system for egg carton distribution. Built with Next.js 15, it helps egg farms monitor inventory levels and receive automated container order recommendations before stockouts occur.
 
-**Current Phase:** UI development with mock data. Real ERP integration will come later.
+**Current Phase:** Production-ready with live ERP integration. Data fetched from MyPak ERP API.
 
 ## Commands
 
@@ -20,27 +20,25 @@ npm run lint         # Run ESLint
 
 ## Architecture
 
-### State Management Pattern
+### Data Flow
 
-The app uses a **dev-only state switcher** for testing different UI scenarios without a backend:
+**Live Data (Production):**
+- Dashboard fetches products from MyPak ERP `/product/list`
+- Orders page fetches from `/order/current` and `/order/complete`
+- Server Components pattern: data fetched on server, passed to client islands
+- Authentication: Uses stored `kavop_token` from organizations table
 
-- **Location:** Purple "Dev Mode" panel in sidebar (only shows in `NODE_ENV=development`)
-- **States:** `healthy`, `single_urgent`, `multiple_urgent`
-- **Mechanism:** localStorage + page reload to swap data sources
-- **Implementation:**
-  ```typescript
-  // Sidebar sets state in localStorage → page reloads
-  // Pages check localStorage on mount:
-  const state = localStorage.getItem('demoState') || 'healthy';
-  const data = SCENARIOS[state];
-  ```
+**ERP Client:**
+- `src/lib/erp/client.ts` - Fetch functions for ERP API
+- `src/lib/erp/types.ts` - ERP API response types
+- `src/lib/erp/transforms.ts` - Transform ERP data to app types
 
-**Key Files:**
-- `src/components/shared/Sidebar.tsx` - Dev tools panel (lines 160-217)
-- `src/lib/data/mock-scenarios.ts` - All demo state data
-- `src/app/page.tsx` & `src/app/orders/page.tsx` - Load state on mount
+**Temporary Mock Data:**
+- Inventory levels (currentStock, weeklyConsumption) - using `src/lib/services/inventory.ts`
+- Container recommendations - using `src/lib/data/mock-containers.ts`
+- TODO: Replace with real inventory tracking and recommendation algorithm
 
-**Documentation:** `docs/guides/state-management.md`
+**Documentation:** `docs/guides/erp-integration.md`
 
 ### Status System
 
@@ -110,10 +108,14 @@ const status = calculateProductStatus(weeksRemaining, targetSOH);
 <span className="text-gray-500">({cartons.toLocaleString()} cartons)</span>
 ```
 
-**Mock Data Sources:**
-- `src/lib/data/mock-products.ts` - Default product data
-- `src/lib/data/mock-containers.ts` - Default container/order data
-- `src/lib/data/mock-scenarios.ts` - State-specific scenarios (export: `SCENARIOS`)
+**Data Sources:**
+- **Live from ERP:**
+  - `src/lib/erp/client.ts` - Product and order data from MyPak ERP API
+- **Temporary Mock:**
+  - `src/lib/services/inventory.ts` - Mock inventory levels (TODO: replace with real tracking)
+  - `src/lib/data/mock-containers.ts` - Mock container recommendations (TODO: replace with algorithm)
+- **Static Reference:**
+  - `src/lib/data/mock-scenarios.ts` - Deprecated demo scenarios (kept for reference only)
 
 **Business Logic:**
 - `src/lib/calculations.ts` - All calculation functions (stockout dates, target stock, etc.)
@@ -124,37 +126,33 @@ const status = calculateProductStatus(weeksRemaining, targetSOH);
 ```
 src/app/
 ├── layout.tsx              # Root layout with Sidebar
-├── page.tsx                # Dashboard (loads state from localStorage)
+├── page.tsx                # Dashboard (Server Component - fetches from ERP)
+├── loading.tsx             # Dashboard loading state
+├── error.tsx               # Dashboard error boundary
 └── orders/
-    └── page.tsx            # Orders page (loads state from localStorage)
+    ├── page.tsx            # Orders page (Server Component - fetches from ERP)
+    ├── loading.tsx         # Orders loading state
+    └── error.tsx           # Orders error boundary
 ```
 
-Pages check `localStorage.getItem('demoState')` on mount to determine data source.
+Pages are async Server Components that fetch from ERP API and pass data to Client Components for interactivity.
 
 ## Key Patterns
 
-### Adding a New Demo State
+### Server Component Data Fetching
 
-1. Create scenario in `src/lib/data/mock-scenarios.ts`:
-   ```typescript
-   export const newScenario: ContainerRecommendation[] = [...]
-   ```
+Pages fetch data from ERP and pass to client components:
 
-2. Add to `SCENARIOS` export:
-   ```typescript
-   export const SCENARIOS = {
-     // ...existing
-     new_state: { containers: newScenario, products: [] },
-   }
-   ```
+```typescript
+// src/app/page.tsx (Server Component)
+export default async function Dashboard() {
+  const erpProducts = await fetchErpProducts();
+  const erpOrders = await fetchErpCurrentOrders();
 
-3. Update `Sidebar.tsx`:
-   ```typescript
-   type DemoState = 'healthy' | 'single_urgent' | 'multiple_urgent' | 'new_state';
-   const STATE_CONFIG = {
-     new_state: { label: '...', emoji: '...', color: '...' },
-   }
-   ```
+  // Transform and pass to client
+  return <DashboardClient products={products} orders={orders} />;
+}
+```
 
 ### Component Variants
 
@@ -167,21 +165,6 @@ const config = {
 }[state];
 
 return <Card className={`border-l-4 ${config.borderColor}`}>...</Card>
-```
-
-### When Real API is Ready
-
-Replace state-based data loading with API calls:
-
-```typescript
-useEffect(() => {
-  if (process.env.NODE_ENV === 'development') {
-    const state = localStorage.getItem('demoState') || 'healthy';
-    setData(SCENARIOS[state]);  // Dev mode with state switcher
-  } else {
-    fetchFromAPI().then(setData);  // Production API
-  }
-}, []);
 ```
 
 ## Design System
@@ -212,25 +195,24 @@ useEffect(() => {
 ## Documentation Structure
 
 - **Quick Start:** `docs/guides/walkthrough.md`
-- **State System:** `docs/guides/state-management.md`
+- **ERP Integration:** `docs/guides/erp-integration.md`
 - **Component System:** `docs/design/component-system.md`
-- **State Designs:** `docs/states/` (healthy.md is complete, others TBD)
-- **Backend Planning:** `docs/backend-planning/` (API specs, database models, algorithms for future implementation)
+- **Status System:** `docs/design/status-system.md`
+- **Backend Planning:** `docs/backend-planning/` (API specs, database models, algorithms)
 - **Historical Context:** `archive/` (original wireframes, specs, prototypes)
 
 ## Important Context
 
 1. **Pallet-First Display:** Always show pallets prominently, cartons secondary (in parentheses)
 2. **Component Reuse:** Never create state-specific components; use props for variations
-3. **State Switcher:** Lives in Sidebar, only visible in development, uses localStorage
+3. **Server Components:** Pages fetch from ERP API, pass data to client components
 4. **Layout Consistency:** All states use identical layout structure, only styling differs
 5. **Design Philosophy:** Ruthless simplicity - every element must earn its place
 
-## Testing Workflow
+## Development Workflow
 
 1. Start dev server: `npm run dev`
-2. Open sidebar → "Dev Mode" panel at bottom
-3. Select state from dropdown (healthy, single_urgent, multiple_urgent)
-4. Page reloads with demo data
-5. Verify UI adapts correctly (colors, messaging, CTAs)
-6. Test in all 3 states before committing
+2. Data loads from live ERP API (requires valid `kavop_token` in database)
+3. Verify UI adapts correctly based on real data
+4. Test error states (error boundaries) and loading states
+5. Check TypeScript compilation: `npm run build`

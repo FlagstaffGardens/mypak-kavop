@@ -29,6 +29,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 25000,
     targetStock: 150000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(167102 / 5760),
     weeklyPallets: parseFloat((25000 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((167102 / 25000) * 7)), "MMM dd, yyyy"),
@@ -49,6 +50,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 18000,
     targetStock: 108000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(190054 / 5760),
     weeklyPallets: parseFloat((18000 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((190054 / 18000) * 7)), "MMM dd, yyyy"),
@@ -69,6 +71,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 3350,
     targetStock: 20100,
     piecesPerPallet: 5120,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(13195 / 5120),
     weeklyPallets: parseFloat((3350 / 5120).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((13195 / 3350) * 7)), "MMM dd, yyyy"),
@@ -89,6 +92,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 450,
     targetStock: 2700,
     piecesPerPallet: 3200,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(203300 / 3200),
     weeklyPallets: parseFloat((450 / 3200).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((203300 / 450) * 7)), "MMM dd, yyyy"),
@@ -109,6 +113,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 8500,
     targetStock: 51000,
     piecesPerPallet: 5832,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(89013 / 5832),
     weeklyPallets: parseFloat((8500 / 5832).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((89013 / 8500) * 7)), "MMM dd, yyyy"),
@@ -129,6 +134,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 22500,
     targetStock: 135000,
     piecesPerPallet: 5832,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(15278 / 5832),
     weeklyPallets: parseFloat((22500 / 5832).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((15278 / 22500) * 7)), "MMM dd, yyyy"),
@@ -149,6 +155,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 35000,
     targetStock: 210000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(379078 / 5760),
     weeklyPallets: parseFloat((35000 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((379078 / 35000) * 7)), "MMM dd, yyyy"),
@@ -169,6 +176,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 25000,
     targetStock: 150000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(216870 / 5760),
     weeklyPallets: parseFloat((25000 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((216870 / 25000) * 7)), "MMM dd, yyyy"),
@@ -189,6 +197,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 18000,
     targetStock: 108000,
     piecesPerPallet: 3200,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(366024 / 3200),
     weeklyPallets: parseFloat((18000 / 3200).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((366024 / 18000) * 7)), "MMM dd, yyyy"),
@@ -209,6 +218,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 10000,
     targetStock: 60000,
     piecesPerPallet: 3200,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(93200 / 3200),
     weeklyPallets: parseFloat((10000 / 3200).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((93200 / 10000) * 7)), "MMM dd, yyyy"),
@@ -229,6 +239,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 42500,
     targetStock: 255000,
     piecesPerPallet: 5760,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(383242 / 5760),
     weeklyPallets: parseFloat((42500 / 5760).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((383242 / 42500) * 7)), "MMM dd, yyyy"),
@@ -249,6 +260,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 23500,
     targetStock: 141000,
     piecesPerPallet: 3200,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(281420 / 3200),
     weeklyPallets: parseFloat((23500 / 3200).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((281420 / 23500) * 7)), "MMM dd, yyyy"),
@@ -269,6 +281,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 15250,
     targetStock: 91500,
     piecesPerPallet: 3400,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(223588 / 3400),
     weeklyPallets: parseFloat((15250 / 3400).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((223588 / 15250) * 7)), "MMM dd, yyyy"),
@@ -289,6 +302,7 @@ export const mockProducts: Product[] = [
     weeklyConsumption: 1500,
     targetStock: 9000,
     piecesPerPallet: 3400,
+    volumePerPallet: 1.0, // m³ (mock value)
     currentPallets: Math.floor(77050 / 3400),
     weeklyPallets: parseFloat((1500 / 3400).toFixed(2)),
     runsOutDate: format(addDays(today, Math.floor((77050 / 1500) * 7)), "MMM dd, yyyy"),

@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1762848470445,
+      "tag": "0000_remarkable_blue_marvel",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1762848500306,
+      "tag": "0001_dashing_steel_serpent",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762887747627,
+      "tag": "0002_broken_captain_midlands",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1762948508282,
+      "tag": "0003_wandering_rick_jones",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1763006539907,
+      "tag": "0004_lucky_molecule_man",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Info, ChevronRight } from 'lucide-react';
+import { Info, ChevronRight, X } from 'lucide-react';
+import { parse, addWeeks } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { StatusBadge } from './StatusBadge';
 import { InventoryChart } from './InventoryChart';
 import { ProductDetailModal } from './ProductDetailModal';
@@ -16,10 +18,15 @@ interface ProductCardProps {
 
 export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
   const [showModal, setShowModal] = useState(false);
+  const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
   const showRunsOut = product.status === 'CRITICAL' || product.status === 'ORDER_NOW';
 
+  // Calculate chart timeframe cutoff (6 weeks from today)
+  const today = new Date();
+  const chartEndDate = addWeeks(today, 6);
+
   // Filter live orders for this specific product
-  const productLiveOrders = liveOrders
+  const allProductOrders = liveOrders
     .filter(order =>
       order.products && order.products.some(p => p.productId === product.id || p.productName === product.name)
     )
@@ -32,6 +39,32 @@ export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
       };
     })
     .filter(o => o.quantity > 0);
+
+  // Show only orders within the chart's 6-week visible timeframe
+  const productLiveOrders = allProductOrders
+    .filter(order => {
+      try {
+        const deliveryDate = parse(order.deliveryDate, 'MMM dd, yyyy', new Date());
+        return deliveryDate <= chartEndDate;
+      } catch {
+        // If we can't parse the date, include it (better to show than hide)
+        return true;
+      }
+    })
+    .sort((a, b) => {
+      // Sort by delivery date (soonest first)
+      try {
+        const dateA = parse(a.deliveryDate, 'MMM dd, yyyy', new Date());
+        const dateB = parse(b.deliveryDate, 'MMM dd, yyyy', new Date());
+        return dateA.getTime() - dateB.getTime();
+      } catch {
+        return 0;
+      }
+    });
+
+  // Count total orders for display
+  const totalOrders = allProductOrders.length;
+  const hiddenOrders = totalOrders - productLiveOrders.length;
 
   return (
     <>
@@ -48,22 +81,12 @@ export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
                   {product.sku}
                 </p>
                 {product.imageUrl && (
-                  <div className="relative group">
-                    <Info className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-help transition-colors flex-shrink-0" />
-                    {/* Tooltip with product image */}
-                    <div className="absolute left-0 top-6 z-50 hidden group-hover:block">
-                      <div className="bg-card border-2 border-border rounded-lg shadow-xl overflow-hidden">
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="w-48 h-48 object-cover"
-                        />
-                        <div className="px-3 py-2 bg-muted border-t">
-                          <p className="text-xs font-semibold">{product.name}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => setViewingImage({ url: product.imageUrl!, name: product.name })}
+                    className="flex-shrink-0"
+                  >
+                    <Info className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-pointer transition-colors" />
+                  </button>
                 )}
               </div>
             )}
@@ -122,12 +145,19 @@ export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
           </div>
         </div>
 
-        {/* Live Orders */}
+        {/* Live Orders - Only show orders within chart timeframe (6 weeks) */}
         {productLiveOrders.length > 0 && (
           <div className="pt-3 border-t-2 mt-auto">
-            <p className="text-muted-foreground font-medium text-sm mb-1.5">
-              Incoming Orders:
-            </p>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-muted-foreground font-medium text-sm">
+                Incoming Orders (Next 6 Weeks):
+              </p>
+              {hiddenOrders > 0 && (
+                <span className="text-xs text-muted-foreground/70">
+                  +{hiddenOrders} more
+                </span>
+              )}
+            </div>
             {productLiveOrders.map((order) => (
               <p key={order.orderNumber} className="text-foreground/70 text-xs mt-1">
                 • Order #{order.orderNumber}: {Math.round(order.quantity / 1000)} pallets ({order.quantity.toLocaleString()} cartons) → {order.deliveryDate}
@@ -155,6 +185,41 @@ export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
         liveOrders={liveOrders}
         onClose={() => setShowModal(false)}
       />
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Product Label Image</DialogTitle>
+            </DialogHeader>
+            <div className="relative w-full h-full flex flex-col">
+              {/* Close button */}
+              <button
+                onClick={() => setViewingImage(null)}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+
+              {/* Image */}
+              <div className="flex-1 flex items-center justify-center p-4 bg-black/95">
+                <img
+                  src={viewingImage.url}
+                  alt={viewingImage.name}
+                  className="max-w-full max-h-[85vh] object-contain"
+                />
+              </div>
+
+              {/* Product name footer */}
+              <div className="bg-card border-t px-6 py-4">
+                <p className="text-sm font-semibold text-center">{viewingImage.name}</p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

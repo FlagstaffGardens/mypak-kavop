@@ -26,6 +26,7 @@ export interface Product {
   status: ProductStatus;
   // Pallet information
   piecesPerPallet: number;
+  volumePerPallet: number; // m³ per pallet (from ERP)
   currentPallets: number;
   weeklyPallets: number;
   approvedOrders?: ApprovedOrder[];
@@ -42,6 +43,7 @@ export interface ApprovedOrder {
 // Container Product (Product within a container recommendation)
 export interface ContainerProduct {
   productId: number;
+  sku?: string; // SKU from ERP
   productName: string;
   currentStock: number;
   weeklyConsumption: number;
@@ -49,6 +51,8 @@ export interface ContainerProduct {
   afterDeliveryStock: number;
   weeksSupply: number;
   runsOutDate: string;
+  piecesPerPallet?: number; // For calculating pallets from quantity
+  imageUrl?: string; // Product label image
 }
 
 // Container Recommendation
@@ -83,6 +87,7 @@ export interface Order {
   productCount: number;
   products: ContainerProduct[];
   status: OrderStatus;
+  erpStatus?: string; // Original ERP status string for display
   shippingTerm?: ShippingTerm;
   customerOrderNumber?: string;
   comments?: string;
@@ -106,4 +111,26 @@ export interface StockoutCalculation {
   runsOutDays: number;
   weeksRemaining: number;
   status: ProductStatus;
+}
+
+// Database models
+export interface Organization {
+  org_id: string;
+  org_name: string;
+  mypak_customer_name: string;
+  kavop_token: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface User {
+  user_id: string;
+  org_id: string | null;
+  email: string;
+  name: string;
+  password: string;
+  role: "org_user" | "platform_admin";
+  created_at: Date;
+  updated_at: Date;
+  last_login_at: Date | null;
 }

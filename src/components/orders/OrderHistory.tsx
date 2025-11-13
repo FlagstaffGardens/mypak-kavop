@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { mockOrders } from '@/lib/data/mock-containers';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Search } from 'lucide-react';
 import {
@@ -11,17 +10,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { OrderDetailsModal } from './OrderDetailsModal';
+import type { Order } from '@/lib/types';
 
 type StatusFilter = 'all' | 'delivered';
 type TimeFilter = '3months' | '6months' | '12months' | 'all';
 
-export function OrderHistory() {
+interface OrderHistoryProps {
+  orders: Order[];
+}
+
+export function OrderHistory({ orders }: OrderHistoryProps) {
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('12months');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Get delivered orders
-  const deliveredOrders = mockOrders.filter(order => order.type === 'DELIVERED');
+  const deliveredOrders = orders.filter(order => order.type === 'DELIVERED');
 
   // Apply filters
   const filteredOrders = deliveredOrders.filter(order => {
@@ -50,6 +56,7 @@ export function OrderHistory() {
   }
 
   return (
+    <>
     <div>
       {/* Filters Row */}
       <div className="mb-6">
@@ -160,24 +167,14 @@ export function OrderHistory() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled
-                      className="cursor-not-allowed flex-1 sm:flex-initial"
-                    >
-                      View Details
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled
-                      className="cursor-not-allowed flex-1 sm:flex-initial"
-                    >
-                      Reorder
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedOrder(order)}
+                    className="w-full sm:w-auto"
+                  >
+                    View Details
+                  </Button>
                 </div>
               </div>
             </div>
@@ -185,5 +182,12 @@ export function OrderHistory() {
         </div>
       )}
     </div>
+
+    <OrderDetailsModal
+      order={selectedOrder}
+      open={selectedOrder !== null}
+      onOpenChange={(open) => !open && setSelectedOrder(null)}
+    />
+    </>
   );
 }
