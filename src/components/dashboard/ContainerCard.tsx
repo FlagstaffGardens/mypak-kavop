@@ -50,8 +50,10 @@ export function ContainerCard({
     return 'ON TRACK';
   };
 
-  // Calculate total pallets (assuming 1000 cartons per pallet)
-  const totalPallets = Math.round(container.totalCartons / 1000);
+  // Calculate total pallets using actual piecesPerPallet for each product
+  const totalPallets = container.products.reduce((sum, product) => {
+    return sum + (product.recommendedQuantity / product.piecesPerPallet);
+  }, 0);
 
   return (
     <div
@@ -78,7 +80,7 @@ export function ContainerCard({
         {/* Summary and Dates in One Line */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm mb-2 gap-1 sm:gap-0">
           <div className="text-foreground">
-            <span className="font-medium">{totalPallets} pallets</span>
+            <span className="font-medium">{totalPallets.toFixed(1)} pallets</span>
             <span className="text-muted-foreground font-normal ml-1">
               ({container.totalCartons.toLocaleString()} cartons)
             </span>
@@ -153,12 +155,12 @@ function ProductRow({ product }: { product: ContainerProduct }) {
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm gap-1 sm:gap-0">
-      <span className="text-foreground font-medium truncate flex-1 sm:mr-4">
-        {product.productName.slice(0, 40)}{product.productName.length > 40 ? '...' : ''}
+      <span className="text-foreground font-medium flex-1 sm:mr-4 break-words">
+        {product.productName}
       </span>
       <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 text-xs sm:text-sm">
         <span className="text-muted-foreground">
-          {Math.round(product.recommendedQuantity / 1000)} pallets
+          {(product.recommendedQuantity / product.piecesPerPallet).toFixed(1)} pallets
         </span>
         <span className={`font-medium min-w-[50px] sm:min-w-[60px] text-right ${getWeeksColor()}`}>
           {product.weeksSupply.toFixed(1)} wks

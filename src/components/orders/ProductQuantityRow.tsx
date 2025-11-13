@@ -1,6 +1,8 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 import type { ContainerProduct } from '@/lib/types';
 
 interface ProductQuantityRowProps {
@@ -8,6 +10,7 @@ interface ProductQuantityRowProps {
   quantity: number;
   onQuantityChange: (quantity: number) => void;
   piecesPerPallet: number;
+  onRemove?: () => void;
 }
 
 export function ProductQuantityRow({
@@ -15,6 +18,7 @@ export function ProductQuantityRow({
   quantity,
   onQuantityChange,
   piecesPerPallet,
+  onRemove,
 }: ProductQuantityRowProps) {
   const pallets = (quantity / piecesPerPallet).toFixed(1);
   const afterDeliveryStock = product.currentStock + quantity;
@@ -32,9 +36,21 @@ export function ProductQuantityRow({
       <CardContent className="pt-6">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="flex-1">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">
-              Product
-            </Label>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                Product
+              </Label>
+              {onRemove && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRemove}
+                  className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             <h3 className="text-lg font-semibold text-foreground mb-3">
               {product.productName}
             </h3>

@@ -70,7 +70,7 @@ function OrdersTabs({
 }
 
 export function OrdersPageClient(props: OrdersPageClientProps) {
-  const firstContainerId = props.containers[0]?.id || null;
+  const firstContainerId = props.containers[0]?.containerNumber || null;
 
   return (
     <div className="space-y-6">
@@ -84,13 +84,11 @@ export function OrdersPageClient(props: OrdersPageClientProps) {
             View recommended containers, track shipments, and manage order history
           </p>
         </div>
-        {firstContainerId && (
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link href={`/orders/review/${firstContainerId}`}>
-              + Create New Order
-            </Link>
-          </Button>
-        )}
+        <Button asChild size="lg" className="w-full sm:w-auto">
+          <Link href="/orders/new">
+            + Create New Order
+          </Link>
+        </Button>
       </div>
 
       {/* Tabs */}

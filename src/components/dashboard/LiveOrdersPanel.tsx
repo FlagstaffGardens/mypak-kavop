@@ -88,7 +88,11 @@ function OrderCard({ order, onClick }: { order: Order; onClick?: () => void }) {
 
   const badge = getStatusBadge();
   const StatusIcon = badge.icon;
-  const totalPallets = Math.round(order.totalCartons / 1000);
+
+  // Calculate total pallets using actual piecesPerPallet for each product
+  const totalPallets = order.products?.reduce((sum, product) => {
+    return sum + (product.recommendedQuantity / product.piecesPerPallet);
+  }, 0) || 0;
 
   return (
     <div
@@ -111,7 +115,7 @@ function OrderCard({ order, onClick }: { order: Order; onClick?: () => void }) {
 
         {/* Summary */}
         <div className="text-sm mb-2">
-          <span className="font-medium text-foreground">{totalPallets} pallets</span>
+          <span className="font-medium text-foreground">{totalPallets.toFixed(1)} pallets</span>
           <span className="text-muted-foreground font-normal ml-1">
             ({order.totalCartons.toLocaleString()} cartons)
           </span>
@@ -145,11 +149,11 @@ function OrderCard({ order, onClick }: { order: Order; onClick?: () => void }) {
           <div className="mb-3 px-3 py-2 bg-muted/50 rounded border border-border space-y-1.5">
             {order.products.map((product) => (
               <div key={product.productId} className="flex items-center justify-between text-sm">
-                <span className="text-foreground font-medium truncate flex-1 mr-4">
-                  {product.productName.slice(0, 40)}{product.productName.length > 40 ? '...' : ''}
+                <span className="text-foreground font-medium break-words flex-1 mr-4">
+                  {product.productName}
                 </span>
                 <span className="text-muted-foreground flex-shrink-0">
-                  {Math.round(product.recommendedQuantity / 1000)} pallets
+                  {(product.recommendedQuantity / product.piecesPerPallet).toFixed(1)} pallets
                 </span>
               </div>
             ))}

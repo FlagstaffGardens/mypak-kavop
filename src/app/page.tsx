@@ -75,16 +75,17 @@ export default async function Dashboard() {
   const dbRecommendations = await getRecommendations(user.orgId);
 
   // Transform recommendations to UI format
-  const containers: ContainerRecommendation[] = dbRecommendations.map((rec, index) => {
+  const containers: ContainerRecommendation[] = dbRecommendations.map((rec) => {
     // Create product map for lookups
     const productMap = new Map(products.map(p => [p.sku, p]));
 
     return {
-      id: index + 1,
+      id: rec.containerNumber, // Use container number as ID (stable and meaningful)
       containerNumber: rec.containerNumber,
       orderByDate: rec.orderByDate.toISOString().split('T')[0],
       deliveryDate: rec.deliveryDate.toISOString().split('T')[0],
       totalCartons: rec.totalCartons,
+      totalVolume: rec.totalVolume, // Total volume from algorithm (already a number)
       productCount: rec.products.length,
       urgency: rec.urgency === 'URGENT' || rec.urgency === 'OVERDUE' ? 'URGENT' : null,
       products: rec.products.map(p => {
@@ -102,6 +103,7 @@ export default async function Dashboard() {
             : 999,
           runsOutDate: '',
           piecesPerPallet: p.piecesPerPallet, // From algorithm output (always present)
+          volumePerCarton: product ? product.volumePerPallet / product.piecesPerPallet : undefined,
           imageUrl: product?.imageUrl,
         };
       }),

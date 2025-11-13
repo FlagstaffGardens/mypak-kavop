@@ -1,48 +1,55 @@
 import type { ShippingDetails } from './types';
+import { CONTAINER_CAPACITY } from './constants';
 
 export interface CapacityValidation {
   isValid: boolean;
-  currentCartons: number;
-  maxCartons: number;
+  currentVolume: number;
+  maxVolume: number;
   percentFull: number;
   warning?: 'small_order' | 'near_capacity' | 'exceeds_capacity';
   warningMessage?: string;
 }
 
-export function validateCapacity(totalCartons: number): CapacityValidation {
-  const MAX_CAPACITY = 95000;
-  const SMALL_ORDER_THRESHOLD = 50000;
-  const NEAR_CAPACITY_THRESHOLD = 90000;
+/**
+ * Validate container capacity based on VOLUME (m³), not cartons
+ *
+ * 40HC container capacity: 75.98 m³
+ * Each product has different volume per carton, so we validate by total volume
+ */
+export function validateCapacity(totalVolume: number): CapacityValidation {
+  const MAX_VOLUME = CONTAINER_CAPACITY; // 75.98 m³ for 40HC
+  const SMALL_ORDER_THRESHOLD = MAX_VOLUME * 0.5; // 50% of capacity
+  const NEAR_CAPACITY_THRESHOLD = MAX_VOLUME * 0.95; // 95% of capacity
 
-  const percentFull = (totalCartons / MAX_CAPACITY) * 100;
+  const percentFull = (totalVolume / MAX_VOLUME) * 100;
 
-  if (totalCartons > MAX_CAPACITY) {
+  if (totalVolume > MAX_VOLUME) {
     return {
       isValid: false,
-      currentCartons: totalCartons,
-      maxCartons: MAX_CAPACITY,
+      currentVolume: totalVolume,
+      maxVolume: MAX_VOLUME,
       percentFull,
       warning: 'exceeds_capacity',
-      warningMessage: `EXCEEDS CAPACITY: ${totalCartons.toLocaleString()} cartons exceeds limit of ${MAX_CAPACITY.toLocaleString()}. Remove products.`,
+      warningMessage: `EXCEEDS CAPACITY: ${totalVolume.toFixed(2)} m³ exceeds 40HC limit of ${MAX_VOLUME} m³. Remove products.`,
     };
   }
 
-  if (totalCartons > NEAR_CAPACITY_THRESHOLD) {
+  if (totalVolume > NEAR_CAPACITY_THRESHOLD) {
     return {
       isValid: true,
-      currentCartons: totalCartons,
-      maxCartons: MAX_CAPACITY,
+      currentVolume: totalVolume,
+      maxVolume: MAX_VOLUME,
       percentFull,
       warning: 'near_capacity',
       warningMessage: `Approaching capacity: ${percentFull.toFixed(0)}% full. Consider removing products.`,
     };
   }
 
-  if (totalCartons < SMALL_ORDER_THRESHOLD && totalCartons > 0) {
+  if (totalVolume < SMALL_ORDER_THRESHOLD && totalVolume > 0) {
     return {
       isValid: true,
-      currentCartons: totalCartons,
-      maxCartons: MAX_CAPACITY,
+      currentVolume: totalVolume,
+      maxVolume: MAX_VOLUME,
       percentFull,
       warning: 'small_order',
       warningMessage: `Small order (${percentFull.toFixed(0)}% capacity). Consider adding more products to optimize shipping costs.`,
@@ -51,8 +58,8 @@ export function validateCapacity(totalCartons: number): CapacityValidation {
 
   return {
     isValid: true,
-    currentCartons: totalCartons,
-    maxCartons: MAX_CAPACITY,
+    currentVolume: totalVolume,
+    maxVolume: MAX_VOLUME,
     percentFull,
   };
 }
@@ -104,11 +111,8 @@ export function validateOrder(
     errors.products = 'Order must contain at least one product';
   }
 
-  // Capacity validation
-  const capacityValidation = validateCapacity(totalQuantity);
-  if (!capacityValidation.isValid) {
-    errors.capacity = capacityValidation.warningMessage || 'Order exceeds capacity';
-  }
+  // NOTE: Volume capacity validation is now handled in the review page
+  // where we have access to product volume data
 
   // Shipping details validation
   const shippingErrors = validateShippingDetails(shippingDetails);

@@ -54,17 +54,22 @@ export default async function OrdersPage() {
   );
 
   // Transform recommendations to UI format
-  const containers: ContainerRecommendation[] = dbRecommendations.map((rec, index) => {
+  const containers: ContainerRecommendation[] = dbRecommendations.map((rec) => {
     const productInfoMap = new Map(
-      erpProducts.map(p => [p.sku, { piecesPerPallet: p.piecesPerPallet, imageUrl: p.imageUrl }])
+      erpProducts.map(p => [p.sku, {
+        piecesPerPallet: p.piecesPerPallet,
+        volumePerCarton: p.volumePerPallet / p.piecesPerPallet,
+        imageUrl: p.imageUrl
+      }])
     );
 
     return {
-      id: index + 1,
+      id: rec.containerNumber, // Use container number as ID (stable and meaningful)
       containerNumber: rec.containerNumber,
       orderByDate: rec.orderByDate.toISOString().split('T')[0],
       deliveryDate: rec.deliveryDate.toISOString().split('T')[0],
       totalCartons: rec.totalCartons,
+      totalVolume: rec.totalVolume, // Total volume from algorithm (already a number)
       productCount: rec.products.length,
       urgency: rec.urgency === 'URGENT' || rec.urgency === 'OVERDUE' ? 'URGENT' : null,
       products: rec.products.map(p => {
@@ -83,6 +88,7 @@ export default async function OrdersPage() {
             : 999,
           runsOutDate: '',
           piecesPerPallet: p.piecesPerPallet, // From algorithm output (always present)
+          volumePerCarton: productInfo?.volumePerCarton, // Add volume per carton
           imageUrl: productInfo?.imageUrl || undefined,
         };
       }),

@@ -25,7 +25,11 @@ export function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
 
   const badge = getStatusBadge();
   const StatusIcon = badge.icon;
-  const totalPallets = Math.round(order.totalCartons / 1000);
+
+  // Calculate total pallets using actual piecesPerPallet for each product
+  const totalPallets = order.products?.reduce((sum, product) => {
+    return sum + (product.recommendedQuantity / product.piecesPerPallet);
+  }, 0) || 0;
 
   return (
     <div
@@ -130,7 +134,7 @@ export function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
               </h3>
             </div>
             <div className="text-lg font-medium text-foreground">
-              {totalPallets} pallets
+              {totalPallets.toFixed(1)} pallets
               <span className="text-muted-foreground font-normal ml-1.5">
                 ({order.totalCartons.toLocaleString()} cartons)
               </span>
@@ -186,7 +190,7 @@ export function OrderDetailsModal({ order, onClose }: OrderDetailsModalProps) {
                       </div>
                       <div className="flex-shrink-0 text-right">
                         <div className="text-lg font-semibold text-foreground">
-                          {Math.round(product.recommendedQuantity / 1000)} pallets
+                          {(product.recommendedQuantity / product.piecesPerPallet).toFixed(1)} pallets
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {product.recommendedQuantity.toLocaleString()} cartons

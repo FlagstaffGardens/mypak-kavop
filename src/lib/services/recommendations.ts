@@ -264,7 +264,7 @@ export async function generateAndSaveRecommendations(orgId: string): Promise<voi
 /**
  * Get current recommendations for an organization
  *
- * Returns recommendations sorted by order-by date.
+ * Returns recommendations sorted by container number.
  *
  * @param orgId - Organization UUID
  * @returns Array of container recommendations
@@ -274,7 +274,7 @@ export async function getRecommendations(orgId: string): Promise<ContainerRecomm
     .select()
     .from(recommendations)
     .where(eq(recommendations.org_id, orgId))
-    .orderBy(recommendations.order_by_date);
+    .orderBy(recommendations.container_number);
 
   return rows.map(transformRecommendationRow);
 }

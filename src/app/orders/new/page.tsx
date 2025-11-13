@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,16 +12,15 @@ import { ShippingDetailsForm } from '@/components/orders/ShippingDetailsForm';
 import { OrderConfirmationModal } from '@/components/orders/OrderConfirmationModal';
 import { validateCapacity, validateOrder } from '@/lib/validations';
 import { addDays, format } from 'date-fns';
-import type { ContainerRecommendation, ShippingDetails, ShippingMethod, Order, Product, ContainerProduct } from '@/lib/types';
+import type { ShippingDetails, Product, ContainerProduct } from '@/lib/types';
 
-export default function OrderReviewPage({ params }: { params: Promise<{ containerId: string }> }) {
-  const { containerId } = use(params);
+export default function NewOrderPage() {
   const router = useRouter();
   const { toast } = useToast();
 
   // Data state
-  const [container, setContainer] = useState<ContainerRecommendation | null>(null);
-  const [addedProducts, setAddedProducts] = useState<ContainerProduct[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
+  const [orderProducts, setOrderProducts] = useState<ContainerProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Form state
@@ -38,39 +37,25 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Load container data from API
+  // Load available products from ERP
   useEffect(() => {
-    const loadContainer = async () => {
+    const loadProducts = async () => {
       try {
         setIsLoading(true);
 
-        // Fetch recommendations from API
-        const response = await fetch('/api/recommendations');
+        // Fetch products from API (we'll create this endpoint)
+        const response = await fetch('/api/products');
         if (!response.ok) {
-          throw new Error('Failed to fetch recommendations');
+          throw new Error('Failed to fetch products');
         }
 
         const data = await response.json();
-        // Find container by container number (which is now the ID)
-        const containerData = data.containers.find(
-          (c: ContainerRecommendation) => c.containerNumber.toString() === containerId
-        );
-
-        if (containerData) {
-          setContainer(containerData);
-
-          // Initialize quantities from recommended amounts
-          const initialQuantities: Record<string, number> = {};
-          containerData.products.forEach((p: ContainerProduct) => {
-            initialQuantities[p.productId.toString()] = p.recommendedQuantity;
-          });
-          setQuantities(initialQuantities);
-        }
+        setAvailableProducts(data.products || []);
       } catch (error) {
-        console.error('Failed to load container:', error);
+        console.error('Failed to load products:', error);
         toast({
-          title: 'Error loading container',
-          description: 'Failed to load container data. Please try again.',
+          title: 'Error loading products',
+          description: 'Failed to load product data. Please try again.',
           variant: 'destructive',
         });
       } finally {
@@ -78,8 +63,8 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
       }
     };
 
-    loadContainer();
-  }, [containerId, toast]);
+    loadProducts();
+  }, [toast]);
 
   // Computed values
   const totalCartons = useMemo(() => {
@@ -87,24 +72,20 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   }, [quantities]);
 
   const totalPallets = useMemo(() => {
-    if (!container) return 0;
-    // Calculate pallets per product using actual piecesPerPallet, then sum
-    return container.products.reduce((sum, product) => {
+    return orderProducts.reduce((sum, product) => {
       const productQuantity = quantities[product.productId.toString()] || 0;
       const productPallets = productQuantity / product.piecesPerPallet;
       return sum + productPallets;
     }, 0);
-  }, [quantities, container]);
+  }, [quantities, orderProducts]);
 
   const totalVolume = useMemo(() => {
-    if (!container) return 0;
-    // Calculate volume per product using volumePerCarton, then sum
-    return container.products.reduce((sum, product) => {
+    return orderProducts.reduce((sum, product) => {
       const productQuantity = quantities[product.productId.toString()] || 0;
       const volumePerCarton = product.volumePerCarton || 0;
       return sum + (productQuantity * volumePerCarton);
     }, 0);
-  }, [quantities, container]);
+  }, [quantities, orderProducts]);
 
   const capacityValidation = useMemo(() => {
     return validateCapacity(totalVolume);
@@ -119,39 +100,45 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
     return format(addDays(new Date(), weeksToAdd * 7), 'MMM dd, yyyy');
   }, [shippingDetails.arrivalPreference, shippingDetails.specificDate]);
 
-  // All products in the order (container + added)
-  const allProducts = useMemo(() => {
-    if (!container) return [];
-    return [...container.products, ...addedProducts];
-  }, [container, addedProducts]);
-
-  // Available products for adding - disabled for now
-  // In the future, this could fetch from ERP and allow adding more products
-  const availableProducts = useMemo(() => {
-    return [];
-  }, []);
+  // Available products (exclude ones already added)
+  const filteredAvailableProducts = useMemo(() => {
+    const productsInOrder = new Set(orderProducts.map(p => p.productId));
+    return availableProducts.filter(p => !productsInOrder.has(p.id));
+  }, [availableProducts, orderProducts]);
 
   // Handlers
   const handleProductAdd = (product: Product) => {
     // Convert Product to ContainerProduct format
     const containerProduct: ContainerProduct = {
       productId: product.id,
+      sku: product.sku,
       productName: product.name,
       currentStock: product.currentStock,
       weeklyConsumption: product.weeklyConsumption,
       weeksSupply: product.weeksRemaining,
       runsOutDate: product.runsOutDate,
-      recommendedQuantity: 0, // User will set this
-      afterDeliveryStock: product.currentStock, // Will be updated when quantity changes
+      recommendedQuantity: 0,
+      afterDeliveryStock: product.currentStock,
       piecesPerPallet: product.piecesPerPallet,
+      volumePerCarton: product.volumePerPallet / product.piecesPerPallet,
+      imageUrl: product.imageUrl,
     };
 
-    setAddedProducts(prev => [...prev, containerProduct]);
+    setOrderProducts(prev => [...prev, containerProduct]);
     setQuantities(prev => ({ ...prev, [product.id.toString()]: 0 }));
 
     toast({
       title: 'Product added',
       description: `${product.name} has been added to the order.`,
+    });
+  };
+
+  const handleProductRemove = (productId: number) => {
+    setOrderProducts(prev => prev.filter(p => p.productId !== productId));
+    setQuantities(prev => {
+      const newQuantities = { ...prev };
+      delete newQuantities[productId.toString()];
+      return newQuantities;
     });
   };
 
@@ -181,30 +168,25 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   };
 
   const handleConfirmSubmit = async () => {
-    if (!container) return;
-
     setIsSubmitting(true);
 
     try {
       // Generate order number
       const orderNumber = `CO-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
 
-      // Build order object
-      const order: Partial<Order> = {
-        id: orderNumber,
+      // Build order object (in real implementation, submit to API)
+      const order = {
         orderNumber,
-        type: 'IN_TRANSIT',
         orderedDate: format(new Date(), 'MMM dd, yyyy'),
         deliveryDate: estimatedDelivery,
         totalCartons,
         productCount: Object.values(quantities).filter(q => q > 0).length,
-        products: allProducts
+        products: orderProducts
           .filter(p => quantities[p.productId.toString()] > 0)
           .map(p => ({
             ...p,
             recommendedQuantity: quantities[p.productId.toString()],
           })),
-        status: 'IN_TRANSIT',
         shippingTerm: shippingDetails.shippingTerm!,
         customerOrderNumber: shippingDetails.customerOrderNumber,
         comments: shippingDetails.comments,
@@ -226,22 +208,14 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
             <p className="text-sm text-muted-foreground">
               Confirmation email sent
             </p>
-            <Button
-              variant="link"
-              size="sm"
-              className="p-0 h-auto"
-              onClick={() => router.push(`/orders?highlight=${orderNumber}`)}
-            >
-              View Order Details
-            </Button>
           </div>
         ),
         duration: 8000,
       });
 
-      // Navigate back to dashboard after short delay
+      // Navigate back to orders
       setTimeout(() => {
-        router.push('/');
+        router.push('/orders?tab=live');
       }, 2000);
     } catch (error) {
       console.error('Order submission failed:', error);
@@ -270,18 +244,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <p className="text-center text-muted-foreground">Loading container data...</p>
-      </div>
-    );
-  }
-
-  if (!container) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <p className="text-center text-muted-foreground">Container not found</p>
-        <Button variant="link" onClick={() => router.push('/orders')} className="mx-auto block mt-4">
-          Return to Orders
-        </Button>
+        <p className="text-center text-muted-foreground">Loading products...</p>
       </div>
     );
   }
@@ -308,7 +271,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
         <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6 max-w-4xl">
           {/* Page Title */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-xl font-bold text-foreground sm:text-2xl">Review Order</h1>
+            <h1 className="text-xl font-bold text-foreground sm:text-2xl">Create New Order</h1>
             <span className="text-xs sm:text-sm text-muted-foreground uppercase tracking-wide">
               Status: Draft
             </span>
@@ -316,9 +279,9 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
 
           {/* Container Summary */}
           <ContainerSummary
-            containerNumber={container.containerNumber}
-            orderByDate={container.orderByDate}
-            deliveryDate={container.deliveryDate}
+            containerNumber={null}
+            orderByDate={null}
+            deliveryDate={estimatedDelivery}
             totalCartons={totalCartons}
             totalPallets={totalPallets}
             capacityValidation={capacityValidation}
@@ -331,23 +294,35 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
                 Products in This Order
               </h2>
               <span className="text-xs text-muted-foreground">
-                {allProducts.length} product{allProducts.length !== 1 ? 's' : ''}
+                {orderProducts.length} product{orderProducts.length !== 1 ? 's' : ''}
               </span>
             </div>
 
-            {allProducts.map((product) => (
-              <ProductQuantityRow
-                key={product.productId}
-                product={product}
-                quantity={quantities[product.productId.toString()] || 0}
-                onQuantityChange={(qty) => handleQuantityChange(product.productId.toString(), qty)}
-                piecesPerPallet={product.piecesPerPallet}
-              />
-            ))}
+            {orderProducts.length === 0 ? (
+              <div className="border border-dashed border-border rounded-lg bg-muted/30 px-8 py-12 text-center">
+                <p className="text-base font-medium text-muted-foreground mb-2">
+                  No products added yet
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Use the selector below to add products to your order
+                </p>
+              </div>
+            ) : (
+              orderProducts.map((product) => (
+                <ProductQuantityRow
+                  key={product.productId}
+                  product={product}
+                  quantity={quantities[product.productId.toString()] || 0}
+                  onQuantityChange={(qty) => handleQuantityChange(product.productId.toString(), qty)}
+                  piecesPerPallet={product.piecesPerPallet}
+                  onRemove={() => handleProductRemove(product.productId)}
+                />
+              ))
+            )}
 
             {/* Add Product Selector */}
             <ProductSelector
-              availableProducts={availableProducts}
+              availableProducts={filteredAvailableProducts}
               onProductAdd={handleProductAdd}
             />
           </div>
@@ -371,11 +346,13 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
             <Button
               size="lg"
               onClick={handleApprove}
-              disabled={!capacityValidation.isValid || isSubmitting}
+              disabled={!capacityValidation.isValid || isSubmitting || orderProducts.length === 0}
               className="w-full md:w-auto"
             >
               {capacityValidation.warning === 'exceeds_capacity'
                 ? 'EXCEEDS CAPACITY - REMOVE PRODUCTS'
+                : orderProducts.length === 0
+                ? 'ADD PRODUCTS TO CONTINUE'
                 : `APPROVE ORDER — ${totalCartons.toLocaleString()} CARTONS`}
             </Button>
           </div>
@@ -387,8 +364,8 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
         isOpen={showConfirmation}
         onClose={() => setShowConfirmation(false)}
         onConfirm={handleConfirmSubmit}
-        containerNumber={container.containerNumber}
-        products={allProducts
+        containerNumber={null}
+        products={orderProducts
           .filter(p => quantities[p.productId.toString()] > 0)
           .map((p) => ({
             name: p.productName,

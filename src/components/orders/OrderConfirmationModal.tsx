@@ -19,7 +19,7 @@ interface OrderConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  containerNumber: number;
+  containerNumber: number | null;
   products: OrderProduct[];
   totalCartons: number;
   totalPallets: number;
@@ -58,9 +58,11 @@ export function OrderConfirmationModal({
 
         <div className="space-y-4 py-4">
           {/* Container Info */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-2">Container {containerNumber}</h3>
-          </div>
+          {containerNumber && (
+            <div>
+              <h3 className="font-semibold text-foreground mb-2">Container {containerNumber}</h3>
+            </div>
+          )}
 
           {/* Products */}
           <div>
