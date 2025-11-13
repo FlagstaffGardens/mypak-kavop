@@ -15,8 +15,11 @@ export interface CapacityValidation {
  *
  * 40HC container capacity: 75.98 m³
  * Each product has different volume per carton, so we validate by total volume
+ *
+ * @param totalVolume - Total volume in m³
+ * @param requireFullCapacity - For new orders, require 100%+ capacity (default: false)
  */
-export function validateCapacity(totalVolume: number): CapacityValidation {
+export function validateCapacity(totalVolume: number, requireFullCapacity: boolean = false): CapacityValidation {
   const MAX_VOLUME = CONTAINER_CAPACITY; // 75.98 m³ for 40HC
   const SMALL_ORDER_THRESHOLD = MAX_VOLUME * 0.5; // 50% of capacity
   const NEAR_CAPACITY_THRESHOLD = MAX_VOLUME * 0.95; // 95% of capacity
@@ -33,6 +36,18 @@ export function validateCapacity(totalVolume: number): CapacityValidation {
       percentFull,
       warning: 'exceeds_capacity',
       warningMessage: `EXCEEDS CAPACITY: ${totalVolume.toFixed(2)} m³ exceeds 40HC limit of ${MAX_VOLUME} m³. Remove products.`,
+    };
+  }
+
+  // For new orders: require 100%+ capacity
+  if (requireFullCapacity && totalVolume < MAX_VOLUME - TOLERANCE) {
+    return {
+      isValid: false,
+      currentVolume: totalVolume,
+      maxVolume: MAX_VOLUME,
+      percentFull,
+      warning: 'small_order',
+      warningMessage: `Must reach 100% capacity (${percentFull.toFixed(0)}% currently). Add more pallets to fill the container.`,
     };
   }
 

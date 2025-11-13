@@ -13,6 +13,7 @@ interface ProductQuantityRowProps {
   onQuantityChange: (quantity: number) => void;
   piecesPerPallet: number;
   onRemove?: () => void;
+  unit?: 'cartons' | 'pallets'; // Default is 'cartons' for backward compatibility
 }
 
 export function ProductQuantityRow({
@@ -21,18 +22,30 @@ export function ProductQuantityRow({
   onQuantityChange,
   piecesPerPallet,
   onRemove,
+  unit = 'cartons',
 }: ProductQuantityRowProps) {
   const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
 
-  const pallets = (quantity / piecesPerPallet).toFixed(1);
+  const pallets = quantity / piecesPerPallet;
   const afterDeliveryStock = product.currentStock + quantity;
   const afterDeliveryWeeks = product.weeklyConsumption > 0
     ? (afterDeliveryStock / product.weeklyConsumption).toFixed(1)
     : '∞';
 
+  // Display value depends on unit
+  const displayValue = unit === 'pallets' ? pallets : quantity;
+  const step = unit === 'pallets' ? 1 : 1000;
+
   const handleChange = (value: string) => {
-    const numValue = parseInt(value) || 0;
-    onQuantityChange(Math.max(0, numValue));
+    const numValue = parseFloat(value) || 0;
+    if (unit === 'pallets') {
+      // Convert pallets to cartons
+      const cartons = Math.round(numValue * piecesPerPallet);
+      onQuantityChange(Math.max(0, cartons));
+    } else {
+      // Direct cartons input
+      onQuantityChange(Math.max(0, Math.round(numValue)));
+    }
   };
 
   return (
@@ -89,19 +102,27 @@ export function ProductQuantityRow({
 
           <div className="md:w-64">
             <Label htmlFor={`quantity-${product.productId}`} className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5 block">
-              Quantity
+              Quantity {unit === 'pallets' && <span className="text-blue-600 dark:text-blue-400">(Pallets)</span>}
             </Label>
             <Input
               id={`quantity-${product.productId}`}
               type="number"
-              value={quantity}
+              value={displayValue}
               onChange={(e) => handleChange(e.target.value)}
               className="text-base font-medium h-12"
               min="0"
-              step="1000"
+              step={step}
             />
             <p className="text-xs text-muted-foreground mt-1.5">
-              {quantity.toLocaleString()} cartons ({pallets} pallets)
+              {unit === 'pallets' ? (
+                <>
+                  {pallets.toFixed(1)} pallets ({quantity.toLocaleString()} cartons)
+                </>
+              ) : (
+                <>
+                  {quantity.toLocaleString()} cartons ({pallets.toFixed(1)} pallets)
+                </>
+              )}
             </p>
           </div>
         </div>

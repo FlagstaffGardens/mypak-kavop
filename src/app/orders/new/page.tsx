@@ -88,7 +88,8 @@ export default function NewOrderPage() {
   }, [quantities, orderProducts]);
 
   const capacityValidation = useMemo(() => {
-    return validateCapacity(totalVolume);
+    // For new orders, require 100%+ capacity
+    return validateCapacity(totalVolume, true);
   }, [totalVolume]);
 
   const estimatedDelivery = useMemo(() => {
@@ -108,14 +109,15 @@ export default function NewOrderPage() {
 
   // Handlers
   const handleProductAdd = (product: Product) => {
-    // Calculate smart default quantity:
-    // - If has weekly consumption: 4 weeks worth (rounded to nearest 1000)
-    // - Otherwise: 5000 cartons (minimum 1 pallet)
-    let defaultQuantity = 5000;
+    // Calculate smart default quantity in PALLETS (whole pallets only):
+    // - If has weekly consumption: 4 weeks worth (rounded up to nearest pallet)
+    // - Otherwise: 1 pallet minimum
+    let defaultQuantity = product.piecesPerPallet; // Start with 1 pallet
     if (product.weeklyConsumption > 0) {
       const fourWeeksWorth = product.weeklyConsumption * 4;
-      defaultQuantity = Math.round(fourWeeksWorth / 1000) * 1000;
-      defaultQuantity = Math.max(defaultQuantity, 5000); // Minimum 5000
+      // Round up to nearest whole pallet
+      const palletsNeeded = Math.ceil(fourWeeksWorth / product.piecesPerPallet);
+      defaultQuantity = palletsNeeded * product.piecesPerPallet;
     }
 
     // Convert Product to ContainerProduct format
@@ -137,9 +139,10 @@ export default function NewOrderPage() {
     setOrderProducts(prev => [...prev, containerProduct]);
     setQuantities(prev => ({ ...prev, [product.id.toString()]: defaultQuantity }));
 
+    const pallets = defaultQuantity / product.piecesPerPallet;
     toast({
       title: 'Product added',
-      description: `${product.name} added with ${(defaultQuantity / 1000).toFixed(0)}k cartons.`,
+      description: `${product.name} added with ${pallets.toFixed(1)} pallets.`,
     });
   };
 
@@ -342,6 +345,7 @@ export default function NewOrderPage() {
                     onQuantityChange={(qty) => handleQuantityChange(product.productId.toString(), qty)}
                     piecesPerPallet={product.piecesPerPallet}
                     onRemove={() => handleProductRemove(product.productId)}
+                    unit="pallets"
                   />
                 ))}
                 {/* Add Product Selector - Compact version when products exist */}
@@ -376,11 +380,13 @@ export default function NewOrderPage() {
               disabled={!capacityValidation.isValid || isSubmitting || orderProducts.length === 0}
               className="w-full md:w-auto"
             >
-              {capacityValidation.warning === 'exceeds_capacity'
-                ? 'EXCEEDS CAPACITY - REMOVE PRODUCTS'
-                : orderProducts.length === 0
+              {orderProducts.length === 0
                 ? 'ADD PRODUCTS TO CONTINUE'
-                : `APPROVE ORDER — ${totalCartons.toLocaleString()} CARTONS`}
+                : capacityValidation.warning === 'exceeds_capacity'
+                ? 'EXCEEDS CAPACITY - REMOVE PALLETS'
+                : capacityValidation.warning === 'small_order' && !capacityValidation.isValid
+                ? `ADD MORE PALLETS - ${capacityValidation.percentFull.toFixed(0)}% FULL`
+                : `APPROVE ORDER — ${totalPallets.toFixed(1)} PALLETS`}
             </Button>
           </div>
         </div>
