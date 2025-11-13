@@ -77,6 +77,17 @@ export function InventoryEditTable({
 
   const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
 
+  // Track timers for cleanup on unmount
+  const timersRef = useRef<NodeJS.Timeout[]>([]);
+
+  // Cleanup timers on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+    };
+  }, []);
+
   // Load data from API on mount
   useEffect(() => {
     async function loadData() {
@@ -248,6 +259,7 @@ export function InventoryEditTable({
       const calculatingTimer = setTimeout(() => {
         setSaveStage('calculating');
       }, 1500);
+      timersRef.current.push(calculatingTimer);
 
       const response = await fetch('/api/inventory/save', {
         method: 'POST',
@@ -257,6 +269,7 @@ export function InventoryEditTable({
 
       // Clear timer if request finishes early
       clearTimeout(calculatingTimer);
+      timersRef.current = timersRef.current.filter(t => t !== calculatingTimer);
 
       if (!response.ok) {
         throw new Error('Failed to save inventory data');
@@ -266,10 +279,15 @@ export function InventoryEditTable({
       setSaveStage('success');
 
       // Call onSave after brief success display
-      setTimeout(() => {
+      const successTimer = setTimeout(() => {
         onSave();
       }, 800);
+      timersRef.current.push(successTimer);
     } catch (error) {
+      // Clear all timers on error
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+
       console.error('Failed to save inventory data:', error);
       toast.error('Failed to save inventory data. Please try again.');
       setSaveStage('idle');
