@@ -60,3 +60,21 @@ export function validateWeeklyConsumption(
 
   return { state: 'valid' };
 }
+
+export function validateTargetSOH(targetSOH: number): ValidationResult {
+  if (targetSOH < 0) {
+    return { state: 'error', message: 'Target SOH cannot be negative' };
+  }
+
+  if (isNaN(targetSOH)) {
+    return { state: 'error', message: 'Please enter a valid number' };
+  }
+
+  // Must be a whole number (integer)
+  if (!Number.isInteger(targetSOH)) {
+    return { state: 'error', message: 'Target SOH must be a whole number' };
+  }
+
+  // Allow 0 (indicates discontinued/inactive product)
+  return { state: 'valid' };
+}

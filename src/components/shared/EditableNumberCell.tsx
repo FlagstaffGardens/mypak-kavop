@@ -89,7 +89,7 @@ export function EditableNumberCell({
 
     // Strip leading zeros (except "0" or "0.x")
     if (input.length > 1 && input.startsWith('0') && input[1] !== '.') {
-      input = input.replace(/^0+/, '');
+      input = input.replace(/^0+/, '') || '0'; // Preserve at least one zero
     }
 
     setEditValue(input);

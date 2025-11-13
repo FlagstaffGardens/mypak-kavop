@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { EditableNumberCell } from './EditableNumberCell';
-import { validateCurrentStock, validateWeeklyConsumption } from '@/lib/validation';
+import { validateCurrentStock, validateWeeklyConsumption, validateTargetSOH } from '@/lib/validation';
 import { calculateStockoutDate, calculateTargetStock } from '@/lib/calculations';
 import { DEFAULT_TARGET_SOH } from '@/lib/constants';
 import { toast } from 'sonner';
@@ -184,6 +184,7 @@ export function InventoryEditTable({
         product.weeklyConsumption,
         product.originalConsumption
       ),
+      targetSOH: validateTargetSOH(product.targetSOH || DEFAULT_TARGET_SOH),
     }));
   }, [editableProducts]);
 
@@ -191,7 +192,7 @@ export function InventoryEditTable({
 
   // Check if there are any errors
   const hasErrors = validations.some(
-    (v) => v.stock.state === 'error' || v.consumption.state === 'error'
+    (v) => v.stock.state === 'error' || v.consumption.state === 'error' || v.targetSOH.state === 'error'
   );
 
   // Check if there are any warnings
@@ -202,6 +203,9 @@ export function InventoryEditTable({
     }
     if (v.consumption.state === 'warning') {
       acc.push(`${product.name}: ${v.consumption.message}`);
+    }
+    if (v.targetSOH.state === 'warning') {
+      acc.push(`${product.name}: ${v.targetSOH.message}`);
     }
     return acc;
   }, []);
@@ -514,7 +518,7 @@ export function InventoryEditTable({
                           <EditableNumberCell
                             value={product.targetSOH || DEFAULT_TARGET_SOH}
                             onChange={(value) => updateProduct(index, 'targetSOH', value)}
-                            validation={{ state: 'valid', message: '' }}
+                            validation={validations[index].targetSOH}
                             onKeyDown={(e) => handleKeyDown(e, index, 'targetSOH')}
                             autoFocus={isTargetSOHFocused}
                           />
