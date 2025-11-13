@@ -587,7 +587,7 @@ export function InventoryEditTable({
               <AlertTriangle className="h-5 w-5 text-amber-600" />
               {warnings.length} Warning{warnings.length !== 1 ? 's' : ''} Detected
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
+            <div className="space-y-3 text-muted-foreground text-sm">
               <p>The following products have warnings:</p>
               <ul className="space-y-2">
                 {warnings.slice(0, 5).map((warning, index) => (
@@ -603,7 +603,7 @@ export function InventoryEditTable({
                 )}
               </ul>
               <p className="text-sm font-medium">Do you want to save anyway?</p>
-            </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
