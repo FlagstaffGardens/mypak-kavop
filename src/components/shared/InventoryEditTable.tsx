@@ -485,6 +485,8 @@ export function InventoryEditTable({
                             validation={validations[index].stock}
                             onKeyDown={(e) => handleKeyDown(e, index, 'stock')}
                             autoFocus={isStockFocused}
+                            allowDecimals={true}
+                            maxDecimals={1}
                           />
                           <div className="text-xs text-muted-foreground">
                             pallets = {product.currentStock.toLocaleString()} cartons ({product.piecesPerPallet.toLocaleString()}/pallet)
@@ -499,6 +501,8 @@ export function InventoryEditTable({
                             validation={validations[index].consumption}
                             onKeyDown={(e) => handleKeyDown(e, index, 'consumption')}
                             autoFocus={isConsumptionFocused}
+                            allowDecimals={true}
+                            maxDecimals={1}
                           />
                           <div className="text-xs text-muted-foreground">
                             pallets/week = {product.weeklyConsumption.toLocaleString()} cartons/week
