@@ -37,25 +37,23 @@ export function ProductQuantityRow({
 
   return (
     <>
-    <Card>
+    <Card className="relative">
       <CardContent className="pt-6">
+        {onRemove && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onRemove}
+            className="absolute top-4 right-4 h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground z-10"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div className="flex-1">
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-                Product
-              </Label>
-              {onRemove && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onRemove}
-                  className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">
+              Product
+            </Label>
             <h3 className="text-lg font-semibold text-foreground mb-1">
               {product.productName}
             </h3>
