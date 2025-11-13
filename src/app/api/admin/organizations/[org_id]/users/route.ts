@@ -27,8 +27,8 @@ export async function POST(
 
     // Generate users data
     const usersData = emails.map((email) => ({
-      id: crypto.randomUUID(),
-      orgId: org_id,
+      user_id: crypto.randomUUID(),
+      org_id: org_id,
       email,
       name: generateNameFromEmail(email),
       password: generatePassword(16),

@@ -2,11 +2,11 @@ import { redirect } from 'next/navigation';
 import { fetchErpProducts, fetchErpCurrentOrders } from '@/lib/erp/client';
 import { transformErpProduct, transformErpOrder, completeProductWithInventory } from '@/lib/erp/transforms';
 import { getInventoryData } from '@/lib/services/inventory';
+import { getRecommendations } from '@/lib/services/recommendations';
 import { getCurrentUser } from '@/lib/auth/jwt';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
-import { mockContainers } from '@/lib/data/mock-containers';
 import { DEFAULT_TARGET_SOH } from '@/lib/constants';
-import type { Product } from '@/lib/types';
+import type { Product, ContainerRecommendation } from '@/lib/types';
 
 export default async function Dashboard() {
   // Get current user
@@ -71,8 +71,42 @@ export default async function Dashboard() {
   // Transform orders
   const liveOrders = erpOrders.map(transformErpOrder);
 
-  // TODO: Replace mock containers with calculated recommendations
-  const containers = mockContainers;
+  // Fetch recommendations from database
+  const dbRecommendations = await getRecommendations(user.orgId);
+
+  // Transform recommendations to UI format
+  const containers: ContainerRecommendation[] = dbRecommendations.map((rec, index) => {
+    // Create product map for lookups
+    const productMap = new Map(products.map(p => [p.sku, p]));
+
+    return {
+      id: index + 1,
+      containerNumber: rec.containerNumber,
+      orderByDate: rec.orderByDate.toISOString().split('T')[0],
+      deliveryDate: rec.deliveryDate.toISOString().split('T')[0],
+      totalCartons: rec.totalCartons,
+      productCount: rec.products.length,
+      urgency: rec.urgency === 'URGENT' || rec.urgency === 'OVERDUE' ? 'URGENT' : null,
+      products: rec.products.map(p => {
+        const product = productMap.get(p.sku);
+        return {
+          productId: p.productId,
+          sku: p.sku,
+          productName: p.productName,
+          currentStock: product?.currentStock || 0,
+          weeklyConsumption: product?.weeklyConsumption || 0,
+          recommendedQuantity: p.quantity,
+          afterDeliveryStock: (product?.currentStock || 0) + p.quantity,
+          weeksSupply: product?.weeklyConsumption
+            ? ((product.currentStock || 0) + p.quantity) / product.weeklyConsumption
+            : 999,
+          runsOutDate: '',
+          piecesPerPallet: product?.piecesPerPallet,
+          imageUrl: product?.imageUrl,
+        };
+      }),
+    };
+  });
 
   // Get last updated from localStorage (client-side only)
   const lastUpdated = null; // Will be hydrated on client

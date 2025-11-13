@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, integer, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, integer, index, primaryKey, decimal, jsonb, date } from "drizzle-orm/pg-core";
 
 export const organizations = pgTable("organizations", {
   org_id: uuid("org_id").defaultRandom().primaryKey(),
@@ -34,4 +34,22 @@ export const productData = pgTable("product_data", {
   pk: primaryKey({ columns: [table.org_id, table.sku] }),
   orgIdx: index("idx_product_data_org").on(table.org_id),
   updatedIdx: index("idx_product_data_updated").on(table.org_id, table.updated_at),
+}));
+
+export const recommendations = pgTable("recommendations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  org_id: uuid("org_id")
+    .references(() => organizations.org_id, { onDelete: "cascade" })
+    .notNull(),
+  container_number: integer("container_number").notNull(),
+  order_by_date: date("order_by_date").notNull(),
+  delivery_date: date("delivery_date").notNull(),
+  total_cartons: integer("total_cartons").notNull(),
+  total_volume: decimal("total_volume", { precision: 10, scale: 2 }).notNull(),
+  urgency: text("urgency"), // 'OVERDUE', 'URGENT', 'PLANNED'
+  products: jsonb("products").notNull(), // Array of product objects
+  generated_at: timestamp("generated_at").notNull().defaultNow(),
+}, (table) => ({
+  orgIdx: index("idx_recommendations_org").on(table.org_id, table.generated_at),
+  orderDateIdx: index("idx_recommendations_order_date").on(table.org_id, table.order_by_date),
 }));

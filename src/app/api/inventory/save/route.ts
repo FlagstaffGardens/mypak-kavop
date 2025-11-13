@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/jwt';
 import { upsertInventoryData, type InventoryInput } from '@/lib/services/inventory';
+import { generateAndSaveRecommendations } from '@/lib/services/recommendations';
 import { MIN_TARGET_SOH_WEEKS, MAX_TARGET_SOH_WEEKS } from '@/lib/constants';
 import { z } from 'zod';
 
@@ -35,12 +36,17 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validated = inventorySchema.parse(body);
 
-    // Upsert inventory data
+    // 1. Upsert inventory data
     await upsertInventoryData(user.orgId, validated.products as InventoryInput[]);
+
+    // 2. Regenerate recommendations (synchronous - user waits)
+    console.log('[API] Regenerating recommendations...');
+    await generateAndSaveRecommendations(user.orgId);
+    console.log('[API] Recommendations regenerated successfully');
 
     return NextResponse.json({
       success: true,
-      message: 'Inventory data saved successfully',
+      message: 'Inventory saved and recommendations updated',
     });
   } catch (error) {
     console.error('[API] /api/inventory/save error:', error);

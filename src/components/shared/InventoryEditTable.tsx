@@ -395,7 +395,7 @@ export function InventoryEditTable({
                               {product.name}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {product.size} - {product.packCount}
+                              {product.sku}
                             </div>
                           </div>
                           {product.imageUrl && (
