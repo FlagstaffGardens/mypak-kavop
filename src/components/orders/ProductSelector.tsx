@@ -37,14 +37,19 @@ export function ProductSelector({ availableProducts, onProductAdd, isEmptyState 
   }
 
   return (
-    <div className="flex gap-2 items-end">
+    <div className="flex gap-3 items-center">
+      {!isEmptyState && (
+        <div className="flex items-center justify-center w-11 h-11 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+          <Plus className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        </div>
+      )}
       <div className="flex-1">
         <Select value={selectedProductId} onValueChange={handleProductSelect}>
           <SelectTrigger
             className={`w-full cursor-pointer transition-all ${
               isEmptyState
                 ? 'h-14 text-base border-2 border-blue-500 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 shadow-sm'
-                : 'h-11'
+                : 'h-11 border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:border-blue-300 dark:hover:border-blue-700'
             }`}
           >
             <SelectValue
