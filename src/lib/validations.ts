@@ -17,7 +17,7 @@ export interface CapacityValidation {
  * Each product has different volume per carton, so we validate by total volume
  *
  * @param totalVolume - Total volume in m³
- * @param requireFullCapacity - For new orders, require 100%+ capacity (default: false)
+ * @param requireFullCapacity - For new orders, require 100-105% capacity (default: false)
  */
 export function validateCapacity(totalVolume: number, requireFullCapacity: boolean = false): CapacityValidation {
   const MAX_VOLUME = CONTAINER_CAPACITY; // 75.98 m³ for 40HC
@@ -25,9 +25,48 @@ export function validateCapacity(totalVolume: number, requireFullCapacity: boole
   const NEAR_CAPACITY_THRESHOLD = MAX_VOLUME * 0.95; // 95% of capacity
   const TOLERANCE = 0.01; // Allow small floating point errors (0.01 m³ ≈ 0.013%)
 
+  // For new orders: strict range of 100-105%
+  const MIN_REQUIRED_VOLUME = MAX_VOLUME; // 100%
+  const MAX_ALLOWED_VOLUME = MAX_VOLUME * 1.05; // 105%
+
   const percentFull = (totalVolume / MAX_VOLUME) * 100;
 
-  // Only invalid if TRULY exceeds capacity (accounting for floating point precision)
+  // For new orders: enforce 100-105% range
+  if (requireFullCapacity) {
+    // Too much (over 105%)
+    if (totalVolume > MAX_ALLOWED_VOLUME + TOLERANCE) {
+      return {
+        isValid: false,
+        currentVolume: totalVolume,
+        maxVolume: MAX_VOLUME,
+        percentFull,
+        warning: 'exceeds_capacity',
+        warningMessage: `TOO FULL: ${percentFull.toFixed(0)}% exceeds 105% limit. Remove pallets to stay within 100-105%.`,
+      };
+    }
+
+    // Too little (under 100%)
+    if (totalVolume < MIN_REQUIRED_VOLUME - TOLERANCE) {
+      return {
+        isValid: false,
+        currentVolume: totalVolume,
+        maxVolume: MAX_VOLUME,
+        percentFull,
+        warning: 'small_order',
+        warningMessage: `Must reach 100% capacity (${percentFull.toFixed(0)}% currently). Add more pallets to fill the container.`,
+      };
+    }
+
+    // Perfect range: 100-105%
+    return {
+      isValid: true,
+      currentVolume: totalVolume,
+      maxVolume: MAX_VOLUME,
+      percentFull,
+    };
+  }
+
+  // For review orders (existing behavior): only check if exceeds max capacity
   if (totalVolume > MAX_VOLUME + TOLERANCE) {
     return {
       isValid: false,
@@ -36,18 +75,6 @@ export function validateCapacity(totalVolume: number, requireFullCapacity: boole
       percentFull,
       warning: 'exceeds_capacity',
       warningMessage: `EXCEEDS CAPACITY: ${totalVolume.toFixed(2)} m³ exceeds 40HC limit of ${MAX_VOLUME} m³. Remove products.`,
-    };
-  }
-
-  // For new orders: require 100%+ capacity
-  if (requireFullCapacity && totalVolume < MAX_VOLUME - TOLERANCE) {
-    return {
-      isValid: false,
-      currentVolume: totalVolume,
-      maxVolume: MAX_VOLUME,
-      percentFull,
-      warning: 'small_order',
-      warningMessage: `Must reach 100% capacity (${percentFull.toFixed(0)}% currently). Add more pallets to fill the container.`,
     };
   }
 

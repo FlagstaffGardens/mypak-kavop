@@ -393,10 +393,10 @@ export default function NewOrderPage() {
               {orderProducts.length === 0
                 ? 'ADD PRODUCTS TO CONTINUE'
                 : capacityValidation.warning === 'exceeds_capacity'
-                ? 'EXCEEDS CAPACITY - REMOVE PALLETS'
+                ? `TOO FULL (${capacityValidation.percentFull.toFixed(0)}%) - REMOVE PALLETS`
                 : capacityValidation.warning === 'small_order' && !capacityValidation.isValid
                 ? `ADD MORE PALLETS - ${capacityValidation.percentFull.toFixed(0)}% FULL`
-                : `APPROVE ORDER — ${totalPallets.toFixed(1)} PALLETS`}
+                : `APPROVE ORDER — ${totalPallets.toFixed(1)} PALLETS (${capacityValidation.percentFull.toFixed(0)}%)`}
             </Button>
           </div>
         </div>
