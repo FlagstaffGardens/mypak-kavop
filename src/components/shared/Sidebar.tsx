@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useAuth } from '@/hooks/useAuth';
+import { useSession, signOut, useActiveOrganization } from '@/lib/auth-client';
 
 // Sub-component for Orders navigation that uses useSearchParams
 function OrdersSubNav({ isCollapsed }: { isCollapsed: boolean }) {
@@ -62,7 +62,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { user, signOut } = useAuth();
+  const { data: session } = useSession();
+  const { data: activeOrg } = useActiveOrganization();
 
   // Always start with default values to avoid hydration mismatch
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -103,6 +104,8 @@ export function Sidebar() {
     },
   ];
 
+  const user = session?.user;
+
   // Add initials to user data
   const userWithInitials = user
     ? {
@@ -130,9 +133,9 @@ export function Sidebar() {
           <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">
             MyPak
           </span>
-          {user?.orgName && (
+          {activeOrg?.name && (
             <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {user.orgName}
+              {activeOrg.name}
             </span>
           )}
         </div>
@@ -239,8 +242,8 @@ export function Sidebar() {
           )}
         </div>
 
-        {/* Admin Link - only show for platform_admin */}
-        {user?.role === 'platform_admin' && (
+        {/* Admin Link - only show for admin role */}
+        {user?.role === 'admin' && (
           <Link
             href="/admin/organizations"
             title={isCollapsed ? 'Admin' : undefined}

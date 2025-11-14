@@ -2,32 +2,36 @@ import { getCachedErpCurrentOrders, getCachedErpCompletedOrders, getCachedErpPro
 import { transformErpOrder } from '@/lib/erp/transforms';
 import { getRecommendations } from '@/lib/services/recommendations';
 import { getInventoryData } from '@/lib/services/inventory';
-import { getCurrentUser } from '@/lib/auth/jwt';
 import { OrdersPageClient } from '@/components/orders/OrdersPageClient';
 import type { Order, ContainerRecommendation } from '@/lib/types';
 import { redirect } from 'next/navigation';
 import { db } from '@/lib/db';
 import { organizations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { getCurrentOrgId } from "@/lib/utils/get-org";
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   // Get current user
-  const user = await getCurrentUser();
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  const orgId = await getCurrentOrgId();
 
-  if (!user || !user.orgId) {
+  if (!user || !orgId) {
     redirect('/sign-in');
   }
 
   // Fetch data from ERP API and database
   // Fetch org row for versioning
-  const [org] = await db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1);
+  const [org] = await db.select().from(organizations).where(eq(organizations.org_id, orgId)).limit(1);
   const version = (org?.last_inventory_update?.toISOString?.() ?? '0') as string;
 
   const [currentOrders, completedOrders, erpProducts, inventoryData] = await Promise.all([
-    getCachedErpCurrentOrders(user.orgId, version),
-    getCachedErpCompletedOrders(user.orgId, version),
-    getCachedErpProducts(user.orgId, version),
-    getInventoryData(user.orgId),
+    getCachedErpCurrentOrders(orgId, version),
+    getCachedErpCompletedOrders(orgId, version),
+    getCachedErpProducts(orgId, version),
+    getInventoryData(orgId),
   ]);
 
   // Create SKU to product info lookup map
@@ -53,7 +57,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const completedOrdersTransformed = completedOrders.map(transformErpOrder).map(enrichOrder);
 
   // Fetch recommendations from database
-  const dbRecommendations = await getRecommendations(user.orgId);
+  const dbRecommendations = await getRecommendations(orgId);
 
   // Create inventory map for product data lookups
   const inventoryMap = new Map(

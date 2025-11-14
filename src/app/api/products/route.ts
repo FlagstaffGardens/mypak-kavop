@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/jwt';
 import { getCachedErpProducts } from '@/lib/erp/client';
 import { getInventoryData } from '@/lib/services/inventory';
 import { db } from '@/lib/db';
@@ -9,6 +8,9 @@ import { completeProductWithInventory } from '@/lib/erp/transforms';
 import { transformErpProduct } from '@/lib/erp/transforms';
 import { DEFAULT_TARGET_SOH } from '@/lib/constants';
 import type { Product } from '@/lib/types';
+import { auth } from "@/lib/auth";
+import { getCurrentOrgId } from "@/lib/utils/get-org";
+import { headers } from "next/headers";
 
 /**
  * GET /api/products
@@ -17,9 +19,11 @@ import type { Product } from '@/lib/types';
 export async function GET() {
   try {
     // Get current user
-    const user = await getCurrentUser();
+    const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
 
-    if (!user || !user.orgId) {
+    const orgId = await getCurrentOrgId();
+  if (!user || !orgId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -27,11 +31,11 @@ export async function GET() {
     }
 
     // Fetch data
-    const [org] = await db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1);
+    const [org] = await db.select().from(organizations).where(eq(organizations.org_id, orgId)).limit(1);
     const version = (org?.last_inventory_update?.toISOString?.() ?? '0') as string;
     const [erpProducts, inventoryData] = await Promise.all([
-      getCachedErpProducts(user.orgId, version),
-      getInventoryData(user.orgId),
+      getCachedErpProducts(orgId, version),
+      getInventoryData(orgId),
     ]);
 
     // Transform products

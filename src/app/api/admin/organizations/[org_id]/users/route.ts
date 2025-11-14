@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { getCurrentUser } from "@/lib/auth/jwt";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { generatePassword } from "@/lib/utils/password";
 import { generateNameFromEmail } from "@/lib/utils/name";
 import { z } from "zod";
@@ -15,8 +16,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ org_id: string }> }
 ) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -64,8 +66,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ org_id: string }> }
 ) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

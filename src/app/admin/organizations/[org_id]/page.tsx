@@ -3,7 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UsersTable } from "@/components/admin/UsersTable";
-import { getCurrentUser } from "@/lib/auth/jwt";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { organizations, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -31,8 +32,9 @@ export default async function OrganizationDetailPage({
   params: Promise<{ org_id: string }>;
 }) {
   // Check authentication
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     redirect("/sign-in");
   }
 

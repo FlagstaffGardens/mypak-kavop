@@ -3,26 +3,30 @@ import { getCachedErpProducts, getCachedErpCurrentOrders } from '@/lib/erp/clien
 import { transformErpProduct, transformErpOrder, completeProductWithInventory } from '@/lib/erp/transforms';
 import { getInventoryData } from '@/lib/services/inventory';
 import { getRecommendations } from '@/lib/services/recommendations';
-import { getCurrentUser } from '@/lib/auth/jwt';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { DEFAULT_TARGET_SOH } from '@/lib/constants';
 import type { Product, ContainerRecommendation } from '@/lib/types';
 import { db } from '@/lib/db';
 import { organizations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { getCurrentOrgId } from "@/lib/utils/get-org";
 
 export default async function Dashboard() {
   // Get current user
-  const user = await getCurrentUser();
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  const orgId = await getCurrentOrgId();
 
-  if (!user || !user.orgId) {
+  if (!user || !orgId) {
     redirect('/sign-in');
   }
 
   // Fetch data from ERP API and database
   const [inventoryRows, org] = await Promise.all([
-    getInventoryData(user.orgId),
-    db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1),
+    getInventoryData(orgId),
+    db.select().from(organizations).where(eq(organizations.org_id, orgId)).limit(1),
   ]);
 
   // Use last inventory update as version to bust cache per org on save
@@ -30,8 +34,8 @@ export default async function Dashboard() {
 
   // Fetch ERP data with per-org versioned cache
   const [erpProducts, erpOrders] = await Promise.all([
-    getCachedErpProducts(user.orgId, version),
-    getCachedErpCurrentOrders(user.orgId, version),
+    getCachedErpProducts(orgId, version),
+    getCachedErpCurrentOrders(orgId, version),
   ]);
 
   // Get last updated timestamp from organization
@@ -86,7 +90,7 @@ export default async function Dashboard() {
   const liveOrders = erpOrders.map(transformErpOrder);
 
   // Fetch recommendations from database
-  const dbRecommendations = await getRecommendations(user.orgId);
+  const dbRecommendations = await getRecommendations(orgId);
 
   // Create product map ONCE before the loop
   const productMap = new Map(products.map(p => [p.sku, p]));

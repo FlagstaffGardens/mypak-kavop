@@ -21,14 +21,15 @@ export default function SignInPage() {
     setSuccess("");
 
     try {
-      const response = await fetch("/api/auth/magic-link/send", {
+      const response = await fetch("/api/auth/sign-in/magic-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, callbackURL: "/" }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to send magic link");
+        const data = await response.json();
+        throw new Error(data.message || "Failed to send magic link");
       }
 
       setSuccess("Check your email! We sent you a magic link.");

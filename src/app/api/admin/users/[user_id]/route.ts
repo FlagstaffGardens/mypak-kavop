@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/jwt";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -8,8 +9,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ user_id: string }> }
 ) {
-  const currentUser = await getCurrentUser();
-  if (!currentUser || currentUser.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const currentUser = session?.user;
+
+  if (!currentUser || currentUser?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,7 +29,7 @@ export async function DELETE(
     }
 
     // Prevent self-deletion
-    if (user_id === currentUser.userId) {
+    if (user_id === currentUser.id) {
       return NextResponse.json(
         { error: "Cannot delete your own account" },
         { status: 400 }

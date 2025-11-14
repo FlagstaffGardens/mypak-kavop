@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchKavopToken } from "@/lib/api/kavop";
-import { getCurrentUser } from "@/lib/auth/jwt";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { z } from "zod";
 
 const schema = z.object({
@@ -8,8 +9,9 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { organizations } from "@/lib/db/schema";
-import { getCurrentUser } from "@/lib/auth/jwt";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { z } from "zod";
 
 const createOrgSchema = z.object({
@@ -11,8 +12,9 @@ const createOrgSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -49,8 +51,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

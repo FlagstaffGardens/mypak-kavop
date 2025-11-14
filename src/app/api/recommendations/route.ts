@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/jwt';
 import { getRecommendations } from '@/lib/services/recommendations';
 import { getCachedErpProducts } from '@/lib/erp/client';
 import { getInventoryData } from '@/lib/services/inventory';
@@ -8,6 +7,9 @@ import { organizations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { addDays, format } from 'date-fns';
 import type { ContainerRecommendation } from '@/lib/types';
+import { auth } from "@/lib/auth";
+import { getCurrentOrgId } from "@/lib/utils/get-org";
+import { headers } from "next/headers";
 
 /**
  * GET /api/recommendations
@@ -16,9 +18,11 @@ import type { ContainerRecommendation } from '@/lib/types';
 export async function GET() {
   try {
     // Get current user
-    const user = await getCurrentUser();
+    const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
 
-    if (!user || !user.orgId) {
+    const orgId = await getCurrentOrgId();
+  if (!user || !orgId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -26,12 +30,12 @@ export async function GET() {
     }
 
     // Fetch data
-    const [org] = await db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1);
+    const [org] = await db.select().from(organizations).where(eq(organizations.org_id, orgId)).limit(1);
     const version = (org?.last_inventory_update?.toISOString?.() ?? '0') as string;
     const [dbRecommendations, erpProducts, inventoryData] = await Promise.all([
-      getRecommendations(user.orgId),
-      getCachedErpProducts(user.orgId, version),
-      getInventoryData(user.orgId),
+      getRecommendations(orgId),
+      getCachedErpProducts(orgId, version),
+      getInventoryData(orgId),
     ]);
 
     // Create inventory map
