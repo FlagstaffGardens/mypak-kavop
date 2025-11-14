@@ -53,16 +53,17 @@ export default async function OrdersPage() {
     inventoryData.map(inv => [inv.sku, inv])
   );
 
+  // Create product info map ONCE before the loop
+  const productInfoMap = new Map(
+    erpProducts.map(p => [p.sku, {
+      piecesPerPallet: p.piecesPerPallet,
+      volumePerCarton: p.volumePerPallet / p.piecesPerPallet,
+      imageUrl: p.imageUrl
+    }])
+  );
+
   // Transform recommendations to UI format
   const containers: ContainerRecommendation[] = dbRecommendations.map((rec) => {
-    const productInfoMap = new Map(
-      erpProducts.map(p => [p.sku, {
-        piecesPerPallet: p.piecesPerPallet,
-        volumePerCarton: p.volumePerPallet / p.piecesPerPallet,
-        imageUrl: p.imageUrl
-      }])
-    );
-
     return {
       id: rec.containerNumber, // Use container number as ID (stable and meaningful)
       containerNumber: rec.containerNumber,
