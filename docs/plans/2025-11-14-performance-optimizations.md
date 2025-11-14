@@ -4,7 +4,7 @@
 
 **Goal:** Improve MyPak Connect performance by 40-50% through database indexing, caching, memoization, and configuration optimizations.
 
-**Architecture:** Focus on 7 high-impact, low-effort fixes: database indexes for faster queries, Next.js config for build optimization, ERP API caching to prevent duplicate fetches, and React memoization to prevent unnecessary re-renders. All changes are incremental and non-breaking.
+**Architecture:** 7 high-impact implementation changes + 1 verification task: database indexes for faster queries, Next.js config for build optimization, ERP API caching to prevent duplicate fetches, and React memoization to prevent unnecessary re-renders. All changes are incremental and non-breaking.
 
 **Tech Stack:** Next.js 16, React 19, PostgreSQL, Drizzle ORM, date-fns
 
@@ -511,7 +511,7 @@ import { fetchErpProducts, fetchErpCurrentOrders, fetchErpCompletedOrders } from
  */
 const cachedErpProducts = unstable_cache(
   async (orgId: string) => fetchErpProducts(),
-  ['erp:products'], // Static cache key base
+  (orgId: string) => ['erp:products', orgId], // Per-org cache key
   {
     revalidate: 300, // 5 minutes
     tags: ['erp:products'], // Static tag for invalidation
@@ -527,7 +527,7 @@ export const getCachedErpProducts = (orgId: string) => cachedErpProducts(orgId);
  */
 const cachedErpCurrentOrders = unstable_cache(
   async (orgId: string) => fetchErpCurrentOrders(),
-  ['erp:orders:current'], // Static cache key base
+  (orgId: string) => ['erp:orders:current', orgId], // Per-org cache key
   {
     revalidate: 300, // 5 minutes
     tags: ['erp:orders:current'], // Static tag for invalidation
@@ -543,7 +543,7 @@ export const getCachedErpCurrentOrders = (orgId: string) => cachedErpCurrentOrde
  */
 const cachedErpCompletedOrders = unstable_cache(
   async (orgId: string) => fetchErpCompletedOrders(),
-  ['erp:orders:completed'], // Static cache key base
+  (orgId: string) => ['erp:orders:completed', orgId], // Per-org cache key
   {
     revalidate: 300, // 5 minutes
     tags: ['erp:orders:completed'], // Static tag for invalidation
