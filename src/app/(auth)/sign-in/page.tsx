@@ -80,7 +80,7 @@ export default function SignInPage() {
         <Card className="border-border shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-semibold tracking-tight">
-              Sign in to MyPak Connect
+              Sign in to MyPak - Kavop
             </CardTitle>
             <CardDescription>
               {!otpSent ? "We'll send you a 6-digit code" : `Code sent to ${email}`}
@@ -174,7 +174,7 @@ export default function SignInPage() {
         </Card>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Secure, passwordless authentication for MyPak Connect
+          Secure, passwordless authentication for MyPak - Kavop
         </p>
       </div>
     </div>
