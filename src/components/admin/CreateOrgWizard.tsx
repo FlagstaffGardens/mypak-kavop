@@ -20,8 +20,15 @@ export function CreateOrgWizard() {
 
   // Step 2 data
   const [emails, setEmails] = useState<string[]>([""]);
-  const [createdUsers, setCreatedUsers] = useState<{ email: string; password: string }[]>([]);
-  const [copiedPassword, setCopiedPassword] = useState<string | null>(null);
+  const [createdUsers, setCreatedUsers] = useState<Array<{
+    user_id: string;
+    org_id: string;
+    email: string;
+    name: string;
+    role: string;
+    created_at: Date;
+    updated_at: Date;
+  }>>([]);
 
   async function handleStep1Submit(e: React.FormEvent) {
     e.preventDefault();
@@ -134,12 +141,6 @@ export function CreateOrgWizard() {
 
   function handleSkip() {
     router.push(`/admin/organizations/${createdOrgId}`);
-  }
-
-  async function copyPassword(password: string) {
-    await navigator.clipboard.writeText(password);
-    setCopiedPassword(password);
-    setTimeout(() => setCopiedPassword(null), 2000);
   }
 
   // Step 1: Organization Details
@@ -268,8 +269,7 @@ export function CreateOrgWizard() {
             ✓ {createdUsers.length} users created successfully for {orgName}
           </p>
           <p className="text-sm text-green-700 mt-1">
-            Copy these passwords and share them with your users. You can view
-            passwords later from the users table.
+            Users will receive authentication credentials via email when they sign in using Magic Link or Email OTP.
           </p>
         </div>
 
@@ -284,10 +284,7 @@ export function CreateOrgWizard() {
                   Email
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium">
-                  Password
-                </th>
-                <th className="px-4 py-3 text-right text-sm font-medium">
-                  Actions
+                  Role
                 </th>
               </tr>
             </thead>
@@ -296,18 +293,7 @@ export function CreateOrgWizard() {
                 <tr key={user.user_id} className="border-b last:border-0">
                   <td className="px-4 py-3 text-sm">{user.name}</td>
                   <td className="px-4 py-3 text-sm">{user.email}</td>
-                  <td className="px-4 py-3 text-sm font-mono">
-                    {user.password}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyPassword(user.password)}
-                    >
-                      {copiedPassword === user.password ? "Copied!" : "Copy"}
-                    </Button>
-                  </td>
+                  <td className="px-4 py-3 text-sm">{user.role}</td>
                 </tr>
               ))}
             </tbody>

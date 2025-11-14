@@ -83,12 +83,7 @@ export const auth = betterAuth({
 
     // Multi-tenancy with organizations
     organizationPlugin({
-      async sendInvitationEmail(data: {
-        email: string;
-        organization: { name: string };
-        inviter: { user: { name: string } };
-        invitation: { link?: string };
-      }) {
+      async sendInvitationEmail(data) {
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -102,7 +97,7 @@ export const auth = betterAuth({
               <p style="color: #666; line-height: 1.5;">
                 ${data.inviter.user.name} invited you to join <strong>${data.organization.name}</strong> on MyPak Connect.
               </p>
-              <a href="${data.invitation.link || '#'}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0;">
+              <a href="${process.env.BETTER_AUTH_URL}/api/auth/organization/accept-invitation?id=${data.invitation.id}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0;">
                 Accept Invitation
               </a>
             </div>

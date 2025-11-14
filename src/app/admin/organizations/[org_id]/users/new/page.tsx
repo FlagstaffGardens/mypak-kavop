@@ -18,8 +18,15 @@ export default function AddUsersPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emails, setEmails] = useState<string[]>([""]);
-  const [createdUsers, setCreatedUsers] = useState<{ email: string; password: string }[]>([]);
-  const [copiedPassword, setCopiedPassword] = useState<string | null>(null);
+  const [createdUsers, setCreatedUsers] = useState<Array<{
+    user_id: string;
+    org_id: string;
+    email: string;
+    name: string;
+    role: string;
+    created_at: Date;
+    updated_at: Date;
+  }>>([]);
 
   // Unwrap params
   useState(() => {
@@ -82,12 +89,6 @@ export default function AddUsersPage({
     }
   }
 
-  async function copyPassword(password: string) {
-    await navigator.clipboard.writeText(password);
-    setCopiedPassword(password);
-    setTimeout(() => setCopiedPassword(null), 2000);
-  }
-
   if (!orgId) {
     return <div>Loading...</div>;
   }
@@ -116,10 +117,7 @@ export default function AddUsersPage({
                     Email
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium">
-                    Password
-                  </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium">
-                    Actions
+                    Role
                   </th>
                 </tr>
               </thead>
@@ -128,18 +126,7 @@ export default function AddUsersPage({
                   <tr key={user.user_id} className="border-b last:border-0">
                     <td className="px-4 py-3 text-sm">{user.name}</td>
                     <td className="px-4 py-3 text-sm">{user.email}</td>
-                    <td className="px-4 py-3 text-sm font-mono">
-                      {user.password}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyPassword(user.password)}
-                      >
-                        {copiedPassword === user.password ? "Copied!" : "Copy"}
-                      </Button>
-                    </td>
+                    <td className="px-4 py-3 text-sm">{user.role}</td>
                   </tr>
                 ))}
               </tbody>

@@ -87,7 +87,7 @@ export default function SignInPage() {
     setSuccess("");
 
     try {
-      const result = await authClient.magicLink.sendMagicLink({
+      const result = await authClient.signIn.magicLink({
         email,
         callbackURL: "/",
       });
