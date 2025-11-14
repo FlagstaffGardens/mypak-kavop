@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/jwt';
 import { db } from '@/lib/db';
 import { organizations } from '@/lib/db/schema';
@@ -39,76 +40,100 @@ async function getOrgToken(): Promise<string> {
  * Fetch products from ERP API
  */
 export async function fetchErpProducts(): Promise<ErpProduct[]> {
-  const token = await getOrgToken();
+  const user = await getCurrentUser();
+  if (!user?.orgId) throw new Error('Not authenticated');
 
-  const response = await fetch(`${ERP_BASE_URL}/product/list`, {
-    headers: {
-      'Authorization': token,
+  return unstable_cache(
+    async (orgId: string) => {
+      const token = await getOrgToken();
+
+      const response = await fetch(`${ERP_BASE_URL}/product/list`, {
+        headers: {
+          'Authorization': token,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`ERP API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data: ErpApiResponse<ErpProduct[]> = await response.json();
+
+      if (!data.success) {
+        throw new Error(`ERP API error: ${data.error}`);
+      }
+
+      return data.response;
     },
-    cache: 'no-store', // Always fresh data for now
-  });
-
-  if (!response.ok) {
-    throw new Error(`ERP API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data: ErpApiResponse<ErpProduct[]> = await response.json();
-
-  if (!data.success) {
-    throw new Error(`ERP API error: ${data.error}`);
-  }
-
-  return data.response;
+    ['erp:products'],
+    { revalidate: 300, tags: ['erp-products'] }
+  )(user.orgId);
 }
 
 /**
  * Fetch current orders (APPROVED + IN_TRANSIT) from ERP API
  */
 export async function fetchErpCurrentOrders(): Promise<ErpOrder[]> {
-  const token = await getOrgToken();
+  const user = await getCurrentUser();
+  if (!user?.orgId) throw new Error('Not authenticated');
 
-  const response = await fetch(`${ERP_BASE_URL}/order/current`, {
-    headers: {
-      'Authorization': token,
+  return unstable_cache(
+    async (orgId: string) => {
+      const token = await getOrgToken();
+
+      const response = await fetch(`${ERP_BASE_URL}/order/current`, {
+        headers: {
+          'Authorization': token,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`ERP API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data: ErpApiResponse<ErpOrder[]> = await response.json();
+
+      if (!data.success) {
+        throw new Error(`ERP API error: ${data.error}`);
+      }
+
+      return data.response;
     },
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error(`ERP API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data: ErpApiResponse<ErpOrder[]> = await response.json();
-
-  if (!data.success) {
-    throw new Error(`ERP API error: ${data.error}`);
-  }
-
-  return data.response;
+    ['erp:orders:current'],
+    { revalidate: 180, tags: ['erp-orders'] }
+  )(user.orgId);
 }
 
 /**
  * Fetch completed orders from ERP API
  */
 export async function fetchErpCompletedOrders(): Promise<ErpOrder[]> {
-  const token = await getOrgToken();
+  const user = await getCurrentUser();
+  if (!user?.orgId) throw new Error('Not authenticated');
 
-  const response = await fetch(`${ERP_BASE_URL}/order/complete`, {
-    headers: {
-      'Authorization': token,
+  return unstable_cache(
+    async (orgId: string) => {
+      const token = await getOrgToken();
+
+      const response = await fetch(`${ERP_BASE_URL}/order/complete`, {
+        headers: {
+          'Authorization': token,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`ERP API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data: ErpApiResponse<ErpOrder[]> = await response.json();
+
+      if (!data.success) {
+        throw new Error(`ERP API error: ${data.error}`);
+      }
+
+      return data.response;
     },
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error(`ERP API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data: ErpApiResponse<ErpOrder[]> = await response.json();
-
-  if (!data.success) {
-    throw new Error(`ERP API error: ${data.error}`);
-  }
-
-  return data.response;
+    ['erp:orders:completed'],
+    { revalidate: 600, tags: ['erp-orders'] }
+  )(user.orgId);
 }
