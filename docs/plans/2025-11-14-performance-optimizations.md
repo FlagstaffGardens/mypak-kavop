@@ -20,18 +20,23 @@
 
 **Step 1: Add index callback to existing users table**
 
-In `src/lib/db/schema.ts`, locate the `users` table definition (around line 13). The table already exists with `uuid("user_id")` primary key, `text` fields, etc. **Do not change any of the existing table structure.** Only add the index callback as the second parameter to `pgTable()`:
+In `src/lib/db/schema.ts`, locate the `users` table definition (around line 13). The table is already fully defined. **Do not redefine or change the table.** Simply add the index callback as the second parameter to the existing `pgTable('users', ...)` call:
 
+Add this callback:
 ```typescript
-export const users = pgTable("users", {
-  // ... existing fields stay exactly as-is ...
-}, (table) => ({
-  // NEW: Index for org_id foreign key joins
-  orgIdx: index("idx_users_org_id").on(table.org_id),
-}));
+(table) => ({
+  orgIdx: index('idx_users_org_id').on(table.org_id),
+})
 ```
 
-**Important:** Keep all existing fields (`user_id`, `org_id`, `email`, `name`, `password`, `role`, timestamps) exactly as they are. Only add the callback.
+So the pgTable call becomes:
+```typescript
+export const users = pgTable("users", {
+  /* existing fields - don't touch */
+}, (table) => ({  // <-- Add this callback
+  orgIdx: index('idx_users_org_id').on(table.org_id),
+}));
+```
 
 **Step 2: Generate and apply migration with Drizzle**
 
@@ -606,12 +611,6 @@ const erpProducts = await getCachedErpProducts(user.orgId);
 const currentOrders = await getCachedErpCurrentOrders(user.orgId);
 const completedOrders = await getCachedErpCompletedOrders(user.orgId);
 ```
-
-**IMPORTANT - Do NOT change recommendations service:**
-
-We intentionally **do NOT** change `src/lib/services/recommendations.ts` to use the cached fetch. The service uses `fetchErpProductsForOrg(orgId)` (explicit org-based) while the cache uses `fetchErpProducts()` (session-based with user token). Swapping to `getCachedErpProducts(orgId)` would introduce a correctness risk if called outside user context or for a different org.
-
-**Keep the existing `fetchErpProductsForOrg(orgId)` call in `generateAndSaveRecommendations`.** Page-level caching already delivers the big performance win.
 
 **Step 4: Invalidate cache after inventory save**
 
