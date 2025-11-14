@@ -18,6 +18,104 @@ npm start            # Run production build
 npm run lint         # Run ESLint
 ```
 
+## Authentication
+
+**System:** Better Auth v1.3.34 (Passwordless, Multi-Tenant)
+
+### Authentication Methods
+
+**Email OTP (6-Digit Code)** - Primary method
+- User enters email → receives 6-digit code via Resend
+- Code expires in 5 minutes
+- Clean, familiar UX for B2B users
+
+**Magic Link** - Disabled (commented out, ready for future)
+- Code preserved in `src/lib/auth.ts` and `src/lib/auth-client.ts`
+- Uncomment to re-enable if needed
+
+### Session Management
+
+```typescript
+session: {
+  expiresIn: 60 * 60 * 24 * 60,  // 60 days
+  updateAge: 60 * 60 * 24 * 7,   // Auto-renews every 7 days
+}
+```
+
+**Behavior:**
+- Daily/weekly users: Stay logged in indefinitely (auto-renewal)
+- Inactive 60+ days: Re-authentication required
+- Perfect for enterprise users checking inventory daily
+
+### Better Auth Configuration
+
+**Location:** `src/lib/auth.ts` (server), `src/lib/auth-client.ts` (client)
+
+**Plugins Enabled:**
+- `emailOTP` - 6-digit code authentication
+- `organization` - Multi-tenant organization management
+- `admin` - Platform admin impersonation (1-hour sessions)
+
+**Plugins Disabled (Commented):**
+- `magicLink` - One-click email link authentication (future use)
+
+### Database Tables (Drizzle + Better Auth)
+
+**Better Auth Tables** (auto-managed):
+- `user` - Better Auth users (id, email, emailVerified, name, createdAt, updatedAt, role)
+- `session` - Active sessions with tokens
+- `verification` - OTP codes and magic link tokens
+- `organization` - Better Auth organizations
+- `member` - Organization memberships and roles
+- `invitation` - Pending organization invites
+
+**Business Tables** (custom):
+- `organizations` - Business orgs (org_id, org_name, better_auth_org_id, kavop_token, created_at)
+- `users` - Legacy user table (user_id, org_id, email, name, password, role)
+  - Note: `password` field deprecated, kept for schema compatibility only
+  - Better Auth handles all authentication, passwords not used
+
+**Schema Mapping:**
+- Better Auth `user.id` → Business `users.user_id`
+- Better Auth `organization.id` → Business `organizations.better_auth_org_id`
+- Better Auth manages auth, business tables manage app data
+
+### Email Templates
+
+**Service:** Resend (noreply@mypak.kavop.com)
+
+**Templates:**
+- OTP Sign-In: Modern card design, blue gradient code box
+- Organization Invite: Professional gradient header, CTA button
+- All emails: Dark slate header, responsive HTML tables, footer with copyright
+
+**Branding:** All emails use "MyPak - Kavop" (not "MyPak Connect")
+
+### Route Protection
+
+**Middleware:** `src/middleware.ts`
+- Checks `better-auth.session_token` cookie
+- Redirects unauthenticated users to `/sign-in`
+- Protects all routes except `/sign-in` and `/api/auth/*`
+
+**Admin Routes:** `src/app/admin/layout.tsx`
+- Platform admins (`user.role === "admin"`) - Full access
+- Org owners (`member.role === "owner"`) - Scoped to their organization
+
+### Key Features
+
+**Passwordless:** No passwords to remember, reset, or compromise
+**Multi-Tenant:** Organizations with member roles (owner, admin, member)
+**Impersonation:** Platform admins can impersonate org users for support
+**Email Delivery:** Resend API for reliable transactional emails
+**Security:** Hashed tokens, httpOnly cookies, 60-day session expiry
+
+### Testing
+
+**Admin User:** Platform admin with `role="admin"` in Better Auth `user` table
+**Org Users:** Regular users with organization membership
+**Test Flow:** Sign in with email → Enter 6-digit code → Dashboard
+
 ## Architecture
 
 ### Data Flow

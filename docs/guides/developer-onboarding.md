@@ -1,10 +1,10 @@
 # Developer Onboarding Guide
 
-**Welcome to MyPak Connect!**
+**Welcome to MyPak - Kavop!**
 
 This guide will get you from zero to productive in ~30 minutes. By the end, you'll understand the architecture, know where everything lives, and be ready to ship features.
 
-**Last Updated:** November 12, 2024
+**Last Updated:** January 15, 2025
 
 ---
 
@@ -22,9 +22,9 @@ This guide will get you from zero to productive in ~30 minutes. By the end, you'
 
 ---
 
-## What is MyPak Connect?
+## What is MyPak - Kavop?
 
-MyPak Connect is a **vendor-managed inventory (VMI) system** for egg farms that order cartons from MyPak.
+MyPak - Kavop is a **vendor-managed inventory (VMI) system** for egg farms that order cartons from MyPak.
 
 ### The Problem It Solves
 
@@ -32,7 +32,7 @@ Egg farms need to order container loads of cartons regularly. If they order too 
 
 ### The Solution
 
-MyPak Connect monitors inventory levels and **proactively recommends** when to order containers, helping farms:
+MyPak - Kavop monitors inventory levels and **proactively recommends** when to order containers, helping farms:
 - ✅ Never run out of cartons (no production delays)
 - ✅ Optimize cash flow (order just-in-time)
 - ✅ Reduce manual tracking (automated monitoring)
@@ -41,8 +41,10 @@ MyPak Connect monitors inventory levels and **proactively recommends** when to o
 
 **Production with Live ERP Integration:**
 - ✅ Dashboard shows real products from MyPak ERP
-- ✅ Orders page shows real orders from MyPak ERP  
-- ✅ Authentication with JWT
+- ✅ Orders page shows real orders from MyPak ERP
+- ✅ Better Auth passwordless authentication (Email OTP)
+- ✅ Multi-tenant organizations with role-based access
+- ✅ Admin impersonation for customer support
 - 🚧 Inventory tracking (temporary mock data)
 - 🚧 Recommendations (temporary mock data)
 
@@ -56,13 +58,21 @@ MyPak Connect monitors inventory levels and **proactively recommends** when to o
 ┌─────────────────────────────────────────────────────────────┐
 │                        Browser                               │
 │  - Client Components (interactive UI)                       │
-│  - JWT cookie (httpOnly, secure)                            │
+│  - Better Auth session cookie (httpOnly, secure)            │
 └───────────────────────┬─────────────────────────────────────┘
                         │ HTTPS
                         ↓
 ┌─────────────────────────────────────────────────────────────┐
 │                  Next.js 15 Server                           │
 │  ┌─────────────────────────────────────────────┐            │
+│  │   Better Auth (src/lib/auth.ts)             │            │
+│  │   - Email OTP authentication                │            │
+│  │   - Session management (60 days)            │            │
+│  │   - Multi-tenant organizations              │            │
+│  │   - Admin impersonation                     │            │
+│  └──────────────┬──────────────────────────────┘            │
+│                 │                                            │
+│  ┌──────────────▼──────────────────────────────┐            │
 │  │   Server Components (Data Fetching)         │            │
 │  │   - Dashboard: fetchErpProducts()           │            │
 │  │   - Orders: fetchErpOrders()                │            │
@@ -77,8 +87,9 @@ MyPak Connect monitors inventory levels and **proactively recommends** when to o
 │                 │                                            │
 │  ┌──────────────▼──────────────────────────────┐            │
 │  │   Database (PostgreSQL)                     │            │
+│  │   - Better Auth tables (user, session, etc) │            │
+│  │   - Business tables (organizations, etc)    │            │
 │  │   - organizations (kavop_token stored here) │            │
-│  │   - users (JWT auth data)                   │            │
 │  └─────────────────────────────────────────────┘            │
 └───────────────────────┬─────────────────────────────────────┘
                         │ HTTP
@@ -110,10 +121,12 @@ MyPak Connect monitors inventory levels and **proactively recommends** when to o
 - We don't duplicate ERP data in our database
 - Only store: users, organizations, configuration
 
-**4. JWT Authentication**
-- Custom implementation (not NextAuth)
+**4. Better Auth Passwordless Authentication**
+- Email OTP (6-digit codes, 5-minute expiry)
+- 60-day sessions with 7-day auto-renewal
 - httpOnly cookies for security
-- Multi-tenant by organization
+- Multi-tenant organizations with roles
+- Platform admin + org owner authorization model
 
 ---
 
@@ -150,10 +163,16 @@ Add these values:
 
 ```bash
 # Database connection
-DATABASE_URL="postgresql://user:password@localhost:5432/mypak_connect"
+DATABASE_URL="postgresql://user:password@localhost:5432/mypak_kavop"
 
-# JWT secret (generate with: openssl rand -base64 32)
+# Better Auth secret (generate with: openssl rand -base64 32)
 BETTER_AUTH_SECRET="your-random-secret-key-here"
+
+# Better Auth base URL (for email links)
+BETTER_AUTH_URL="http://localhost:3000"
+
+# Resend API key for email delivery
+RESEND_API_KEY="re_..."
 ```
 
 ### Step 3: Set Up Database
@@ -168,29 +187,37 @@ npm run db:push
 
 ### Step 4: Seed Test Data
 
-You'll need at least one organization and one user:
+**Option 1: Use seed script (recommended):**
+
+```bash
+# Run the seed script
+npm run seed
+
+# This creates:
+# - Platform admin user with role='admin'
+# - Test organization with Better Auth link
+# - Sample product_data
+```
+
+**Option 2: Manual SQL setup:**
 
 ```sql
--- Insert test organization
-INSERT INTO organizations (org_id, org_name, mypak_customer_name, kavop_token)
+-- 1. Insert test organization (business table)
+INSERT INTO organizations (org_id, org_name, mypak_customer_name, kavop_token, better_auth_org_id)
 VALUES (
   gen_random_uuid(),
   'Test Egg Farm',
   'Aginbrook',  -- Must match MyPak ERP customer name
-  'eyJhbGci...'  -- Get real token from MyPak team
+  'eyJhbGci...',  -- Get real token from MyPak team
+  NULL  -- Will be linked to Better Auth org when user signs in
 );
 
--- Insert test user (password: "password123" hashed with bcrypt)
-INSERT INTO users (id, org_id, email, name, password, role)
-VALUES (
-  gen_random_uuid(),
-  '<org_id_from_above>',
-  'test@example.com',
-  'Test User',
-  '$2a$10$...',  -- Use bcrypt to hash "password123"
-  'org_user'
-);
+-- 2. Better Auth user and org will be created automatically
+-- when user signs in with Email OTP for the first time.
+-- Just visit /sign-in and enter your email!
 ```
+
+**Note:** No passwords needed! Users authenticate via 6-digit email codes.
 
 ### Step 5: Start Development Server
 
@@ -202,8 +229,12 @@ npm run dev
 ### Step 6: Sign In
 
 1. Go to http://localhost:3000
-2. Sign in with: `test@example.com` / `password123`
-3. You should see the Dashboard with real ERP data!
+2. Enter your email: `test@example.com`
+3. Check your email for a 6-digit code
+4. Enter the code to sign in
+5. You should see the Dashboard with real ERP data!
+
+**Note:** First-time users will have their Better Auth account created automatically.
 
 ---
 
@@ -225,18 +256,30 @@ src/app/
 │   ├── loading.tsx         # Loading state
 │   └── error.tsx           # Error boundary
 │
-├── sign-in/
-│   └── page.tsx            # Login page
+├── (auth)/
+│   └── sign-in/
+│       └── page.tsx        # Email OTP sign-in page
 │
-├── admin/                  # Admin pages
-│   └── organizations/
-│       └── page.tsx        # Org management (platform_admin only)
+├── admin/                  # Admin pages (platform admins + org owners)
+│   ├── organizations/
+│   │   ├── page.tsx        # Org list (platform_admin only)
+│   │   └── [org_id]/
+│   │       ├── page.tsx    # Org details
+│   │       ├── impersonate/
+│   │       │   └── page.tsx  # Admin impersonation
+│   │       └── users/
+│   │           ├── page.tsx  # User list
+│   │           └── new/
+│   │               └── page.tsx  # Add users
+│   └── page.tsx            # Admin dashboard
 │
-└── api/                    # API routes
-    └── auth/
-        ├── sign-in/route.ts    # POST /api/auth/sign-in
-        ├── sign-out/route.ts   # POST /api/auth/sign-out
-        └── me/route.ts         # GET /api/auth/me
+└── api/
+    ├── auth/[...all]/route.ts  # Better Auth API routes (auto-handled)
+    └── admin/              # Admin API endpoints
+        ├── users/route.ts
+        └── organizations/
+            └── [org_id]/
+                └── users/route.ts
 ```
 
 **Example: Dashboard Page**
@@ -283,12 +326,12 @@ src/components/
 
 ```
 src/lib/
-├── auth/
-│   └── jwt.ts              # JWT sign/verify, cookies
+├── auth.ts                 # ⭐ Better Auth server config (important!)
+├── auth-client.ts          # Better Auth client config
 │
 ├── db/
 │   ├── index.ts            # Drizzle client export
-│   └── schema.ts           # Database schema (organizations, users)
+│   └── schema.ts           # Database schema (Better Auth + Business tables)
 │
 ├── erp/                    # ⭐ ERP Integration (important!)
 │   ├── client.ts           # ERP API fetch functions
@@ -415,32 +458,42 @@ export function RecommendationCard({ state }: { state: 'healthy' | 'urgent' | 'm
 
 **See:** [docs/design/component-system.md](../design/component-system.md) for complete guidelines.
 
-### 5. Authentication Flow
+### 5. Authentication Flow (Email OTP)
 
 ```typescript
-// 1. User submits login form
-POST /api/auth/sign-in
-  { email, password }
-
-// 2. Server verifies credentials
-const user = await db.select().from(users).where(eq(users.email, email));
-const valid = await bcrypt.compare(password, user.password);
-
-// 3. Sign JWT with user data
-const jwt = await signJWT({
-  userId: user.id,
-  email: user.email,
-  orgId: user.orgId,
-  role: user.role
+// 1. User enters email on sign-in page
+await authClient.emailOtp.sendVerificationOtp({
+  email: "user@example.com",
+  type: "sign-in"
 });
+// → Better Auth generates 6-digit code
+// → Resend sends email with code (5-minute expiry)
 
-// 4. Set httpOnly cookie
-cookies().set('auth_token', jwt, { httpOnly: true, secure: true });
+// 2. User enters 6-digit code
+await authClient.signIn.emailOtp({
+  email: "user@example.com",
+  otp: "123456"
+});
+// → Better Auth verifies code
+// → Creates session (60 days, auto-renews every 7 days)
+// → Sets httpOnly cookie: better-auth.session_token
 
-// 5. Redirect to dashboard
+// 3. Subsequent requests
+const session = await auth.api.getSession({ headers });
+// → Better Auth validates session token
+// → Returns user + activeOrganizationId
+
+// 4. Middleware protection
+// All routes except /sign-in and /api/auth/* require valid session
 ```
 
-**See:** [docs/backend-planning/AUTHENTICATION.md](../backend-planning/AUTHENTICATION.md) for complete system.
+**Key Features:**
+- No passwords - more secure
+- OTP expires in 5 minutes
+- Sessions last 60 days with weekly renewal
+- Multi-tenant via activeOrganizationId
+
+**See:** [CLAUDE.md](../../CLAUDE.md#authentication) for complete system.
 
 ---
 
@@ -625,7 +678,10 @@ UPDATE organizations SET kavop_token = '' WHERE org_name = 'Test Org';
 |------|-------|
 | **Dashboard page** | `src/app/page.tsx` |
 | **Orders page** | `src/app/orders/page.tsx` |
-| **Sign in logic** | `src/app/api/auth/sign-in/route.ts` |
+| **Sign in page** | `src/app/(auth)/sign-in/page.tsx` |
+| **Better Auth server config** | `src/lib/auth.ts` |
+| **Better Auth client** | `src/lib/auth-client.ts` |
+| **Better Auth API routes** | `src/app/api/auth/[...all]/route.ts` |
 | **ERP API calls** | `src/lib/erp/client.ts` |
 | **Database schema** | `src/lib/db/schema.ts` |
 | **Product card component** | `src/components/shared/ProductCard.tsx` |
@@ -640,7 +696,7 @@ UPDATE organizations SET kavop_token = '' WHERE org_name = 'Test Org';
 | **Add an ERP endpoint** | [ERP-API-ENDPOINTS.md](../backend-planning/ERP-API-ENDPOINTS.md) |
 | **Modify a component** | [component-system.md](../design/component-system.md) |
 | **Understand status logic** | [status-system.md](../design/status-system.md) |
-| **Add authentication** | [AUTHENTICATION.md](../backend-planning/AUTHENTICATION.md) |
+| **Work with authentication** | [CLAUDE.md - Authentication](../../CLAUDE.md#authentication) |
 | **Update database schema** | [DATABASE-MODELS.md](../backend-planning/DATABASE-MODELS.md) |
 
 ### "What is...?"
@@ -669,12 +725,15 @@ WHERE org_name = 'Your Org';
 
 ### Issue: "User not authenticated" when accessing Dashboard
 
-**Cause:** JWT cookie expired or invalid.
+**Cause:** Better Auth session expired or invalid.
 
 **Fix:**
-1. Sign out
-2. Sign in again
-3. Check `BETTER_AUTH_SECRET` is set in `.env.local`
+1. Sign out (or clear cookies)
+2. Sign in again with Email OTP
+3. Check environment variables:
+   - `BETTER_AUTH_SECRET` is set in `.env.local`
+   - `RESEND_API_KEY` is set (for email delivery)
+   - `BETTER_AUTH_URL` matches your dev URL
 
 ### Issue: TypeScript errors after `npm install`
 
@@ -738,4 +797,4 @@ Now that you're set up:
 
 **Welcome to the team! Let's build something great.** 🚀
 
-Last Updated: November 12, 2024
+Last Updated: January 15, 2025
