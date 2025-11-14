@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/jwt';
-import { fetchErpProducts } from '@/lib/erp/client';
+import { getCachedErpProducts } from '@/lib/erp/client';
 import { getInventoryData } from '@/lib/services/inventory';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { completeProductWithInventory } from '@/lib/erp/transforms';
 import { transformErpProduct } from '@/lib/erp/transforms';
 import { DEFAULT_TARGET_SOH } from '@/lib/constants';
@@ -24,8 +27,10 @@ export async function GET() {
     }
 
     // Fetch data
+    const [org] = await db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1);
+    const version = (org?.last_inventory_update?.toISOString?.() ?? '0') as string;
     const [erpProducts, inventoryData] = await Promise.all([
-      fetchErpProducts(),
+      getCachedErpProducts(user.orgId, version),
       getInventoryData(user.orgId),
     ]);
 

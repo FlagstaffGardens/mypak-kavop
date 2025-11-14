@@ -1,4 +1,4 @@
-import { fetchErpCurrentOrders, fetchErpCompletedOrders, fetchErpProducts } from '@/lib/erp/client';
+import { getCachedErpCurrentOrders, getCachedErpCompletedOrders, getCachedErpProducts } from '@/lib/erp/client';
 import { transformErpOrder } from '@/lib/erp/transforms';
 import { getRecommendations } from '@/lib/services/recommendations';
 import { getInventoryData } from '@/lib/services/inventory';
@@ -6,6 +6,9 @@ import { getCurrentUser } from '@/lib/auth/jwt';
 import { OrdersPageClient } from '@/components/orders/OrdersPageClient';
 import type { Order, ContainerRecommendation } from '@/lib/types';
 import { redirect } from 'next/navigation';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 export default async function OrdersPage() {
   // Get current user
@@ -16,10 +19,14 @@ export default async function OrdersPage() {
   }
 
   // Fetch data from ERP API and database
+  // Fetch org row for versioning
+  const [org] = await db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1);
+  const version = (org?.last_inventory_update?.toISOString?.() ?? '0') as string;
+
   const [currentOrders, completedOrders, erpProducts, inventoryData] = await Promise.all([
-    fetchErpCurrentOrders(),
-    fetchErpCompletedOrders(),
-    fetchErpProducts(),
+    getCachedErpCurrentOrders(user.orgId, version),
+    getCachedErpCompletedOrders(user.orgId, version),
+    getCachedErpProducts(user.orgId, version),
     getInventoryData(user.orgId),
   ]);
 

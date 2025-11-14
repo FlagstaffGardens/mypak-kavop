@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { fetchErpProducts, fetchErpCurrentOrders } from '@/lib/erp/client';
+import { getCachedErpProducts, getCachedErpCurrentOrders } from '@/lib/erp/client';
 import { transformErpProduct, transformErpOrder, completeProductWithInventory } from '@/lib/erp/transforms';
 import { getInventoryData } from '@/lib/services/inventory';
 import { getRecommendations } from '@/lib/services/recommendations';
@@ -20,11 +20,18 @@ export default async function Dashboard() {
   }
 
   // Fetch data from ERP API and database
-  const [erpProducts, erpOrders, inventoryRows, org] = await Promise.all([
-    fetchErpProducts(),
-    fetchErpCurrentOrders(),
+  const [inventoryRows, org] = await Promise.all([
     getInventoryData(user.orgId),
     db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1),
+  ]);
+
+  // Use last inventory update as version to bust cache per org on save
+  const version = (org[0]?.last_inventory_update?.toISOString?.() ?? '0') as string;
+
+  // Fetch ERP data with per-org versioned cache
+  const [erpProducts, erpOrders] = await Promise.all([
+    getCachedErpProducts(user.orgId, version),
+    getCachedErpCurrentOrders(user.orgId, version),
   ]);
 
   // Get last updated timestamp from organization

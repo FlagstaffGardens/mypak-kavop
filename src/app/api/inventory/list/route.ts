@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/jwt';
-import { fetchErpProducts } from '@/lib/erp/client';
+import { getCachedErpProducts } from '@/lib/erp/client';
 import { getInventoryData } from '@/lib/services/inventory';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 /**
  * GET /api/inventory/list
@@ -20,8 +23,10 @@ export async function GET() {
       );
     }
 
-    // Fetch ERP products
-    const erpProducts = await fetchErpProducts();
+    // Fetch version (last update) and ERP products (cached per org + version)
+    const [org] = await db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1);
+    const version = (org?.last_inventory_update?.toISOString?.() ?? '0') as string;
+    const erpProducts = await getCachedErpProducts(user.orgId, version);
 
     // Fetch stored inventory data
     const inventoryRows = await getInventoryData(user.orgId);

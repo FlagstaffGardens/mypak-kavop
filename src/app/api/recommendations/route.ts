@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/jwt';
 import { getRecommendations } from '@/lib/services/recommendations';
-import { fetchErpProducts } from '@/lib/erp/client';
+import { getCachedErpProducts } from '@/lib/erp/client';
 import { getInventoryData } from '@/lib/services/inventory';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { addDays, format } from 'date-fns';
 import type { ContainerRecommendation } from '@/lib/types';
 
@@ -23,9 +26,11 @@ export async function GET() {
     }
 
     // Fetch data
+    const [org] = await db.select().from(organizations).where(eq(organizations.org_id, user.orgId)).limit(1);
+    const version = (org?.last_inventory_update?.toISOString?.() ?? '0') as string;
     const [dbRecommendations, erpProducts, inventoryData] = await Promise.all([
       getRecommendations(user.orgId),
-      fetchErpProducts(),
+      getCachedErpProducts(user.orgId, version),
       getInventoryData(user.orgId),
     ]);
 

@@ -617,15 +617,27 @@ const completedOrders = await getCachedErpCompletedOrders(user.orgId);
 In `src/app/api/inventory/save/route.ts`, add cache invalidation after saving:
 
 ```typescript
-// At top, add import:
-import { revalidateErpCache } from '@/lib/erp/cache';
+// At top, add imports:
+import { revalidatePath, revalidateTag } from 'next/cache';
 
 // After generateAndSaveRecommendations call (around line 58), add:
 await generateAndSaveRecommendations(user.orgId);
 
-// Invalidate ERP cache to ensure fresh data on next fetch
-// Note: Invalidates all orgs (broad invalidation with static tags)
-revalidateErpCache();
+// Invalidate caches (wrapped to avoid failing the save on cache errors)
+try {
+  // Invalidate app routes that read ERP/inventory data
+  revalidatePath('/', 'layout');
+  revalidatePath('/orders', 'layout');
+
+  // Invalidate ERP caches (broad + per-org) to beat TTLs
+  revalidateTag('erp:products', 'max');
+  revalidateTag('erp:orders', 'max');
+  revalidateTag(`erp:products:${user.orgId}`, 'max');
+  revalidateTag(`erp:orders:current:${user.orgId}`, 'max');
+  revalidateTag(`erp:orders:completed:${user.orgId}`, 'max');
+} catch (cacheError) {
+  console.warn('[API] Cache invalidation failed (non-fatal):', cacheError);
+}
 
 return NextResponse.json({
   // ...

@@ -187,7 +187,7 @@ export function InventoryChart({ product, liveOrders = [], timeframe = '6w' }: I
   };
 
   return (
-    <ChartContainer config={chartConfig} className="h-full w-full">
+    <ChartContainer id={`product-${product.id}`} config={chartConfig} className="h-full w-full">
       <LineChart data={data} margin={{ top: 20, right: 5, left: -20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(215, 20%, 90%)" vertical={false} />
         <XAxis

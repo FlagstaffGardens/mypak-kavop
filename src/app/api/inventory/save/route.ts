@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/jwt';
 import { upsertInventoryData, type InventoryInput } from '@/lib/services/inventory';
 import { generateAndSaveRecommendations } from '@/lib/services/recommendations';
@@ -59,10 +59,21 @@ export async function POST(request: Request) {
     await generateAndSaveRecommendations(user.orgId);
     console.log('[API] Recommendations updated successfully');
 
-    // 4. Invalidate page cache to ensure fresh data on next page load
-    revalidatePath('/', 'layout'); // Revalidate dashboard
-    revalidatePath('/orders', 'layout'); // Revalidate orders page
-    console.log('[API] Cache invalidated');
+    // 4. Invalidate caches to ensure fresh data on next page load
+    try {
+      // Page-level revalidation (routes that consume ERP + inventory data)
+      revalidatePath('/', 'layout'); // Revalidate dashboard
+      revalidatePath('/orders', 'layout'); // Revalidate orders page
+
+      // ERP API cache revalidation (broad) to beat TTLs immediately
+      // Per-org cache busting is handled via versioned cache keys (last_inventory_update)
+      revalidateTag('erp:products', 'max');
+      revalidateTag('erp:orders', 'max');
+      console.log('[API] Cache invalidated (paths + tags)');
+    } catch (cacheError) {
+      console.warn('[API] Cache invalidation failed (non-fatal):', cacheError);
+      // Continue: inventory data and recommendations were already saved
+    }
 
     return NextResponse.json({
       success: true,
