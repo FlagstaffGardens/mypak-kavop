@@ -1,7 +1,98 @@
-import { pgTable, text, timestamp, uuid, integer, index, primaryKey, decimal, jsonb, date } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, integer, index, primaryKey, decimal, jsonb, date, boolean } from "drizzle-orm/pg-core";
+
+// ========================================
+// Better Auth Tables
+// ========================================
+
+export const user = pgTable("user", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("emailVerified").notNull().default(false),
+  name: text("name").notNull(),
+  image: text("image"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export const session = pgTable("session", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expiresAt").notNull(),
+  token: text("token").notNull().unique(),
+  ipAddress: text("ipAddress"),
+  userAgent: text("userAgent"),
+  impersonatedBy: text("impersonatedBy"), // Admin user ID
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export const account = pgTable("account", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  accountId: text("accountId").notNull(),
+  providerId: text("providerId").notNull(),
+  accessToken: text("accessToken"),
+  refreshToken: text("refreshToken"),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export const verification = pgTable("verification", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export const organization = pgTable("organization", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  logo: text("logo"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  metadata: jsonb("metadata"),
+});
+
+export const member = pgTable("member", {
+  id: text("id").primaryKey(),
+  organizationId: text("organizationId")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // 'owner' | 'admin' | 'member'
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+export const invitation = pgTable("invitation", {
+  id: text("id").primaryKey(),
+  organizationId: text("organizationId")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  role: text("role").notNull(),
+  inviterId: text("inviterId")
+    .notNull()
+    .references(() => user.id),
+  status: text("status").notNull().default("pending"),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+});
+
+// ========================================
+// Business Tables
+// ========================================
 
 export const organizations = pgTable("organizations", {
   org_id: uuid("org_id").defaultRandom().primaryKey(),
+  better_auth_org_id: text("better_auth_org_id")
+    .unique()
+    .references(() => organization.id, { onDelete: "cascade" }),
   org_name: text("org_name").notNull(),
   mypak_customer_name: text("mypak_customer_name").notNull().unique(),
   kavop_token: text("kavop_token").notNull(),
