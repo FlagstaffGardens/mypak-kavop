@@ -102,7 +102,7 @@ export default function AddUsersPage({
               ✓ {createdUsers.length} users created successfully
             </p>
             <p className="text-sm text-green-700 mt-1">
-              Users will receive authentication credentials via email when they sign in using Magic Link or Email OTP.
+              Users will receive a 6-digit verification code via email when they sign in.
             </p>
           </div>
 

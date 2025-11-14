@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -71,93 +75,107 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-lg">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Sign in to MyPak Connect
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {!otpSent ? "We'll send you a 6-digit code" : `Code sent to ${email}`}
-          </p>
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
+        <Card className="border-border shadow-lg">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl font-semibold tracking-tight">
+              Sign in to MyPak Connect
+            </CardTitle>
+            <CardDescription>
+              {!otpSent ? "We'll send you a 6-digit code" : `Code sent to ${email}`}
+            </CardDescription>
+          </CardHeader>
 
-        {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
+          <CardContent>
+            {error && (
+              <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
-        {/* Email Input Form */}
-        {!otpSent && (
-          <form onSubmit={handleSendOTP} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email"
-                type="email"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                required
-              />
-            </div>
+            {/* Email Input Form */}
+            {!otpSent && (
+              <form onSubmit={handleSendOTP} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                    className="h-11"
+                    autoFocus
+                    required
+                  />
+                </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              {loading ? "Sending..." : "Send Code"}
-            </button>
-          </form>
-        )}
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-11"
+                  size="lg"
+                >
+                  {loading ? "Sending..." : "Send Code"}
+                </Button>
+              </form>
+            )}
 
-        {/* Code Verification Form */}
-        {otpSent && (
-          <form onSubmit={handleVerifyOTP} className="space-y-4">
-            <div>
-              <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
-                Enter 6-digit code
-              </label>
-              <input
-                id="otp"
-                type="text"
-                placeholder="000000"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                disabled={loading}
-                maxLength={6}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-center text-2xl font-mono font-bold tracking-widest focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                required
-              />
-            </div>
+            {/* Code Verification Form */}
+            {otpSent && (
+              <form onSubmit={handleVerifyOTP} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="otp">Enter 6-digit code</Label>
+                  <Input
+                    id="otp"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="000000"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    disabled={loading}
+                    maxLength={6}
+                    className="h-11 text-center text-2xl font-mono tracking-widest"
+                    autoFocus
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Check your email for the verification code
+                  </p>
+                </div>
 
-            <button
-              type="submit"
-              disabled={loading || otp.length !== 6}
-              className="w-full rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              {loading ? "Verifying..." : "Sign In"}
-            </button>
+                <Button
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="w-full h-11"
+                  size="lg"
+                >
+                  {loading ? "Verifying..." : "Sign In"}
+                </Button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setOtpSent(false);
-                setOtp("");
-                setError("");
-              }}
-              className="w-full text-sm text-gray-600 hover:text-gray-900"
-            >
-              ← Back to email
-            </button>
-          </form>
-        )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setOtpSent(false);
+                    setOtp("");
+                    setError("");
+                  }}
+                  className="w-full"
+                  disabled={loading}
+                >
+                  ← Back to email
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          Secure, passwordless authentication for MyPak Connect
+        </p>
       </div>
     </div>
   );
