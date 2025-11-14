@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, integer, index, primaryKey, decimal, jsonb, date, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, integer, index, primaryKey, decimal, jsonb, date, boolean, unique } from "drizzle-orm/pg-core";
 
 // ========================================
 // Better Auth Tables
@@ -25,6 +25,7 @@ export const session = pgTable("session", {
   userAgent: text("userAgent"),
   impersonatedBy: text("impersonatedBy"), // Admin user ID
   createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 
 export const account = pgTable("account", {
@@ -36,8 +37,13 @@ export const account = pgTable("account", {
   providerId: text("providerId").notNull(),
   accessToken: text("accessToken"),
   refreshToken: text("refreshToken"),
-  expiresAt: timestamp("expiresAt"),
+  idToken: text("idToken"),
+  accessTokenExpiresAt: timestamp("accessTokenExpiresAt"),
+  refreshTokenExpiresAt: timestamp("refreshTokenExpiresAt"),
+  scope: text("scope"),
+  password: text("password"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 
 export const verification = pgTable("verification", {
@@ -46,6 +52,7 @@ export const verification = pgTable("verification", {
   value: text("value").notNull(),
   expiresAt: timestamp("expiresAt").notNull(),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
 
 export const organization = pgTable("organization", {
@@ -67,7 +74,12 @@ export const member = pgTable("member", {
     .references(() => user.id, { onDelete: "cascade" }),
   role: text("role").notNull(), // 'owner' | 'admin' | 'member'
   createdAt: timestamp("createdAt").notNull().defaultNow(),
-});
+}, (table) => ({
+  // Unique constraint: one user can only be a member of an org once
+  uniqueOrgUser: unique().on(table.organizationId, table.userId),
+  // Index for performance
+  orgIdx: index("idx_member_org").on(table.organizationId),
+}));
 
 export const invitation = pgTable("invitation", {
   id: text("id").primaryKey(),

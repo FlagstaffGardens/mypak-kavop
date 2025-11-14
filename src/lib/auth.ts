@@ -11,7 +11,11 @@ import { member } from "@/lib/db/schema";
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
+    camelCase: true, // Match our camelCase schema
   }),
+
+  // Base URL for generating magic links and verification URLs
+  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 
   // Disable password auth - passwordless only
   emailAndPassword: {
