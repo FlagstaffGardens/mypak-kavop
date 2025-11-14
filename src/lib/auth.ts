@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import {
   organization as organizationPlugin,
   admin as adminPlugin,
-  magicLink as magicLinkPlugin
+  magicLink as magicLinkPlugin,
+  emailOTP as emailOTPPlugin,
 } from "better-auth/plugins";
 
 export const auth = betterAuth({
@@ -45,6 +46,39 @@ export const auth = betterAuth({
       },
       expiresIn: 60 * 15, // 15 minutes
       storeToken: "hashed", // Store tokens hashed for security
+    }),
+
+    // Email OTP authentication (6-digit code)
+    emailOTPPlugin({
+      async sendVerificationOTP({ email, otp, type }) {
+        const { Resend } = await import("resend");
+        const resend = new Resend(process.env.RESEND_API_KEY);
+
+        const subjectMap = {
+          "sign-in": "Your sign-in code for MyPak Connect",
+          "email-verification": "Verify your email for MyPak Connect",
+          "forget-password": "Reset your password for MyPak Connect",
+        };
+
+        await resend.emails.send({
+          from: "MyPak Connect <noreply@mypak.kavop.com>",
+          to: email,
+          subject: subjectMap[type],
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #1a1a1a;">${type === "sign-in" ? "Sign in to MyPak Connect" : type === "email-verification" ? "Verify your email" : "Reset your password"}</h2>
+              <p style="color: #666; line-height: 1.5;">Enter this code to continue:</p>
+              <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1a1a1a;">${otp}</span>
+              </div>
+              <p style="color: #999; font-size: 14px;">This code expires in 5 minutes.</p>
+              <p style="color: #999; font-size: 14px;">If you didn't request this, you can safely ignore this email.</p>
+            </div>
+          `,
+        });
+      },
+      otpLength: 6, // 6-digit code
+      expiresIn: 60 * 5, // 5 minutes
     }),
 
     // Multi-tenancy with organizations
