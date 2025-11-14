@@ -1,79 +1,78 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RecommendedContainers } from '@/components/orders/RecommendedContainers';
-import { OrdersEnRoute } from '@/components/orders/OrdersEnRoute';
-import { OrderHistory } from '@/components/orders/OrderHistory';
+import dynamic from 'next/dynamic';
+const RecommendedContainersLazy = dynamic(() =>
+  import('@/components/orders/RecommendedContainers').then(m => ({ default: m.RecommendedContainers }))
+);
+const OrdersEnRouteLazy = dynamic(() =>
+  import('@/components/orders/OrdersEnRoute').then(m => ({ default: m.OrdersEnRoute }))
+);
+const OrderHistoryLazy = dynamic(() =>
+  import('@/components/orders/OrderHistory').then(m => ({ default: m.OrderHistory }))
+);
 import type { ContainerRecommendation, Order } from '@/lib/types';
 
 interface OrdersPageClientProps {
   containers: ContainerRecommendation[];
   liveOrders: Order[];
   completedOrders: Order[];
-  initialTab?: 'recommended' | 'live' | 'completed';
-  initialHighlight?: string | null;
 }
 
 function OrdersTabs({
   containers,
   liveOrders,
   completedOrders,
-  initialTab,
-  initialHighlight,
 }: OrdersPageClientProps) {
-  const highlightOrderNumber = initialHighlight || null;
-  // Initialize from server-provided value only (avoids hydration mismatch)
-  const [currentTab, setCurrentTab] = useState<string>(initialTab || 'recommended');
+  const searchParams = useSearchParams();
+  const highlightOrderNumber = searchParams.get('highlight');
+  const currentTab = highlightOrderNumber ? 'live' : (searchParams.get('tab') || 'recommended');
 
   // Keep URL in sync without triggering a Next.js navigation (no re-fetch)
-  useEffect(() => {
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.set('tab', currentTab);
-      window.history.replaceState(window.history.state, '', url.toString());
-    } catch {
-      // noop
-    }
-  }, [currentTab]);
-
   return (
-    <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
+    <Tabs value={currentTab} className="w-full">
       <TabsList className="h-auto p-1 bg-muted">
-        <TabsTrigger value="recommended" className="data-[state=active]:bg-background cursor-pointer">
+        <Link href="/orders?tab=recommended" className="inline-block cursor-pointer">
+          <TabsTrigger value="recommended" className="data-[state=active]:bg-background cursor-pointer">
           Recommended Orders
           {containers.length > 0 && (
             <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
               {containers.length}
             </span>
           )}
-        </TabsTrigger>
-        <TabsTrigger value="live" className="data-[state=active]:bg-background cursor-pointer">
+          </TabsTrigger>
+        </Link>
+        <Link href="/orders?tab=live" className="inline-block cursor-pointer">
+          <TabsTrigger value="live" className="data-[state=active]:bg-background cursor-pointer">
           Live Orders
           {liveOrders.length > 0 && (
             <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
               {liveOrders.length}
             </span>
           )}
-        </TabsTrigger>
-        <TabsTrigger value="completed" className="data-[state=active]:bg-background cursor-pointer">
+          </TabsTrigger>
+        </Link>
+        <Link href="/orders?tab=completed" className="inline-block cursor-pointer">
+          <TabsTrigger value="completed" className="data-[state=active]:bg-background cursor-pointer">
           Completed Orders
-        </TabsTrigger>
+          </TabsTrigger>
+        </Link>
       </TabsList>
 
-      {/* Keep mounted to avoid remount lag when switching */}
-      <TabsContent value="recommended" className="mt-6" forceMount>
-        <RecommendedContainers containers={containers} />
+      <TabsContent value="recommended" className="mt-6">
+        <RecommendedContainersLazy containers={containers} />
       </TabsContent>
 
-      <TabsContent value="live" className="mt-6" forceMount>
-        <OrdersEnRoute orders={liveOrders} highlightOrderNumber={highlightOrderNumber} />
+      <TabsContent value="live" className="mt-6">
+        <OrdersEnRouteLazy orders={liveOrders} highlightOrderNumber={highlightOrderNumber} />
       </TabsContent>
 
-      <TabsContent value="completed" className="mt-6" forceMount>
-        <OrderHistory orders={completedOrders} />
+      <TabsContent value="completed" className="mt-6">
+        <OrderHistoryLazy orders={completedOrders} />
       </TabsContent>
     </Tabs>
   );
