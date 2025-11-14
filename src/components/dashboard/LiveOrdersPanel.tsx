@@ -147,8 +147,8 @@ function OrderCard({ order, onClick }: { order: Order; onClick?: () => void }) {
         {/* Product List (Expandable) */}
         {isExpanded && order.products && order.products.length > 0 && (
           <div className="mb-3 px-3 py-2 bg-muted/50 rounded border border-border space-y-1.5">
-            {order.products.map((product) => (
-              <div key={product.productId} className="flex items-center justify-between text-sm">
+            {order.products.map((product, index) => (
+              <div key={`${order.orderNumber}-${product.sku || product.productId}-${index}`} className="flex items-center justify-between text-sm">
                 <span className="text-foreground font-medium break-words flex-1 mr-4">
                   {product.productName}
                 </span>
