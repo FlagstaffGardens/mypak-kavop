@@ -506,12 +506,12 @@ import { fetchErpProducts, fetchErpCurrentOrders, fetchErpCompletedOrders } from
 
 /**
  * Cached ERP product fetch with 5-minute revalidation
- * Cache is per organization (orgId in cache key)
+ * Cache is per organization (orgId argument is part of cache key)
  * Uses static tag for broad invalidation
  */
 const cachedErpProducts = unstable_cache(
   async (orgId: string) => fetchErpProducts(),
-  (orgId: string) => ['erp:products', orgId], // Per-org cache key
+  ['erp:products'], // Function arg (orgId) differentiates cache entries
   {
     revalidate: 300, // 5 minutes
     tags: ['erp:products'], // Static tag for invalidation
@@ -522,12 +522,12 @@ export const getCachedErpProducts = (orgId: string) => cachedErpProducts(orgId);
 
 /**
  * Cached ERP current orders fetch with 5-minute revalidation
- * Cache is per organization (orgId in cache key)
+ * Cache is per organization (orgId argument is part of cache key)
  * Uses static tag for broad invalidation
  */
 const cachedErpCurrentOrders = unstable_cache(
   async (orgId: string) => fetchErpCurrentOrders(),
-  (orgId: string) => ['erp:orders:current', orgId], // Per-org cache key
+  ['erp:orders:current'], // Function arg (orgId) differentiates cache entries
   {
     revalidate: 300, // 5 minutes
     tags: ['erp:orders:current'], // Static tag for invalidation
@@ -538,12 +538,12 @@ export const getCachedErpCurrentOrders = (orgId: string) => cachedErpCurrentOrde
 
 /**
  * Cached ERP completed orders fetch with 5-minute revalidation
- * Cache is per organization (orgId in cache key)
+ * Cache is per organization (orgId argument is part of cache key)
  * Uses static tag for broad invalidation
  */
 const cachedErpCompletedOrders = unstable_cache(
   async (orgId: string) => fetchErpCompletedOrders(),
-  (orgId: string) => ['erp:orders:completed', orgId], // Per-org cache key
+  ['erp:orders:completed'], // Function arg (orgId) differentiates cache entries
   {
     revalidate: 300, // 5 minutes
     tags: ['erp:orders:completed'], // Static tag for invalidation

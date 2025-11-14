@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Edit3, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,16 +57,29 @@ export function DashboardClient({
   }, [isFirstVisit]);
 
   // Calculate worst product
-  const worstProduct = products.length > 0
-    ? products.reduce((worst, product) =>
-        product.weeksRemaining < worst.weeksRemaining ? product : worst
-      )
-    : null;
+  const worstProduct = useMemo(() => {
+    return products.length > 0
+      ? products.reduce((worst, product) =>
+          product.weeksRemaining < worst.weeksRemaining ? product : worst
+        )
+      : null;
+  }, [products]);
 
   // Group products by status
-  const criticalProducts = products.filter(p => p.status === 'CRITICAL');
-  const orderNowProducts = products.filter(p => p.status === 'ORDER_NOW');
-  const healthyProducts = products.filter(p => p.status === 'HEALTHY');
+  const criticalProducts = useMemo(
+    () => products.filter(p => p.status === 'CRITICAL'),
+    [products]
+  );
+
+  const orderNowProducts = useMemo(
+    () => products.filter(p => p.status === 'ORDER_NOW'),
+    [products]
+  );
+
+  const healthyProducts = useMemo(
+    () => products.filter(p => p.status === 'HEALTHY'),
+    [products]
+  );
 
   // Handle inventory data save - refresh to get fresh data from server
   const handleSaveInventory = () => {
