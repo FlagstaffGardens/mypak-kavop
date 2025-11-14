@@ -117,6 +117,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       liveOrders={liveOrders}
       completedOrders={completedOrdersTransformed}
       initialTab={initialTab}
+      initialHighlight={highlightParam || null}
     />
   );
 }

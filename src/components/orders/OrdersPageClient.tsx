@@ -1,8 +1,7 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { RecommendedContainers } from '@/components/orders/RecommendedContainers';
@@ -15,6 +14,7 @@ interface OrdersPageClientProps {
   liveOrders: Order[];
   completedOrders: Order[];
   initialTab?: 'recommended' | 'live' | 'completed';
+  initialHighlight?: string | null;
 }
 
 function OrdersTabs({
@@ -22,14 +22,11 @@ function OrdersTabs({
   liveOrders,
   completedOrders,
   initialTab,
+  initialHighlight,
 }: OrdersPageClientProps) {
-  const searchParams = useSearchParams();
-  const highlightOrderNumber = searchParams.get('highlight');
-  // Initialize from URL but keep tab client-side to avoid refetch/navigation lag
-  const initialFromUrl = useMemo(() => {
-    return highlightOrderNumber ? 'live' : (searchParams.get('tab') || initialTab || 'recommended');
-  }, [searchParams, highlightOrderNumber, initialTab]);
-  const [currentTab, setCurrentTab] = useState<string>(initialFromUrl);
+  const highlightOrderNumber = initialHighlight || null;
+  // Initialize from server-provided value only (avoids hydration mismatch)
+  const [currentTab, setCurrentTab] = useState<string>(initialTab || 'recommended');
 
   // Keep URL in sync without triggering a Next.js navigation (no re-fetch)
   useEffect(() => {
