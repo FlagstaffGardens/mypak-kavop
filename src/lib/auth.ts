@@ -6,8 +6,6 @@ import {
   admin as adminPlugin,
   magicLink as magicLinkPlugin
 } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
-import { member } from "@/lib/db/schema";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -76,15 +74,7 @@ export const auth = betterAuth({
     // Admin impersonation
     adminPlugin({
       impersonationSessionDuration: 60 * 60, // 1 hour
-
-      async canImpersonate(impersonator: any) {
-        // Only owners can impersonate
-        const memberships = await db.query.member.findMany({
-          where: eq(member.userId, impersonator.id),
-        });
-
-        return memberships.some((m) => m.role === "owner");
-      },
+      adminRoles: ["admin"], // Only users with role="admin" can impersonate
     }),
   ],
 

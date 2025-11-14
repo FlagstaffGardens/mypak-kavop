@@ -60,27 +60,42 @@ async function main() {
       email: adminEmail,
       name: "Platform Admin",
       emailVerified: true,
+      role: "admin", // Required for Better Auth admin plugin
       createdAt: new Date(),
       updatedAt: new Date(),
     })
     .onConflictDoNothing()
     .returning();
 
+  let userToUse = adminUser;
+
   if (!adminUser) {
     console.log(`✓ Admin user already exists: ${adminEmail}`);
+    // Get existing user
+    const [existing] = await db
+      .select()
+      .from(user)
+      .where(eq(user.email, adminEmail))
+      .limit(1);
+    if (!existing) throw new Error("Failed to find admin user");
+    userToUse = existing;
   } else {
     console.log(`✓ Created admin user: ${adminEmail}`);
+  }
 
-    // Create owner membership
-    await db.insert(member).values({
+  // Create owner membership (idempotent)
+  await db
+    .insert(member)
+    .values({
       id: `mem_${crypto.randomUUID()}`,
-      userId: adminUser.id,
+      userId: userToUse.id,
       organizationId: orgToUse.id,
       role: "owner",
       createdAt: new Date(),
-    });
-    console.log(`✓ Created owner membership for ${adminEmail}`);
-  }
+    })
+    .onConflictDoNothing();
+
+  console.log(`✓ Ensured owner membership for ${adminEmail}`);
 
   console.log("\n✨ Seeding complete!");
   console.log(`\nYou can now sign in with: ${adminEmail}`);
