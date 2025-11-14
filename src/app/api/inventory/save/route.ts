@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/jwt';
 import { upsertInventoryData, type InventoryInput } from '@/lib/services/inventory';
 import { generateAndSaveRecommendations } from '@/lib/services/recommendations';
@@ -57,6 +58,11 @@ export async function POST(request: Request) {
     console.log('[API] Recalculating recommendations...');
     await generateAndSaveRecommendations(user.orgId);
     console.log('[API] Recommendations updated successfully');
+
+    // 4. Invalidate page cache to ensure fresh data on next page load
+    revalidatePath('/', 'layout'); // Revalidate dashboard
+    revalidatePath('/orders', 'layout'); // Revalidate orders page
+    console.log('[API] Cache invalidated');
 
     return NextResponse.json({
       success: true,

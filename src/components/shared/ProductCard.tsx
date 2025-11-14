@@ -21,9 +21,8 @@ export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
   const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
   const showRunsOut = product.status === 'CRITICAL' || product.status === 'ORDER_NOW';
 
-  // Calculate chart timeframe cutoff (6 weeks from today)
-  const today = new Date();
-  const chartEndDate = addWeeks(today, 6);
+  // Calculate chart timeframe cutoff (6 weeks from today) - memoized to prevent re-renders
+  const chartEndDate = useMemo(() => addWeeks(new Date(), 6), []);
 
   const productLiveOrders = useMemo(() => {
     // Filter and map orders for this product
