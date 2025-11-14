@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Info, ChevronRight, X } from 'lucide-react';
 import { parse, addWeeks } from 'date-fns';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -25,45 +25,56 @@ export function ProductCard({ product, liveOrders = [] }: ProductCardProps) {
   const today = new Date();
   const chartEndDate = addWeeks(today, 6);
 
-  // Filter live orders for this specific product
-  const allProductOrders = liveOrders
-    .filter(order =>
-      order.products && order.products.some(p => p.productId === product.id || p.productName === product.name)
-    )
-    .map(order => {
-      const orderProduct = order.products.find(p => p.productId === product.id || p.productName === product.name);
-      return {
-        orderNumber: order.orderNumber,
-        deliveryDate: order.deliveryDate,
-        quantity: orderProduct?.recommendedQuantity || 0,
-      };
-    })
-    .filter(o => o.quantity > 0);
+  const productLiveOrders = useMemo(() => {
+    // Filter and map orders for this product
+    const allProductOrders = liveOrders
+      .filter(order =>
+        order.products?.some(p => p.productId === product.id || p.productName === product.name)
+      )
+      .map(order => {
+        const orderProduct = order.products.find(p => p.productId === product.id || p.productName === product.name);
+        return {
+          orderNumber: order.orderNumber,
+          deliveryDate: order.deliveryDate,
+          quantity: orderProduct?.recommendedQuantity || 0,
+        };
+      })
+      .filter(o => o.quantity > 0);
 
-  // Show only orders within the chart's 6-week visible timeframe
-  const productLiveOrders = allProductOrders
-    .filter(order => {
-      try {
-        const deliveryDate = parse(order.deliveryDate, 'MMM dd, yyyy', new Date());
-        return deliveryDate <= chartEndDate;
-      } catch {
-        // If we can't parse the date, include it (better to show than hide)
-        return true;
-      }
-    })
-    .sort((a, b) => {
-      // Sort by delivery date (soonest first)
-      try {
-        const dateA = parse(a.deliveryDate, 'MMM dd, yyyy', new Date());
-        const dateB = parse(b.deliveryDate, 'MMM dd, yyyy', new Date());
-        return dateA.getTime() - dateB.getTime();
-      } catch {
-        return 0;
-      }
-    });
+    // Filter to chart timeframe and sort
+    return allProductOrders
+      .filter(order => {
+        try {
+          const deliveryDate = parse(order.deliveryDate, 'MMM dd, yyyy', new Date());
+          return deliveryDate <= chartEndDate;
+        } catch {
+          return true;
+        }
+      })
+      .sort((a, b) => {
+        try {
+          const dateA = parse(a.deliveryDate, 'MMM dd, yyyy', new Date());
+          const dateB = parse(b.deliveryDate, 'MMM dd, yyyy', new Date());
+          return dateA.getTime() - dateB.getTime();
+        } catch {
+          return 0;
+        }
+      });
+  }, [liveOrders, product.id, product.name, chartEndDate]);
 
-  // Count total orders for display
-  const totalOrders = allProductOrders.length;
+  // Count total orders for display (need to recalculate allProductOrders for count)
+  const totalOrders = useMemo(() => {
+    return liveOrders
+      .filter(order =>
+        order.products?.some(p => p.productId === product.id || p.productName === product.name)
+      )
+      .map(order => {
+        const orderProduct = order.products.find(p => p.productId === product.id || p.productName === product.name);
+        return orderProduct?.recommendedQuantity || 0;
+      })
+      .filter(q => q > 0).length;
+  }, [liveOrders, product.id, product.name]);
+
   const hiddenOrders = totalOrders - productLiveOrders.length;
 
   return (
