@@ -44,6 +44,7 @@ export const auth = betterAuth({
         });
       },
       expiresIn: 60 * 15, // 15 minutes
+      storeToken: "hashed", // Store tokens hashed for security
     }),
 
     // Multi-tenancy with organizations
