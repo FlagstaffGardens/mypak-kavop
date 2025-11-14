@@ -10,6 +10,11 @@ export const user = pgTable("user", {
   emailVerified: boolean("emailVerified").notNull().default(false),
   name: text("name").notNull(),
   image: text("image"),
+  // Admin plugin fields
+  role: text("role"),
+  banned: boolean("banned").notNull().default(false),
+  banReason: text("banReason"),
+  banExpires: timestamp("banExpires"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 });
@@ -26,7 +31,10 @@ export const session = pgTable("session", {
   impersonatedBy: text("impersonatedBy"), // Admin user ID
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-});
+}, (table) => ({
+  userIdx: index("idx_session_user").on(table.userId),
+  expiresAtIdx: index("idx_session_expires_at").on(table.expiresAt),
+}));
 
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
@@ -44,7 +52,10 @@ export const account = pgTable("account", {
   password: text("password"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-});
+}, (table) => ({
+  userIdx: index("idx_account_user").on(table.userId),
+  providerIdx: index("idx_account_provider").on(table.providerId, table.accountId),
+}));
 
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -53,7 +64,10 @@ export const verification = pgTable("verification", {
   expiresAt: timestamp("expiresAt").notNull(),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
-});
+}, (table) => ({
+  identifierIdx: index("idx_verification_identifier").on(table.identifier),
+  expiresAtIdx: index("idx_verification_expires_at").on(table.expiresAt),
+}));
 
 export const organization = pgTable("organization", {
   id: text("id").primaryKey(),
@@ -77,8 +91,9 @@ export const member = pgTable("member", {
 }, (table) => ({
   // Unique constraint: one user can only be a member of an org once
   uniqueOrgUser: unique().on(table.organizationId, table.userId),
-  // Index for performance
+  // Indexes for performance
   orgIdx: index("idx_member_org").on(table.organizationId),
+  userIdx: index("idx_member_user").on(table.userId),
 }));
 
 export const invitation = pgTable("invitation", {
@@ -94,7 +109,10 @@ export const invitation = pgTable("invitation", {
   status: text("status").notNull().default("pending"),
   expiresAt: timestamp("expiresAt").notNull(),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
-});
+}, (table) => ({
+  orgIdx: index("idx_invitation_org").on(table.organizationId),
+  emailIdx: index("idx_invitation_email").on(table.email),
+}));
 
 // ========================================
 // Business Tables
