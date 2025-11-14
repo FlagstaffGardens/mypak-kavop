@@ -230,7 +230,7 @@ export const auth = betterAuth({
   ],
 
   session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // Update every 24 hours
+    expiresIn: 60 * 60 * 24 * 60, // 60 days
+    updateAge: 60 * 60 * 24 * 7, // Auto-renews every 7 days
   },
 });
