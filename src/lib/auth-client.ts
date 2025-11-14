@@ -1,7 +1,12 @@
 "use client";
 
 import { createAuthClient } from "better-auth/react";
-import { organizationClient, adminClient, emailOTPClient, magicLinkClient } from "better-auth/client/plugins";
+import {
+  organizationClient,
+  adminClient,
+  emailOTPClient,
+  // magicLinkClient, // TODO: Enable in future if needed
+} from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
   baseURL: typeof window !== "undefined" ? window.location.origin : "",
@@ -9,7 +14,7 @@ export const authClient = createAuthClient({
     organizationClient(),
     adminClient(),
     emailOTPClient(),
-    magicLinkClient(), // Add Magic Link client plugin
+    // magicLinkClient(), // TODO: Disabled for now, may enable in future
   ],
 });
 

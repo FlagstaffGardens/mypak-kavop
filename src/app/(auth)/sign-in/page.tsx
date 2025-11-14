@@ -6,12 +6,10 @@ import { useRouter } from "next/navigation";
 
 export default function SignInPage() {
   const router = useRouter();
-  const [method, setMethod] = useState<"otp" | "magic-link">("otp");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [otpSent, setOtpSent] = useState(false);
 
   async function handleSendOTP(e: React.FormEvent) {
@@ -24,7 +22,6 @@ export default function SignInPage() {
 
     setLoading(true);
     setError("");
-    setSuccess("");
 
     try {
       await authClient.emailOtp.sendVerificationOtp({
@@ -32,7 +29,6 @@ export default function SignInPage() {
         type: "sign-in",
       });
 
-      setSuccess("Check your email! We sent you a 6-digit code.");
       setOtpSent(true);
     } catch (err) {
       console.error("OTP error:", err);
@@ -74,37 +70,6 @@ export default function SignInPage() {
     }
   }
 
-  async function handleMagicLink(e: React.FormEvent) {
-    e.preventDefault();
-
-    if (!email) {
-      setError("Please enter your email");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const result = await authClient.signIn.magicLink({
-        email,
-        callbackURL: "/",
-      });
-
-      if (result.error) {
-        throw new Error(result.error.message || "Failed to send magic link");
-      }
-
-      setSuccess("Check your email! We sent you a magic link.");
-    } catch (err) {
-      console.error("Magic link error:", err);
-      setError(err instanceof Error ? err.message : "Failed to send magic link. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-lg">
@@ -113,44 +78,8 @@ export default function SignInPage() {
             Sign in to MyPak Connect
           </h1>
           <p className="mt-2 text-sm text-gray-600">
-            Choose your preferred sign-in method
+            {!otpSent ? "We'll send you a 6-digit code" : `Code sent to ${email}`}
           </p>
-        </div>
-
-        {/* Method Tabs */}
-        <div className="flex rounded-lg bg-gray-100 p-1">
-          <button
-            type="button"
-            onClick={() => {
-              setMethod("otp");
-              setOtpSent(false);
-              setError("");
-              setSuccess("");
-            }}
-            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              method === "otp"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Email Code
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMethod("magic-link");
-              setOtpSent(false);
-              setError("");
-              setSuccess("");
-            }}
-            className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-              method === "magic-link"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Magic Link
-          </button>
         </div>
 
         {error && (
@@ -159,14 +88,8 @@ export default function SignInPage() {
           </div>
         )}
 
-        {success && (
-          <div className="rounded-md bg-green-50 p-3 text-sm text-green-600">
-            {success}
-          </div>
-        )}
-
-        {/* OTP Method */}
-        {method === "otp" && !otpSent && (
+        {/* Email Input Form */}
+        {!otpSent && (
           <form onSubmit={handleSendOTP} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -194,8 +117,8 @@ export default function SignInPage() {
           </form>
         )}
 
-        {/* OTP Verification */}
-        {method === "otp" && otpSent && (
+        {/* Code Verification Form */}
+        {otpSent && (
           <form onSubmit={handleVerifyOTP} className="space-y-4">
             <div>
               <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
@@ -232,35 +155,6 @@ export default function SignInPage() {
               className="w-full text-sm text-gray-600 hover:text-gray-900"
             >
               ← Back to email
-            </button>
-          </form>
-        )}
-
-        {/* Magic Link Method */}
-        {method === "magic-link" && (
-          <form onSubmit={handleMagicLink} className="space-y-4">
-            <div>
-              <label htmlFor="email-magic" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                id="email-magic"
-                type="email"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              {loading ? "Sending..." : "Send Magic Link"}
             </button>
           </form>
         )}

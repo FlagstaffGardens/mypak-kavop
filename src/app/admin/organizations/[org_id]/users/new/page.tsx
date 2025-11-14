@@ -102,7 +102,7 @@ export default function AddUsersPage({
               ✓ {createdUsers.length} users created successfully
             </p>
             <p className="text-sm text-green-700 mt-1">
-              Copy these passwords and share them with your users.
+              Users will receive authentication credentials via email when they sign in using Magic Link or Email OTP.
             </p>
           </div>
 
