@@ -18,18 +18,20 @@
 
 **Note:** The `product_data` table already has a composite primary key on `(org_id, sku)` which provides an index. We only need to add an index on `users.org_id` for foreign key joins.
 
-**Step 1: Add index to users table in schema**
+**Step 1: Add index callback to existing users table**
 
-In `src/lib/db/schema.ts`, locate the `users` table definition (around line 13) and add the index callback as the second parameter:
+In `src/lib/db/schema.ts`, locate the `users` table definition (around line 13). The table already exists with `uuid("user_id")` primary key, `text` fields, etc. **Do not change any of the existing table structure.** Only add the index callback as the second parameter to `pgTable()`:
 
 ```typescript
+export const users = pgTable("users", {
+  // ... existing fields stay exactly as-is ...
 }, (table) => ({
   // NEW: Index for org_id foreign key joins
   orgIdx: index("idx_users_org_id").on(table.org_id),
 }));
 ```
 
-Add this callback to the existing `users` table definition - don't rewrite the table, just add the index callback.
+**Important:** Keep all existing fields (`user_id`, `org_id`, `email`, `name`, `password`, `role`, timestamps) exactly as they are. Only add the callback.
 
 **Step 2: Generate and apply migration with Drizzle**
 
@@ -294,13 +296,15 @@ git commit -m "perf: create product info map once instead of inside recommendati
 
 **Step 1: Import useMemo**
 
-At the top of `src/components/shared/ProductCard.tsx`, ensure React is imported:
+At the top of `src/components/shared/ProductCard.tsx`, add `useMemo` to the existing React imports:
 
 ```typescript
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import { useState, useMemo } from 'react';
 ```
+
+Note: The file already imports `useState` - just add `useMemo` to the import. No default `React` import needed.
 
 **Step 2: Wrap order filtering in useMemo**
 
@@ -398,13 +402,15 @@ git commit -m "perf: memoize order filtering in ProductCard to prevent re-comput
 
 **Step 1: Import useMemo**
 
-At the top of `src/components/dashboard/DashboardClient.tsx`, ensure useMemo is imported:
+At the top of `src/components/dashboard/DashboardClient.tsx`, add `useMemo` to the existing React imports:
 
 ```typescript
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 ```
+
+Note: The file already imports `useState` and `useEffect` - just add `useMemo` to the import. No default `React` import needed.
 
 **Step 2: Wrap worst product calculation in useMemo**
 
@@ -601,7 +607,11 @@ const currentOrders = await getCachedErpCurrentOrders(user.orgId);
 const completedOrders = await getCachedErpCompletedOrders(user.orgId);
 ```
 
-**Note:** We intentionally do NOT change `src/lib/services/recommendations.ts` to use the cached fetch. The service uses `fetchErpProductsForOrg(orgId)` (explicit org-based) while the cache uses `fetchErpProducts()` (session-based). Mixing these could introduce subtle correctness bugs. The page-level caching already delivers the performance win without refactoring the service.
+**IMPORTANT - Do NOT change recommendations service:**
+
+We intentionally **do NOT** change `src/lib/services/recommendations.ts` to use the cached fetch. The service uses `fetchErpProductsForOrg(orgId)` (explicit org-based) while the cache uses `fetchErpProducts()` (session-based with user token). Swapping to `getCachedErpProducts(orgId)` would introduce a correctness risk if called outside user context or for a different org.
+
+**Keep the existing `fetchErpProductsForOrg(orgId)` call in `generateAndSaveRecommendations`.** Page-level caching already delivers the big performance win.
 
 **Step 4: Invalidate cache after inventory save**
 
