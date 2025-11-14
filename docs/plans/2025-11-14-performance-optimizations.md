@@ -20,42 +20,26 @@
 
 **Step 1: Add index to users table in schema**
 
-In `src/lib/db/schema.ts`, locate the `users` table definition (around line 13) and add the org_id index callback:
+In `src/lib/db/schema.ts`, locate the `users` table definition (around line 13) and add the index callback as the second parameter:
 
 ```typescript
-export const users = pgTable("users", {
-  user_id: uuid("user_id").defaultRandom().primaryKey(),
-  org_id: uuid("org_id").references(() => organizations.org_id, { onDelete: "cascade" }),
-  email: text("email").notNull().unique(),
-  name: text("name").notNull(),
-  password: text("password").notNull(),
-  role: text("role").notNull().default("org_user"),
-  created_at: timestamp("created_at").notNull().defaultNow(),
-  updated_at: timestamp("updated_at").notNull().defaultNow(),
-  last_login_at: timestamp("last_login_at"),
 }, (table) => ({
   // NEW: Index for org_id foreign key joins
   orgIdx: index("idx_users_org_id").on(table.org_id),
 }));
 ```
 
-**Step 2: Generate migration with Drizzle**
+Add this callback to the existing `users` table definition - don't rewrite the table, just add the index callback.
+
+**Step 2: Generate and apply migration with Drizzle**
 
 ```bash
-npm run db:generate
+npm run db:generate && npm run db:migrate
 ```
 
-Expected output: New migration file created in `drizzle/` directory
+Expected output: Migration file created in `drizzle/` directory, then migration applied successfully
 
-**Step 3: Apply migration**
-
-```bash
-npm run db:migrate
-```
-
-Expected output: Migration applied successfully
-
-**Step 4: Verify index created**
+**Step 3: Verify index created**
 
 Query to verify:
 
@@ -66,7 +50,7 @@ WHERE tablename = 'users' AND indexname = 'idx_users_org_id';
 
 Expected: See `idx_users_org_id` in results
 
-**Step 5: Commit**
+**Step 4: Commit**
 
 ```bash
 git add src/lib/db/schema.ts drizzle/
@@ -493,13 +477,13 @@ git commit -m "perf: memoize product calculations and grouping in DashboardClien
 
 ---
 
-## Task 7: Add ERP API Caching (Careful State Management)
+## Task 7: Add ERP API Caching (Page-Level Only)
 
 **Files:**
 - Create: `src/lib/erp/cache.ts`
 - Modify: `src/app/page.tsx`
 - Modify: `src/app/orders/page.tsx`
-- Modify: `src/lib/services/recommendations.ts`
+- Modify: `src/app/api/inventory/save/route.ts`
 
 **Step 1: Create cache wrapper with unstable_cache**
 
@@ -617,22 +601,9 @@ const currentOrders = await getCachedErpCurrentOrders(user.orgId);
 const completedOrders = await getCachedErpCompletedOrders(user.orgId);
 ```
 
-**Step 4: Update recommendation service to use cached fetch**
+**Note:** We intentionally do NOT change `src/lib/services/recommendations.ts` to use the cached fetch. The service uses `fetchErpProductsForOrg(orgId)` (explicit org-based) while the cache uses `fetchErpProducts()` (session-based). Mixing these could introduce subtle correctness bugs. The page-level caching already delivers the performance win without refactoring the service.
 
-In `src/lib/services/recommendations.ts`, change the fetch in `generateAndSaveRecommendations`:
-
-```typescript
-// At top, add import:
-import { getCachedErpProducts } from '@/lib/erp/cache';
-
-// Find fetchErpProductsForOrg call (around line 234), change:
-const erpProducts = await fetchErpProductsForOrg(orgId);
-
-// To:
-const erpProducts = await getCachedErpProducts(orgId);
-```
-
-**Step 5: Invalidate cache after inventory save**
+**Step 4: Invalidate cache after inventory save**
 
 In `src/app/api/inventory/save/route.ts`, add cache invalidation after saving:
 
@@ -651,7 +622,7 @@ return NextResponse.json({
   // ...
 ```
 
-**Step 6: Test cache behavior**
+**Step 5: Test cache behavior**
 
 ```bash
 npm run dev
@@ -664,11 +635,11 @@ npm run dev
 
 Expected: Pages load faster on subsequent visits, data remains fresh after inventory updates
 
-**Step 7: Commit**
+**Step 6: Commit**
 
 ```bash
-git add src/lib/erp/cache.ts src/app/page.tsx src/app/orders/page.tsx src/lib/services/recommendations.ts src/app/api/inventory/save/route.ts
-git commit -m "perf: add ERP API caching with 5-minute revalidation and manual invalidation"
+git add src/lib/erp/cache.ts src/app/page.tsx src/app/orders/page.tsx src/app/api/inventory/save/route.ts
+git commit -m "perf: add ERP API caching with 5-minute revalidation and broad invalidation"
 ```
 
 ---
