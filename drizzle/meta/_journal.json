@@ -43,6 +43,13 @@
       "when": 1763029843508,
       "tag": "0005_safe_deadpool",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1763091197434,
+      "tag": "0006_damp_taskmaster",
+      "breakpoints": true
     }
   ]
 }

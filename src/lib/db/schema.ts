@@ -20,7 +20,9 @@ export const users = pgTable("users", {
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
   last_login_at: timestamp("last_login_at"),
-});
+}, (table) => ({
+  orgIdx: index('idx_users_org_id').on(table.org_id),
+}));
 
 export const productData = pgTable("product_data", {
   org_id: uuid("org_id")
