@@ -81,11 +81,11 @@ export default async function Dashboard() {
   // Fetch recommendations from database
   const dbRecommendations = await getRecommendations(user.orgId);
 
+  // Create product map ONCE before the loop
+  const productMap = new Map(products.map(p => [p.sku, p]));
+
   // Transform recommendations to UI format
   const containers: ContainerRecommendation[] = dbRecommendations.map((rec) => {
-    // Create product map for lookups
-    const productMap = new Map(products.map(p => [p.sku, p]));
-
     return {
       id: rec.containerNumber, // Use container number as ID (stable and meaningful)
       containerNumber: rec.containerNumber,
