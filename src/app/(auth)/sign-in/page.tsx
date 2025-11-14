@@ -34,9 +34,9 @@ export default function SignInPage() {
 
       setSuccess("Check your email! We sent you a 6-digit code.");
       setOtpSent(true);
-    } catch (err: any) {
+    } catch (err) {
       console.error("OTP error:", err);
-      setError(err.message || "Failed to send code. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to send code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -66,9 +66,9 @@ export default function SignInPage() {
       // Success! Redirect to dashboard
       router.push("/");
       router.refresh();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Verification error:", err);
-      setError(err.message || "Invalid code. Please try again.");
+      setError(err instanceof Error ? err.message : "Invalid code. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -99,9 +99,9 @@ export default function SignInPage() {
       }
 
       setSuccess("Check your email! We sent you a magic link.");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Magic link error:", err);
-      setError(err.message || "Failed to send magic link. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to send magic link. Please try again.");
     } finally {
       setLoading(false);
     }

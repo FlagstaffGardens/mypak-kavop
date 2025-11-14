@@ -25,7 +25,7 @@ export const auth = betterAuth({
   plugins: [
     // Magic Link authentication
     magicLinkPlugin({
-      sendMagicLink: async ({ email, url, token }) => {
+      sendMagicLink: async ({ email, url }) => {
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -83,7 +83,12 @@ export const auth = betterAuth({
 
     // Multi-tenancy with organizations
     organizationPlugin({
-      async sendInvitationEmail(data: any) {
+      async sendInvitationEmail(data: {
+        email: string;
+        organization: { name: string };
+        inviter: { user: { name: string } };
+        invitation: { link?: string };
+      }) {
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
 

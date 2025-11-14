@@ -21,7 +21,7 @@ export default async function AdminLayout({
   }
 
   // Check if user is owner of the ACTIVE organization
-  const activeOrgId = (session as any)?.session?.activeOrganizationId;
+  const activeOrgId = (session as { session?: { activeOrganizationId?: string } })?.session?.activeOrganizationId;
 
   if (activeOrgId) {
     const memberships = await db.query.member.findMany({

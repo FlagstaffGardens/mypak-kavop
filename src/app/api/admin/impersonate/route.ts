@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is owner of the ACTIVE organization
-    const activeOrgId = (session as any)?.session?.activeOrganizationId;
+    const activeOrgId = (session as { session?: { activeOrganizationId?: string } })?.session?.activeOrganizationId;
 
     if (!activeOrgId) {
       return NextResponse.json({ error: "No active organization" }, { status: 400 });

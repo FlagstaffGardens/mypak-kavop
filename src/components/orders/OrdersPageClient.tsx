@@ -60,6 +60,7 @@ function OrdersTabs({
     const urlTab = searchParams.get('tab');
     const urlHighlight = searchParams.get('highlight');
     const next = urlHighlight ? 'live' : (urlTab === 'live' || urlTab === 'completed' ? urlTab : 'recommended');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentTab(next);
   }, [searchParams]);
 

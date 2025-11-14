@@ -6,7 +6,7 @@ export function generatePassword(length: number = 16): string {
   const allChars = uppercase + lowercase + numbers + special;
 
   // Ensure at least one of each type
-  let password = [
+  const password = [
     uppercase[randomInt(uppercase.length)],
     lowercase[randomInt(lowercase.length)],
     numbers[randomInt(numbers.length)],

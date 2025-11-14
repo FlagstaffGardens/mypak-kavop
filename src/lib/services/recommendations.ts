@@ -210,7 +210,7 @@ function transformRecommendationRow(row: typeof recommendations.$inferSelect): C
     totalCartons: row.total_cartons,
     totalVolume: parseFloat(row.total_volume),
     urgency: row.urgency as 'OVERDUE' | 'URGENT' | 'PLANNED',
-    products: row.products as any, // Already JSONB
+    products: row.products as ContainerRecommendation['products'], // Already JSONB
     generatedAt: row.generated_at,
   };
 }

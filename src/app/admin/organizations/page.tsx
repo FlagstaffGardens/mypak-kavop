@@ -61,12 +61,12 @@ export default async function OrganizationsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {organizations.map((org: any) => (
+        {organizations.map((org) => (
           <OrganizationCard
             key={org.org_id}
             organization={org}
             userCount={org.users.length}
-            userEmails={org.users.map((u: any) => u.email)}
+            userEmails={org.users.map((u) => u.email)}
           />
         ))}
       </div>

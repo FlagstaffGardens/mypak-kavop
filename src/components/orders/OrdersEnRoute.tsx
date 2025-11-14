@@ -26,9 +26,11 @@ export function OrdersEnRoute({ orders, highlightOrderNumber }: OrdersEnRoutePro
       );
       if (index >= 0) {
         // Ensure highlighted item is visible
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setVisibleCount((count) => Math.max(count, index + 1));
         const orderToHighlight = inTransitOrders[index];
         // Open the modal
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedOrder(orderToHighlight);
 
         // Scroll to the order on next animation frame (faster than setTimeout)

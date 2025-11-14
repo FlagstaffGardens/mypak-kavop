@@ -18,7 +18,7 @@ export default function AddUsersPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emails, setEmails] = useState<string[]>([""]);
-  const [createdUsers, setCreatedUsers] = useState<any[]>([]);
+  const [createdUsers, setCreatedUsers] = useState<{ email: string; password: string }[]>([]);
   const [copiedPassword, setCopiedPassword] = useState<string | null>(null);
 
   // Unwrap params

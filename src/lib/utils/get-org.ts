@@ -16,7 +16,7 @@ export async function getCurrentOrgId(): Promise<string | null> {
   });
 
   // Access activeOrganizationId from session object (not user)
-  const activeOrgId = (session as any)?.session?.activeOrganizationId;
+  const activeOrgId = (session as { session?: { activeOrganizationId?: string } })?.session?.activeOrganizationId;
 
   if (!activeOrgId) {
     return null;

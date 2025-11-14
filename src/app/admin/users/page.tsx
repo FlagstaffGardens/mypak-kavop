@@ -47,7 +47,7 @@ export default function AdminUsersPage() {
     window.location.href = "/admin/users";
   }
 
-  const isImpersonating = (session?.session as any)?.impersonatedBy;
+  const isImpersonating = (session?.session as { impersonatedBy?: string })?.impersonatedBy;
 
   return (
     <div className="mx-auto max-w-7xl p-8">

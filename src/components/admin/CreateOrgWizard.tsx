@@ -20,7 +20,7 @@ export function CreateOrgWizard() {
 
   // Step 2 data
   const [emails, setEmails] = useState<string[]>([""]);
-  const [createdUsers, setCreatedUsers] = useState<any[]>([]);
+  const [createdUsers, setCreatedUsers] = useState<{ email: string; password: string }[]>([]);
   const [copiedPassword, setCopiedPassword] = useState<string | null>(null);
 
   async function handleStep1Submit(e: React.FormEvent) {
