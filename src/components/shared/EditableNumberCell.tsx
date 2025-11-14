@@ -13,6 +13,7 @@ interface EditableNumberCellProps {
   autoFocus?: boolean;
   allowDecimals?: boolean; // Allow decimal input (default: false)
   maxDecimals?: number;    // Maximum decimal places (default: 1)
+  centerText?: boolean;    // Center-align text (default: false)
 }
 
 export function EditableNumberCell({
@@ -23,6 +24,7 @@ export function EditableNumberCell({
   autoFocus,
   allowDecimals = false,
   maxDecimals = 1,
+  centerText = false,
 }: EditableNumberCellProps) {
   const [editValue, setEditValue] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -123,7 +125,7 @@ export function EditableNumberCell({
         onBlur={handleBlur}
         onKeyDown={onKeyDown}
         autoFocus={autoFocus}
-        className={`font-mono text-base h-10 pr-8 cursor-pointer ${getBorderColor()}`}
+        className={`font-mono text-base h-10 pr-8 cursor-pointer ${centerText ? 'text-center' : ''} ${getBorderColor()}`}
       />
       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
         {getValidationIcon()}

@@ -433,16 +433,16 @@ export function InventoryEditTable({
             <table className="w-full">
               <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-sm">
                 <tr>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[40%]">
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[38%]">
                     Product Name
                   </th>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[24%]">
                     Current Stock (Pallets)
                   </th>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[23%]">
                     Weekly Consumption (Pallets)
                   </th>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[10%]">
+                  <th className="text-center px-4 py-3 text-sm font-semibold text-foreground w-[15%]">
                     Target SOH (Weeks)
                   </th>
                 </tr>
@@ -514,15 +514,16 @@ export function InventoryEditTable({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="space-y-1">
+                        <div className="space-y-1 flex flex-col items-center">
                           <EditableNumberCell
                             value={product.targetSOH || DEFAULT_TARGET_SOH}
                             onChange={(value) => updateProduct(index, 'targetSOH', value)}
                             validation={validations[index].targetSOH}
                             onKeyDown={(e) => handleKeyDown(e, index, 'targetSOH')}
                             autoFocus={isTargetSOHFocused}
+                            centerText={true}
                           />
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-muted-foreground text-center">
                             weeks target
                           </div>
                         </div>
