@@ -14,20 +14,22 @@ interface OrdersPageClientProps {
   containers: ContainerRecommendation[];
   liveOrders: Order[];
   completedOrders: Order[];
+  initialTab?: 'recommended' | 'live' | 'completed';
 }
 
 function OrdersTabs({
   containers,
   liveOrders,
-  completedOrders
+  completedOrders,
+  initialTab,
 }: OrdersPageClientProps) {
   const searchParams = useSearchParams();
   const highlightOrderNumber = searchParams.get('highlight');
   // Initialize from URL but keep tab client-side to avoid refetch/navigation lag
-  const initialTab = useMemo(() => {
-    return highlightOrderNumber ? 'live' : (searchParams.get('tab') || 'recommended');
-  }, [searchParams, highlightOrderNumber]);
-  const [currentTab, setCurrentTab] = useState<string>(initialTab);
+  const initialFromUrl = useMemo(() => {
+    return highlightOrderNumber ? 'live' : (searchParams.get('tab') || initialTab || 'recommended');
+  }, [searchParams, highlightOrderNumber, initialTab]);
+  const [currentTab, setCurrentTab] = useState<string>(initialFromUrl);
 
   // Keep URL in sync without triggering a Next.js navigation (no re-fetch)
   useEffect(() => {

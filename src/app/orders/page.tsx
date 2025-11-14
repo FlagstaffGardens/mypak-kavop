@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 import { organizations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-export default async function OrdersPage() {
+export default async function OrdersPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   // Get current user
   const user = await getCurrentUser();
 
@@ -108,6 +108,7 @@ export default async function OrdersPage() {
       containers={containers}
       liveOrders={liveOrders}
       completedOrders={completedOrdersTransformed}
+      initialTab={(searchParams?.highlight ? 'live' : (typeof searchParams?.tab === 'string' ? searchParams?.tab : 'recommended')) as 'recommended' | 'live' | 'completed'}
     />
   );
 }
