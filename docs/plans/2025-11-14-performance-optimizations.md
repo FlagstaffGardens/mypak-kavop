@@ -20,15 +20,19 @@
 
 **Step 1: Add index to users table in schema**
 
-In `src/lib/db/schema.ts`, locate the `users` table definition and add the org_id index:
+In `src/lib/db/schema.ts`, locate the `users` table definition (around line 13) and add the org_id index callback:
 
 ```typescript
 export const users = pgTable("users", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  name: varchar("name", { length: 255 }),
-  org_id: varchar("org_id", { length: 255 }).notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
+  user_id: uuid("user_id").defaultRandom().primaryKey(),
+  org_id: uuid("org_id").references(() => organizations.org_id, { onDelete: "cascade" }),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  password: text("password").notNull(),
+  role: text("role").notNull().default("org_user"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+  last_login_at: timestamp("last_login_at"),
 }, (table) => ({
   // NEW: Index for org_id foreign key joins
   orgIdx: index("idx_users_org_id").on(table.org_id),
@@ -348,24 +352,40 @@ Replace with optimized memoized version:
 
 ```typescript
 const productLiveOrders = useMemo(() => {
-  return liveOrders
+  // Filter and map orders for this product
+  const allProductOrders = liveOrders
     .filter(order =>
       order.products?.some(p => p.productId === product.id || p.productName === product.name)
     )
     .map(order => {
       const orderProduct = order.products.find(p => p.productId === product.id || p.productName === product.name);
-      const deliveryDate = parse(order.deliveryDate, 'MMM dd, yyyy', new Date());
-
       return {
+        orderNumber: order.orderNumber,
         deliveryDate: order.deliveryDate,
-        parsedDate: deliveryDate,
-        quantity: orderProduct?.quantity || 0,
-        status: order.status,
+        quantity: orderProduct?.recommendedQuantity || 0,
       };
     })
-    .filter(order => isValid(order.parsedDate) && order.parsedDate <= chartEndDate)
-    .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime())
-    .map(({ parsedDate, ...order }) => order); // Remove parsed date from final result
+    .filter(o => o.quantity > 0);
+
+  // Filter to chart timeframe and sort
+  return allProductOrders
+    .filter(order => {
+      try {
+        const deliveryDate = parse(order.deliveryDate, 'MMM dd, yyyy', new Date());
+        return deliveryDate <= chartEndDate;
+      } catch {
+        return true;
+      }
+    })
+    .sort((a, b) => {
+      try {
+        const dateA = parse(a.deliveryDate, 'MMM dd, yyyy', new Date());
+        const dateB = parse(b.deliveryDate, 'MMM dd, yyyy', new Date());
+        return dateA.getTime() - dateB.getTime();
+      } catch {
+        return 0;
+      }
+    });
 }, [liveOrders, product.id, product.name, chartEndDate]);
 ```
 
@@ -491,57 +511,61 @@ import { fetchErpProducts, fetchErpCurrentOrders, fetchErpCompletedOrders } from
 
 /**
  * Cached ERP product fetch with 5-minute revalidation
- * Cache is per organization - orgId included in both key and tag
+ * Cache is per organization (orgId in cache key)
+ * Uses static tag for broad invalidation
  */
-export const getCachedErpProducts = (orgId: string) => {
-  return unstable_cache(
-    async () => fetchErpProducts(),
-    ['erp:products', orgId], // Per-org cache key
-    {
-      revalidate: 300, // 5 minutes
-      tags: [`erp:products:${orgId}`], // Per-org tag for invalidation
-    }
-  )();
-};
+const cachedErpProducts = unstable_cache(
+  async (orgId: string) => fetchErpProducts(),
+  ['erp:products'], // Static cache key base
+  {
+    revalidate: 300, // 5 minutes
+    tags: ['erp:products'], // Static tag for invalidation
+  }
+);
+
+export const getCachedErpProducts = (orgId: string) => cachedErpProducts(orgId);
 
 /**
  * Cached ERP current orders fetch with 5-minute revalidation
- * Cache is per organization - orgId included in both key and tag
+ * Cache is per organization (orgId in cache key)
+ * Uses static tag for broad invalidation
  */
-export const getCachedErpCurrentOrders = (orgId: string) => {
-  return unstable_cache(
-    async () => fetchErpCurrentOrders(),
-    ['erp:orders:current', orgId], // Per-org cache key
-    {
-      revalidate: 300, // 5 minutes
-      tags: [`erp:orders:current:${orgId}`], // Per-org tag for invalidation
-    }
-  )();
-};
+const cachedErpCurrentOrders = unstable_cache(
+  async (orgId: string) => fetchErpCurrentOrders(),
+  ['erp:orders:current'], // Static cache key base
+  {
+    revalidate: 300, // 5 minutes
+    tags: ['erp:orders:current'], // Static tag for invalidation
+  }
+);
+
+export const getCachedErpCurrentOrders = (orgId: string) => cachedErpCurrentOrders(orgId);
 
 /**
  * Cached ERP completed orders fetch with 5-minute revalidation
- * Cache is per organization - orgId included in both key and tag
+ * Cache is per organization (orgId in cache key)
+ * Uses static tag for broad invalidation
  */
-export const getCachedErpCompletedOrders = (orgId: string) => {
-  return unstable_cache(
-    async () => fetchErpCompletedOrders(),
-    ['erp:orders:completed', orgId], // Per-org cache key
-    {
-      revalidate: 300, // 5 minutes
-      tags: [`erp:orders:completed:${orgId}`], // Per-org tag for invalidation
-    }
-  )();
-};
+const cachedErpCompletedOrders = unstable_cache(
+  async (orgId: string) => fetchErpCompletedOrders(),
+  ['erp:orders:completed'], // Static cache key base
+  {
+    revalidate: 300, // 5 minutes
+    tags: ['erp:orders:completed'], // Static tag for invalidation
+  }
+);
+
+export const getCachedErpCompletedOrders = (orgId: string) => cachedErpCompletedOrders(orgId);
 
 /**
- * Manually invalidate ERP caches for a specific organization
+ * Manually invalidate all ERP caches (all organizations)
  * Call after inventory updates to ensure fresh data on next fetch
+ * Note: Invalidates broadly - all orgs will refetch on next request
  */
-export function revalidateErpCache(orgId: string) {
-  revalidateTag(`erp:products:${orgId}`);
-  revalidateTag(`erp:orders:current:${orgId}`);
-  revalidateTag(`erp:orders:completed:${orgId}`);
+export function revalidateErpCache() {
+  revalidateTag('erp:products');
+  revalidateTag('erp:orders:current');
+  revalidateTag('erp:orders:completed');
 }
 ```
 
@@ -562,7 +586,7 @@ const erpOrders = await fetchErpCurrentOrders();
 
 // To:
 const user = await getCurrentUser();
-if (!user) redirect('/login');
+if (!user) redirect('/sign-in');
 
 const erpProducts = await getCachedErpProducts(user.orgId);
 const erpOrders = await getCachedErpCurrentOrders(user.orgId);
@@ -586,7 +610,7 @@ const completedOrders = await fetchErpCompletedOrders();
 
 // To:
 const user = await getCurrentUser();
-if (!user) redirect('/login');
+if (!user) redirect('/sign-in');
 
 const erpProducts = await getCachedErpProducts(user.orgId);
 const currentOrders = await getCachedErpCurrentOrders(user.orgId);
@@ -619,8 +643,9 @@ import { revalidateErpCache } from '@/lib/erp/cache';
 // After generateAndSaveRecommendations call (around line 58), add:
 await generateAndSaveRecommendations(user.orgId);
 
-// Invalidate ERP cache for this org to ensure fresh data on next fetch
-revalidateErpCache(user.orgId);
+// Invalidate ERP cache to ensure fresh data on next fetch
+// Note: Invalidates all orgs (broad invalidation with static tags)
+revalidateErpCache();
 
 return NextResponse.json({
   // ...
