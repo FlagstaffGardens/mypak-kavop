@@ -29,7 +29,7 @@ export const auth = betterAuth({
         const resend = new Resend(process.env.RESEND_API_KEY);
 
         await resend.emails.send({
-          from: "MyPak Connect <noreply-mypak@kavop.com>",
+          from: "MyPak Connect <noreply@mypak.kavop.com>",
           to: email,
           subject: "Sign in to MyPak Connect",
           html: `
@@ -54,7 +54,7 @@ export const auth = betterAuth({
         const resend = new Resend(process.env.RESEND_API_KEY);
 
         await resend.emails.send({
-          from: "MyPak Connect <noreply-mypak@kavop.com>",
+          from: "MyPak Connect <noreply@mypak.kavop.com>",
           to: data.email,
           subject: `Join ${data.organization.name} on MyPak Connect`,
           html: `
