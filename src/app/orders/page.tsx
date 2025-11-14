@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 import { organizations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-export default async function OrdersPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   // Get current user
   const user = await getCurrentUser();
 
@@ -103,12 +103,20 @@ export default async function OrdersPage({ searchParams }: { searchParams?: { [k
     };
   });
 
+  // Resolve initial tab from URL params (completed/live/recommended) with highlight taking precedence
+  const sp = await searchParams;
+  const tabParamRaw = sp?.tab;
+  const highlightParamRaw = sp?.highlight;
+  const tabParam = Array.isArray(tabParamRaw) ? tabParamRaw[0] : tabParamRaw;
+  const highlightParam = Array.isArray(highlightParamRaw) ? highlightParamRaw[0] : highlightParamRaw;
+  const initialTab = (highlightParam ? 'live' : (tabParam === 'live' || tabParam === 'completed' ? tabParam : 'recommended')) as 'recommended' | 'live' | 'completed';
+
   return (
     <OrdersPageClient
       containers={containers}
       liveOrders={liveOrders}
       completedOrders={completedOrdersTransformed}
-      initialTab={(searchParams?.highlight ? 'live' : (typeof searchParams?.tab === 'string' ? searchParams?.tab : 'recommended')) as 'recommended' | 'live' | 'completed'}
+      initialTab={initialTab}
     />
   );
 }
