@@ -20,10 +20,17 @@ export default async function AdminLayout({
     redirect("/sign-in");
   }
 
-  // Check if user is owner of the ACTIVE organization
-  const activeOrgId = (session as { session?: { activeOrganizationId?: string } })?.session?.activeOrganizationId;
+  // Platform admins have full access
+  const isPlatformAdmin = session.user.role === "admin";
 
-  if (activeOrgId) {
+  if (!isPlatformAdmin) {
+    // For non-platform-admins, check if they're an owner of the active organization
+    const activeOrgId = (session as { session?: { activeOrganizationId?: string } })?.session?.activeOrganizationId;
+
+    if (!activeOrgId) {
+      redirect("/");
+    }
+
     const memberships = await db.query.member.findMany({
       where: and(
         eq(member.userId, session.user.id),
@@ -35,8 +42,6 @@ export default async function AdminLayout({
     if (!isOwner) {
       redirect("/");
     }
-  } else {
-    redirect("/");
   }
 
   return <div className="min-h-screen bg-gray-50">{children}</div>;

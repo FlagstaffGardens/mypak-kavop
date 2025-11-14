@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { user, member } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { user } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 
 export async function POST(request: NextRequest) {
@@ -18,23 +18,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is owner of the ACTIVE organization
-    const activeOrgId = (session as { session?: { activeOrganizationId?: string } })?.session?.activeOrganizationId;
-
-    if (!activeOrgId) {
-      return NextResponse.json({ error: "No active organization" }, { status: 400 });
-    }
-
-    const memberships = await db.query.member.findMany({
-      where: and(
-        eq(member.userId, session.user.id),
-        eq(member.organizationId, activeOrgId),
-      ),
-    });
-
-    const isOwner = memberships.some((m) => m.role === "owner");
-    if (!isOwner) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // ONLY platform admins can impersonate users
+    if (session.user.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden - Platform admin only" }, { status: 403 });
     }
 
     // Get target user

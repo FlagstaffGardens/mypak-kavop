@@ -28,12 +28,14 @@ export async function POST(
     const { emails } = createUsersSchema.parse(body);
 
     // Generate users data
+    // NOTE: Password field is DEPRECATED - Better Auth handles all authentication
+    // Passwords are generated here only for legacy schema compatibility
     const usersData = emails.map((email) => ({
       user_id: crypto.randomUUID(),
       org_id: org_id,
       email,
       name: generateNameFromEmail(email),
-      password: generatePassword(16),
+      password: generatePassword(16), // DEPRECATED: Not used for auth
       role: "org_user" as const,
     }));
 
@@ -43,9 +45,12 @@ export async function POST(
       .values(usersData)
       .returning();
 
+    // SECURITY: Remove passwords from API response
+    const safeUsers = createdUsers.map(({ password, ...user }) => user);
+
     return NextResponse.json({
       success: true,
-      users: createdUsers,
+      users: safeUsers,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -87,15 +87,13 @@ export default function SignInPage() {
     setSuccess("");
 
     try {
-      const response = await fetch("/api/auth/sign-in/magic-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, callbackURL: "/" }),
+      const result = await authClient.magicLink.sendMagicLink({
+        email,
+        callbackURL: "/",
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to send magic link");
+      if (result.error) {
+        throw new Error(result.error.message || "Failed to send magic link");
       }
 
       setSuccess("Check your email! We sent you a magic link.");
