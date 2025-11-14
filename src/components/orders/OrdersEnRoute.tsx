@@ -14,16 +14,20 @@ interface OrdersEnRouteProps {
 export function OrdersEnRoute({ orders, highlightOrderNumber }: OrdersEnRouteProps) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const orderRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const INITIAL_COUNT = 20;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
 
   // Handle highlighting and auto-opening modal
   useEffect(() => {
     if (highlightOrderNumber) {
       const inTransitOrders = orders.filter(order => order.type === 'IN_TRANSIT');
-      const orderToHighlight = inTransitOrders.find(
+      const index = inTransitOrders.findIndex(
         order => order.orderNumber === highlightOrderNumber
       );
-
-      if (orderToHighlight) {
+      if (index >= 0) {
+        // Ensure highlighted item is visible
+        setVisibleCount((count) => Math.max(count, index + 1));
+        const orderToHighlight = inTransitOrders[index];
         // Open the modal
         setSelectedOrder(orderToHighlight);
 
@@ -40,6 +44,7 @@ export function OrdersEnRoute({ orders, highlightOrderNumber }: OrdersEnRoutePro
 
   // Get only in-transit orders (includes both APPROVED and IN_TRANSIT from ERP)
   const inTransitOrders = orders.filter(order => order.type === 'IN_TRANSIT');
+  const visibleOrders = inTransitOrders.slice(0, visibleCount);
 
   // Status icon mapping
   const getStatusIcon = (status: string) => {
@@ -88,7 +93,7 @@ export function OrdersEnRoute({ orders, highlightOrderNumber }: OrdersEnRoutePro
   return (
     <>
     <div className="space-y-4">
-        {inTransitOrders.map((order) => (
+        {visibleOrders.map((order) => (
           <div
             key={order.id}
             ref={(el) => {
@@ -168,6 +173,13 @@ export function OrdersEnRoute({ orders, highlightOrderNumber }: OrdersEnRoutePro
             </div>
           </div>
         ))}
+        {visibleCount < inTransitOrders.length && (
+          <div className="flex justify-center mt-4">
+            <Button variant="outline" onClick={() => setVisibleCount((c) => c + INITIAL_COUNT)}>
+              Show more ({inTransitOrders.length - visibleCount} more)
+            </Button>
+          </div>
+        )}
     </div>
 
     <OrderDetailsModal

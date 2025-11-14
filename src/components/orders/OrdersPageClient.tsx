@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,48 +23,57 @@ function OrdersTabs({
 }: OrdersPageClientProps) {
   const searchParams = useSearchParams();
   const highlightOrderNumber = searchParams.get('highlight');
-  // If highlight param exists, default to live tab, otherwise use tab param or recommended
-  const currentTab = highlightOrderNumber ? 'live' : (searchParams.get('tab') || 'recommended');
+  // Initialize from URL but keep tab client-side to avoid refetch/navigation lag
+  const initialTab = useMemo(() => {
+    return highlightOrderNumber ? 'live' : (searchParams.get('tab') || 'recommended');
+  }, [searchParams, highlightOrderNumber]);
+  const [currentTab, setCurrentTab] = useState<string>(initialTab);
+
+  // Keep URL in sync without triggering a Next.js navigation (no re-fetch)
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', currentTab);
+      window.history.replaceState(window.history.state, '', url.toString());
+    } catch {
+      // noop
+    }
+  }, [currentTab]);
 
   return (
-    <Tabs value={currentTab} className="w-full">
+    <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
       <TabsList className="h-auto p-1 bg-muted">
-        <Link href="/orders?tab=recommended" className="inline-block cursor-pointer">
-          <TabsTrigger value="recommended" className="data-[state=active]:bg-background cursor-pointer">
-            Recommended Orders
-            {containers.length > 0 && (
-              <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
-                {containers.length}
-              </span>
-            )}
-          </TabsTrigger>
-        </Link>
-        <Link href="/orders?tab=live" className="inline-block cursor-pointer">
-          <TabsTrigger value="live" className="data-[state=active]:bg-background cursor-pointer">
-            Live Orders
-            {liveOrders.length > 0 && (
-              <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
-                {liveOrders.length}
-              </span>
-            )}
-          </TabsTrigger>
-        </Link>
-        <Link href="/orders?tab=completed" className="inline-block cursor-pointer">
-          <TabsTrigger value="completed" className="data-[state=active]:bg-background cursor-pointer">
-            Completed Orders
-          </TabsTrigger>
-        </Link>
+        <TabsTrigger value="recommended" className="data-[state=active]:bg-background cursor-pointer">
+          Recommended Orders
+          {containers.length > 0 && (
+            <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+              {containers.length}
+            </span>
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="live" className="data-[state=active]:bg-background cursor-pointer">
+          Live Orders
+          {liveOrders.length > 0 && (
+            <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+              {liveOrders.length}
+            </span>
+          )}
+        </TabsTrigger>
+        <TabsTrigger value="completed" className="data-[state=active]:bg-background cursor-pointer">
+          Completed Orders
+        </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="recommended" className="mt-6">
+      {/* Keep mounted to avoid remount lag when switching */}
+      <TabsContent value="recommended" className="mt-6" forceMount>
         <RecommendedContainers containers={containers} />
       </TabsContent>
 
-      <TabsContent value="live" className="mt-6">
+      <TabsContent value="live" className="mt-6" forceMount>
         <OrdersEnRoute orders={liveOrders} highlightOrderNumber={highlightOrderNumber} />
       </TabsContent>
 
-      <TabsContent value="completed" className="mt-6">
+      <TabsContent value="completed" className="mt-6" forceMount>
         <OrderHistory orders={completedOrders} />
       </TabsContent>
     </Tabs>
