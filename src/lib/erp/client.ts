@@ -44,6 +44,7 @@ export async function fetchErpProducts(): Promise<ErpProduct[]> {
   if (!user?.orgId) throw new Error('Not authenticated');
 
   return unstable_cache(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async (orgId: string) => {
       const token = await getOrgToken();
 
@@ -78,6 +79,7 @@ export async function fetchErpCurrentOrders(): Promise<ErpOrder[]> {
   if (!user?.orgId) throw new Error('Not authenticated');
 
   return unstable_cache(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async (orgId: string) => {
       const token = await getOrgToken();
 
@@ -112,6 +114,7 @@ export async function fetchErpCompletedOrders(): Promise<ErpOrder[]> {
   if (!user?.orgId) throw new Error('Not authenticated');
 
   return unstable_cache(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async (orgId: string) => {
       const token = await getOrgToken();
 
