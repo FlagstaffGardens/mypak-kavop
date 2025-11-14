@@ -10,7 +10,7 @@ import { db } from '@/lib/db';
 import { organizations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-export default async function OrdersPage() {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   // Get current user
   const user = await getCurrentUser();
 
@@ -103,11 +103,21 @@ export default async function OrdersPage() {
     };
   });
 
+  // Resolve initial tab/highlight from URL for correct first paint
+  const sp = await searchParams;
+  const tabParamRaw = sp?.tab;
+  const highlightParamRaw = sp?.highlight;
+  const tabParam = Array.isArray(tabParamRaw) ? tabParamRaw[0] : tabParamRaw;
+  const highlightParam = Array.isArray(highlightParamRaw) ? highlightParamRaw[0] : highlightParamRaw;
+  const initialTab = (highlightParam ? 'live' : (tabParam === 'live' || tabParam === 'completed' ? tabParam : 'recommended')) as 'recommended' | 'live' | 'completed';
+
   return (
     <OrdersPageClient
       containers={containers}
       liveOrders={liveOrders}
       completedOrders={completedOrdersTransformed}
+      initialTab={initialTab}
+      initialHighlight={highlightParam || null}
     />
   );
 }
