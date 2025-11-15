@@ -34,8 +34,9 @@ export async function POST(request: NextRequest) {
       });
     } catch (authError: any) {
       // Check for specific Better Auth errors
-      if (authError?.message?.includes("ORGANIZATION_ALREADY_EXISTS") ||
-          authError?.code === "ORGANIZATION_ALREADY_EXISTS") {
+      // Better Auth throws: message: "Organization already exists", code: "BAD_REQUEST"
+      if (authError?.message === "Organization already exists" ||
+          authError?.message?.includes("Organization already exists")) {
         return NextResponse.json(
           {
             success: false,

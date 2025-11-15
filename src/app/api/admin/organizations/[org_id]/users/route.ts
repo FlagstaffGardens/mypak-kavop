@@ -40,6 +40,7 @@ export async function POST(
     }
 
     // Send invitations via Better Auth
+    const headersList = await headers(); // Hoist headers() call out of loop
     const invitations = await Promise.all(
       emails.map(async (email) => {
         return await auth.api.createInvitation({
@@ -48,7 +49,7 @@ export async function POST(
             organizationId: businessOrg.better_auth_org_id!,
             role,
           },
-          headers: await headers(), // Pass session context for inviter
+          headers: headersList, // Reuse same headers for all invitations
         });
       })
     );

@@ -24,7 +24,7 @@ export default function InviteUsersPage({
     organizationId: string;
     role: string;
     status: string;
-    expiresAt: Date;
+    expiresAt: string; // Better Auth returns ISO string
     inviterId: string;
   }>>([]);
 
