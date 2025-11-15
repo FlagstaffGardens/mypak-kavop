@@ -64,8 +64,8 @@ export async function POST(
           })
           .returning();
 
-        // Send invitation email (use invitation ID as token)
-        const inviteUrl = `${process.env.BETTER_AUTH_URL}/api/auth/organization/accept-invitation?invitationId=${invitationId}`;
+        // Send invitation email (Better Auth client-side acceptance)
+        const inviteUrl = `${process.env.BETTER_AUTH_URL}/accept-invitation?id=${invitationId}`;
 
         try {
           await resend.emails.send({
