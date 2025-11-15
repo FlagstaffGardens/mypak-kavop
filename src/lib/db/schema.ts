@@ -29,6 +29,7 @@ export const session = pgTable("session", {
   ipAddress: text("ipAddress"),
   userAgent: text("userAgent"),
   impersonatedBy: text("impersonatedBy"), // Admin user ID
+  activeOrganizationId: text("activeOrganizationId").references(() => organization.id), // Organization plugin
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
 }, (table) => ({
