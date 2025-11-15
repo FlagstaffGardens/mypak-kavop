@@ -156,91 +156,96 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-0.5 px-2 py-3">
-        {navigation.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              title={isCollapsed ? item.name : undefined}
-              className={cn(
-                'group flex items-center rounded-md px-2 py-1.5 text-base font-medium transition-colors cursor-pointer',
-                isCollapsed ? 'justify-center' : '',
-                item.current
-                  ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50'
-              )}
-            >
-              <Icon
-                className={cn(
-                  'h-4 w-4 flex-shrink-0',
-                  !isCollapsed && 'mr-2',
-                  item.current
-                    ? 'text-gray-900 dark:text-gray-50'
-                    : 'text-gray-500 group-hover:text-gray-900 dark:text-gray-500 dark:group-hover:text-gray-50'
-                )}
-              />
-              <span className={cn(
-                "transition-opacity duration-150 ease-out whitespace-nowrap",
-                isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-              )}>
-                {item.name}
-              </span>
-            </Link>
-          );
-        })}
+        {/* Dashboard and Orders - only show for non-admin users with org access */}
+        {activeOrg && user?.role !== 'admin' && (
+          <>
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  title={isCollapsed ? item.name : undefined}
+                  className={cn(
+                    'group flex items-center rounded-md px-2 py-1.5 text-base font-medium transition-colors cursor-pointer',
+                    isCollapsed ? 'justify-center' : '',
+                    item.current
+                      ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50'
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      'h-4 w-4 flex-shrink-0',
+                      !isCollapsed && 'mr-2',
+                      item.current
+                        ? 'text-gray-900 dark:text-gray-50'
+                        : 'text-gray-500 group-hover:text-gray-900 dark:text-gray-500 dark:group-hover:text-gray-50'
+                    )}
+                  />
+                  <span className={cn(
+                    "transition-opacity duration-150 ease-out whitespace-nowrap",
+                    isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                  )}>
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
 
-        {/* Orders with Sub-navigation */}
-        <div>
-          <div className="flex items-center">
-            <Link
-              href="/orders"
-              title={isCollapsed ? 'Orders' : undefined}
-              className={cn(
-                'group flex flex-1 items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer',
-                isCollapsed ? 'justify-center' : '',
-                pathname.startsWith('/orders')
-                  ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50'
-              )}
-            >
-              <Package
-                className={cn(
-                  'h-4 w-4 flex-shrink-0',
-                  !isCollapsed && 'mr-2',
-                  pathname.startsWith('/orders')
-                    ? 'text-gray-900 dark:text-gray-50'
-                    : 'text-gray-500 group-hover:text-gray-900 dark:text-gray-500 dark:group-hover:text-gray-50'
+            {/* Orders with Sub-navigation */}
+            <div>
+              <div className="flex items-center">
+                <Link
+                  href="/orders"
+                  title={isCollapsed ? 'Orders' : undefined}
+                  className={cn(
+                    'group flex flex-1 items-center rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer',
+                    isCollapsed ? 'justify-center' : '',
+                    pathname.startsWith('/orders')
+                      ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-gray-50'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-50'
+                  )}
+                >
+                  <Package
+                    className={cn(
+                      'h-4 w-4 flex-shrink-0',
+                      !isCollapsed && 'mr-2',
+                      pathname.startsWith('/orders')
+                        ? 'text-gray-900 dark:text-gray-50'
+                        : 'text-gray-500 group-hover:text-gray-900 dark:text-gray-500 dark:group-hover:text-gray-50'
+                    )}
+                  />
+                  <span className={cn(
+                    "flex-1 text-left transition-opacity duration-150 ease-out whitespace-nowrap",
+                    isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                  )}>
+                    Orders
+                  </span>
+                </Link>
+                {!isCollapsed && (
+                  <button
+                    onClick={() => setOrdersExpanded(!ordersExpanded)}
+                    className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                  >
+                    {ordersExpanded ? (
+                      <ChevronUp className="h-3 w-3 flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                    )}
+                  </button>
                 )}
-              />
-              <span className={cn(
-                "flex-1 text-left transition-opacity duration-150 ease-out whitespace-nowrap",
-                isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-              )}>
-                Orders
-              </span>
-            </Link>
-            {!isCollapsed && (
-              <button
-                onClick={() => setOrdersExpanded(!ordersExpanded)}
-                className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-              >
-                {ordersExpanded ? (
-                  <ChevronUp className="h-3 w-3 flex-shrink-0" />
-                ) : (
-                  <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                )}
-              </button>
-            )}
-          </div>
+              </div>
 
-          {/* Sub-navigation */}
-          {ordersExpanded && (
-            <Suspense fallback={null}>
-              <OrdersSubNav isCollapsed={isCollapsed} />
-            </Suspense>
-          )}
-        </div>
+              {/* Sub-navigation */}
+              {ordersExpanded && (
+                <Suspense fallback={null}>
+                  <OrdersSubNav isCollapsed={isCollapsed} />
+                </Suspense>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Admin Link - only show for admin role */}
         {user?.role === 'admin' && (

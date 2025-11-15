@@ -24,7 +24,31 @@ async function getOrganization(orgId: string) {
   return org || null;
 }
 
-async function getOrgMembers(betterAuthOrgId: string) {
+async function getOrgMembers(betterAuthOrgId: string, isPlatformAdmin: boolean) {
+  // Platform admins query database directly to bypass membership checks
+  if (isPlatformAdmin) {
+    const { member, user, organization } = await import("@/lib/db/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const members = await db
+      .select({
+        id: member.id,
+        role: member.role,
+        createdAt: member.createdAt,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      })
+      .from(member)
+      .innerJoin(user, eq(user.id, member.userId))
+      .where(eq(member.organizationId, betterAuthOrgId));
+
+    return members;
+  }
+
+  // Regular users use Better Auth API (enforces membership)
   try {
     const orgData = await auth.api.getFullOrganization({
       query: {
@@ -58,8 +82,9 @@ export default async function OrganizationDetailPage({
     notFound();
   }
 
+  const isPlatformAdmin = user.role === "admin";
   const members = org.better_auth_org_id
-    ? await getOrgMembers(org.better_auth_org_id)
+    ? await getOrgMembers(org.better_auth_org_id, isPlatformAdmin)
     : [];
 
   return (
