@@ -71,14 +71,20 @@ session: {
 
 **Business Tables** (custom):
 - `organizations` - Business orgs (org_id, org_name, better_auth_org_id, kavop_token, created_at)
-- `users` - Legacy user table (user_id, org_id, email, name, password, role)
-  - Note: `password` field deprecated, kept for schema compatibility only
-  - Better Auth handles all authentication, passwords not used
+  - Links to Better Auth via `better_auth_org_id` (NOT NULL)
+  - Contains only ERP integration data (kavop_token, mypak_customer_name)
+  - All user/member management handled by Better Auth
 
 **Schema Mapping:**
-- Better Auth `user.id` → Business `users.user_id`
 - Better Auth `organization.id` → Business `organizations.better_auth_org_id`
-- Better Auth manages auth, business tables manage app data
+- Better Auth manages all authentication and organization membership
+- Business tables manage only ERP integration data
+
+**Migration Note (2025-11-15):**
+- Migrated from dual-table architecture to Better Auth-only
+- Removed legacy `users` table (previously held passwords, deprecated fields)
+- Better Auth is now the single source of truth for all user data
+- Organizations created via Better Auth, then linked to business table for ERP data
 
 ### Email Templates
 
@@ -110,11 +116,28 @@ session: {
 **Email Delivery:** Resend API for reliable transactional emails
 **Security:** Hashed tokens, httpOnly cookies, 60-day session expiry
 
-### Testing
+### User Management
 
-**Admin User:** Platform admin with `role="admin"` in Better Auth `user` table
-**Org Users:** Regular users with organization membership
-**Test Flow:** Sign in with email → Enter 6-digit code → Dashboard
+**Admin Creation:**
+- Run `npm run tsx scripts/create-admin.ts` to create platform admin
+- Creates user in Better Auth `user` table with `role="admin"`
+- Admin can create organizations and invite users
+
+**Organization Creation:**
+- Platform admin creates Better Auth organization
+- Business org automatically linked via `better_auth_org_id`
+- Admin becomes organization owner
+
+**User Invitations:**
+- Send invitations via Better Auth invitation system
+- Users receive invitation email with accept link
+- Upon acceptance, users become organization members
+- No passwords required - passwordless OTP authentication
+
+**Testing:**
+- Admin user: Sign in with admin@mypak.com using Email OTP
+- Org users: Accept invitation, sign in with Email OTP
+- Test flow: Email → 6-digit code → Dashboard access
 
 ## Architecture
 
