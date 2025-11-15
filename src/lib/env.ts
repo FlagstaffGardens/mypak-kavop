@@ -7,6 +7,7 @@ const requiredEnvVars = [
   "DATABASE_URL",
   "BETTER_AUTH_SECRET",
   "RESEND_API_KEY", // Required for passwordless auth (Magic Link + Email OTP)
+  "KAVOP_API_AUTH_KEY", // Required for fetching customer tokens from Kavop API
 ] as const;
 
 export function validateEnv() {

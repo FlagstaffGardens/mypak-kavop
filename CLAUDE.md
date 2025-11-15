@@ -18,6 +18,16 @@ npm start            # Run production build
 npm run lint         # Run ESLint
 ```
 
+## Environment Setup
+
+**Required Environment Variables:**
+- `DATABASE_URL` - PostgreSQL connection string
+- `BETTER_AUTH_SECRET` - Secret key for Better Auth (min 32 chars)
+- `RESEND_API_KEY` - Resend API key for transactional emails
+- `KAVOP_API_AUTH_KEY` - Authorization key for Kavop customer token API (UUID format)
+
+Copy `.env.example` to `.env.local` and fill in values. See `.env.example` for complete list.
+
 ## Authentication
 
 **System:** Better Auth v1.3.34 (Passwordless, Multi-Tenant)

@@ -29,7 +29,18 @@ export async function fetchKavopToken(
       customerName
     )}`;
 
-    const response = await fetch(url);
+    // Auth key for Kavop API - required for all customer token requests
+    const authKey = process.env.KAVOP_API_AUTH_KEY;
+    if (!authKey) {
+      throw new Error("KAVOP_API_AUTH_KEY environment variable is not set");
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: authKey,
+      },
+    });
+
     const data: KavopTokenResponse = await response.json();
 
     if (data.success && data.response) {

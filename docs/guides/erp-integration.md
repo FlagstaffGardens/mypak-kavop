@@ -135,8 +135,62 @@ http://www.mypak.cn:8088/api/kavop
 | `/order/current` | GET | Fetch IN_TRANSIT + APPROVED orders | ✅ In use |
 | `/order/complete` | GET | Fetch order history | ✅ In use |
 | `/order/create` | POST | Create new orders | 📝 Ready, not used |
+| `/customer/token` | GET | Fetch customer JWT token | ✅ In use (admin only) |
 
 **Complete API documentation:** [docs/backend-planning/ERP-API-ENDPOINTS.md](../backend-planning/ERP-API-ENDPOINTS.md)
+
+### Customer Token API
+
+**Endpoint:** `GET /customer/token`
+
+This endpoint is used by platform admins to fetch JWT tokens for customers when creating new organizations.
+
+**Request:**
+```http
+GET /api/kavop/customer/token?customerName=Aginbrook HTTP/1.1
+Host: www.mypak.cn:8088
+Authorization: e13923a8-3602-30b8-3340-554ec3803bca
+```
+
+**Response (Success):**
+```json
+{
+  "status": 200,
+  "message": "OK",
+  "success": true,
+  "redirect": null,
+  "error": null,
+  "response": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhdXRoMCIsImN1c3RvbWVySWQiOjEwMDAwNDIsImV4cCI6MTc2NTQzMjc4MH0.45wMUIaVZinmseT3qU2EJi44x4ISOiD9yROC-LaeX3s"
+}
+```
+
+**Response (Error):**
+```json
+{
+  "status": 400,
+  "message": "error",
+  "success": false,
+  "redirect": null,
+  "error": "Invalid customer name",
+  "response": null
+}
+```
+
+**Environment Variable Required:**
+- `KAVOP_API_AUTH_KEY` - Authorization key for Kavop API (UUID format)
+
+**Usage in App:**
+```typescript
+// src/lib/api/kavop.ts
+import { fetchKavopToken } from '@/lib/api/kavop';
+
+const result = await fetchKavopToken('Aginbrook');
+if (result.success) {
+  console.log('Token:', result.token);
+} else {
+  console.error('Error:', result.error);
+}
+```
 
 ### Authentication
 
