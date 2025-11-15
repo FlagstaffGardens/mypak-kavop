@@ -22,12 +22,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = createOrgSchema.parse(body);
 
+    // Step 1: Create Better Auth organization
+    const betterAuthOrg = await auth.api.createOrganization({
+      body: {
+        name: data.org_name,
+        slug: data.org_name.toLowerCase().replace(/\s+/g, "-"),
+      },
+      user: user, // Platform admin creates the org
+    });
+
+    // Step 2: Create business organization (ERP integration data)
     const [org] = await db
       .insert(organizations)
       .values({
         org_name: data.org_name,
         mypak_customer_name: data.mypak_customer_name,
         kavop_token: data.kavop_token,
+        better_auth_org_id: betterAuthOrg.id, // Link to Better Auth org
       })
       .returning();
 
@@ -43,6 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.error("Create organization error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to create organization" },
       { status: 500 }
