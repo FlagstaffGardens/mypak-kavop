@@ -1,26 +1,37 @@
-import { fetchErpCurrentOrders, fetchErpCompletedOrders, fetchErpProducts } from '@/lib/erp/client';
+import { getCachedErpCurrentOrders, getCachedErpCompletedOrders, getCachedErpProducts } from '@/lib/erp/client';
 import { transformErpOrder } from '@/lib/erp/transforms';
 import { getRecommendations } from '@/lib/services/recommendations';
 import { getInventoryData } from '@/lib/services/inventory';
-import { getCurrentUser } from '@/lib/auth/jwt';
 import { OrdersPageClient } from '@/components/orders/OrdersPageClient';
 import type { Order, ContainerRecommendation } from '@/lib/types';
 import { redirect } from 'next/navigation';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { getCurrentOrgId } from "@/lib/utils/get-org";
 
-export default async function OrdersPage() {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   // Get current user
-  const user = await getCurrentUser();
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  const orgId = await getCurrentOrgId();
 
-  if (!user || !user.orgId) {
+  if (!user || !orgId) {
     redirect('/sign-in');
   }
 
   // Fetch data from ERP API and database
+  // Fetch org row for versioning
+  const [org] = await db.select().from(organizations).where(eq(organizations.org_id, orgId)).limit(1);
+  const version = (org?.last_inventory_update?.toISOString?.() ?? '0') as string;
+
   const [currentOrders, completedOrders, erpProducts, inventoryData] = await Promise.all([
-    fetchErpCurrentOrders(),
-    fetchErpCompletedOrders(),
-    fetchErpProducts(),
-    getInventoryData(user.orgId),
+    getCachedErpCurrentOrders(orgId, version),
+    getCachedErpCompletedOrders(orgId, version),
+    getCachedErpProducts(orgId, version),
+    getInventoryData(orgId),
   ]);
 
   // Create SKU to product info lookup map
@@ -35,7 +46,7 @@ export default async function OrdersPage() {
       const productInfo = product.sku ? skuToProductInfo.get(product.sku) : undefined;
       return {
         ...product,
-        piecesPerPallet: productInfo?.piecesPerPallet,
+        piecesPerPallet: productInfo?.piecesPerPallet || 5000, // Default if product info not found
         imageUrl: productInfo?.imageUrl || undefined,
       };
     }),
@@ -46,25 +57,31 @@ export default async function OrdersPage() {
   const completedOrdersTransformed = completedOrders.map(transformErpOrder).map(enrichOrder);
 
   // Fetch recommendations from database
-  const dbRecommendations = await getRecommendations(user.orgId);
+  const dbRecommendations = await getRecommendations(orgId);
 
   // Create inventory map for product data lookups
   const inventoryMap = new Map(
     inventoryData.map(inv => [inv.sku, inv])
   );
 
-  // Transform recommendations to UI format
-  const containers: ContainerRecommendation[] = dbRecommendations.map((rec, index) => {
-    const productInfoMap = new Map(
-      erpProducts.map(p => [p.sku, { piecesPerPallet: p.piecesPerPallet, imageUrl: p.imageUrl }])
-    );
+  // Create product info map ONCE before the loop
+  const productInfoMap = new Map(
+    erpProducts.map(p => [p.sku, {
+      piecesPerPallet: p.piecesPerPallet,
+      volumePerCarton: p.volumePerPallet / p.piecesPerPallet,
+      imageUrl: p.imageUrl
+    }])
+  );
 
+  // Transform recommendations to UI format
+  const containers: ContainerRecommendation[] = dbRecommendations.map((rec) => {
     return {
-      id: index + 1,
+      id: rec.containerNumber, // Use container number as ID (stable and meaningful)
       containerNumber: rec.containerNumber,
       orderByDate: rec.orderByDate.toISOString().split('T')[0],
       deliveryDate: rec.deliveryDate.toISOString().split('T')[0],
       totalCartons: rec.totalCartons,
+      totalVolume: rec.totalVolume, // Total volume from algorithm (already a number)
       productCount: rec.products.length,
       urgency: rec.urgency === 'URGENT' || rec.urgency === 'OVERDUE' ? 'URGENT' : null,
       products: rec.products.map(p => {
@@ -82,18 +99,29 @@ export default async function OrdersPage() {
             ? ((inventory.current_stock || 0) + p.quantity) / inventory.weekly_consumption
             : 999,
           runsOutDate: '',
-          piecesPerPallet: productInfo?.piecesPerPallet,
+          piecesPerPallet: p.piecesPerPallet, // From algorithm output (always present)
+          volumePerCarton: productInfo?.volumePerCarton, // Add volume per carton
           imageUrl: productInfo?.imageUrl || undefined,
         };
       }),
     };
   });
 
+  // Resolve initial tab/highlight from URL for correct first paint
+  const sp = await searchParams;
+  const tabParamRaw = sp?.tab;
+  const highlightParamRaw = sp?.highlight;
+  const tabParam = Array.isArray(tabParamRaw) ? tabParamRaw[0] : tabParamRaw;
+  const highlightParam = Array.isArray(highlightParamRaw) ? highlightParamRaw[0] : highlightParamRaw;
+  const initialTab = (highlightParam ? 'live' : (tabParam === 'live' || tabParam === 'completed' ? tabParam : 'recommended')) as 'recommended' | 'live' | 'completed';
+
   return (
     <OrdersPageClient
       containers={containers}
       liveOrders={liveOrders}
       completedOrders={completedOrdersTransformed}
+      initialTab={initialTab}
+      initialHighlight={highlightParam || null}
     />
   );
 }

@@ -30,6 +30,7 @@ export const mockLiveOrders: Order[] = [
         afterDeliveryStock: 90000,
         weeksSupply: 5.0,
         runsOutDate: format(addDays(today, 35), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 6,
@@ -40,6 +41,7 @@ export const mockLiveOrders: Order[] = [
         afterDeliveryStock: 40000,
         weeksSupply: 1.8,
         runsOutDate: format(addDays(today, 12), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },
@@ -66,6 +68,7 @@ export const mockLiveOrders: Order[] = [
         afterDeliveryStock: 235000,
         weeksSupply: 6.7,
         runsOutDate: format(addDays(today, 47), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 8,
@@ -76,6 +79,7 @@ export const mockLiveOrders: Order[] = [
         afterDeliveryStock: 180000,
         weeksSupply: 7.2,
         runsOutDate: format(addDays(today, 50), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 11,
@@ -86,6 +90,7 @@ export const mockLiveOrders: Order[] = [
         afterDeliveryStock: 273000,
         weeksSupply: 6.4,
         runsOutDate: format(addDays(today, 45), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },
@@ -111,6 +116,7 @@ export const mockLiveOrders: Order[] = [
         afterDeliveryStock: 416024,
         weeksSupply: 23.1,
         runsOutDate: format(addDays(today, 162), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 12,
@@ -121,6 +127,7 @@ export const mockLiveOrders: Order[] = [
         afterDeliveryStock: 303420,
         weeksSupply: 12.9,
         runsOutDate: format(addDays(today, 90), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },
@@ -146,6 +153,7 @@ export const mockLiveOrders: Order[] = [
         afterDeliveryStock: 225054,
         weeksSupply: 12.5,
         runsOutDate: format(addDays(today, 88), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },

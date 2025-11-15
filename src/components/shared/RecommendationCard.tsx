@@ -14,8 +14,11 @@ export function RecommendationCard({ type }: RecommendationCardProps) {
   if (type === 'healthy') {
     const nextContainer = mockContainers.find(c => c.urgency !== 'URGENT') || mockContainers[1];
 
-    // Calculate pallets (assuming 1000 cartons per pallet for now)
-    const pallets = Math.round(nextContainer.totalCartons / 1000);
+    // Calculate total pallets by summing each product's pallets (products have different piecesPerPallet values)
+    const totalPallets = nextContainer.products.reduce((sum, product) =>
+      sum + (product.recommendedQuantity / product.piecesPerPallet), 0
+    );
+    const pallets = Math.round(totalPallets);
 
     return (
       <div className="mb-8 bg-card border-l-4 border-l-green-500 border-y border-r border-border rounded-r overflow-hidden shadow-sm">

@@ -6,6 +6,7 @@
 const requiredEnvVars = [
   "DATABASE_URL",
   "BETTER_AUTH_SECRET",
+  "RESEND_API_KEY", // Required for passwordless auth (Magic Link + Email OTP)
 ] as const;
 
 export function validateEnv() {

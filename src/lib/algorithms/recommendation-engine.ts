@@ -7,7 +7,7 @@
  * 1. Simulate product consumption week-by-week for 52 weeks
  * 2. Cluster order events within 7-day windows
  * 3. Pack clusters with round-robin distribution (delay resilience)
- * 4. Fill containers to exactly 76 m³
+ * 4. Fill containers to exactly CONTAINER_CAPACITY (75.98 m³ for 40HC)
  *
  * @see docs/plans/2025-11-13-final-recommendation-algorithm.md
  */
@@ -33,6 +33,7 @@ export interface OrderEvent {
   quantity: number; // cartons
   volume: number; // m³
   weeklyConsumption: number; // for filler calculation
+  piecesPerPallet: number; // for UI pallet calculations
 }
 
 export interface OrderCluster {
@@ -46,6 +47,7 @@ export interface AlgorithmContainerProduct {
   productName: string;
   quantity: number; // cartons
   volume: number; // m³
+  piecesPerPallet: number; // for UI pallet calculations
 }
 
 export interface AlgorithmContainer {
@@ -149,6 +151,12 @@ function simulateProductOrders(
     return events;
   }
 
+  // Skip products with invalid piecesPerPallet
+  if (!product.piecesPerPallet || product.piecesPerPallet <= 0) {
+    console.warn(`[Algorithm] Skipping product ${product.sku}: invalid piecesPerPallet (${product.piecesPerPallet})`);
+    return events;
+  }
+
   // Calculate safety threshold per product
   const safetyThreshold = product.targetSOH + SHIPPING_LEAD_TIME_WEEKS;
 
@@ -172,6 +180,7 @@ function simulateProductOrders(
         quantity,
         volume,
         weeklyConsumption: product.weeklyConsumption,
+        piecesPerPallet: product.piecesPerPallet,
       });
 
       // Jump to delivery week and add coverage
@@ -266,6 +275,7 @@ function packCluster(cluster: OrderCluster): AlgorithmContainer[] {
         productName: event.productName,
         quantity: Math.round(portionQuantity),
         volume: portionVolume,
+        piecesPerPallet: event.piecesPerPallet,
       });
 
       container.totalVolume += portionVolume;
@@ -288,29 +298,30 @@ function fillToCapacity(container: AlgorithmContainer, products: Product[]): Alg
   if (remainingSpace <= 0.01) return container; // Already full (within tolerance)
 
   // Find highest consumption product in this container
-  const containerProducts = container.products.map(cp => {
+  const containerProductsWithMeta = container.products.map(cp => {
     const product = products.find(p => p.id === cp.productId);
     return {
-      ...cp,
+      containerProduct: cp,
       weeklyConsumption: product?.weeklyConsumption || 0,
       product,
     };
   });
 
-  const fillerProduct = containerProducts.sort(
+  const fillerMeta = containerProductsWithMeta.sort(
     (a, b) => b.weeklyConsumption - a.weeklyConsumption
   )[0];
 
-  if (!fillerProduct.product) return container;
+  if (!fillerMeta.product) return container;
 
-  // Add more of this product to fill exactly to 76 m³
-  fillerProduct.volume += remainingSpace;
-  fillerProduct.quantity += calculateQuantityFromVolume(
+  // Add more of this product to fill exactly to CONTAINER_CAPACITY
+  // Modify the actual container product (not a copy)
+  fillerMeta.containerProduct.volume += remainingSpace;
+  fillerMeta.containerProduct.quantity += calculateQuantityFromVolume(
     remainingSpace,
-    fillerProduct.product
+    fillerMeta.product
   );
 
-  container.totalVolume = CONTAINER_CAPACITY; // Exactly 76 m³
+  container.totalVolume = CONTAINER_CAPACITY; // Fill to full capacity (75.98 m³)
 
   return container;
 }

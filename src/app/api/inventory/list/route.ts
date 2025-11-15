@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/jwt';
-import { fetchErpProducts } from '@/lib/erp/client';
+import { getCachedErpProducts } from '@/lib/erp/client';
 import { getInventoryData } from '@/lib/services/inventory';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { auth } from "@/lib/auth";
+import { getCurrentOrgId } from "@/lib/utils/get-org";
+import { headers } from "next/headers";
 
 /**
  * GET /api/inventory/list
@@ -11,20 +16,24 @@ import { getInventoryData } from '@/lib/services/inventory';
 export async function GET() {
   try {
     // Get current user
-    const user = await getCurrentUser();
+    const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
 
-    if (!user || !user.orgId) {
+    const orgId = await getCurrentOrgId();
+  if (!user || !orgId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    // Fetch ERP products
-    const erpProducts = await fetchErpProducts();
+    // Fetch version (last update) and ERP products (cached per org + version)
+    const [org] = await db.select().from(organizations).where(eq(organizations.org_id, orgId)).limit(1);
+    const version = (org?.last_inventory_update?.toISOString?.() ?? '0') as string;
+    const erpProducts = await getCachedErpProducts(orgId, version);
 
     // Fetch stored inventory data
-    const inventoryRows = await getInventoryData(user.orgId);
+    const inventoryRows = await getInventoryData(orgId);
 
     // Map by SKU for easy lookup
     const inventoryMap: Record<string, {

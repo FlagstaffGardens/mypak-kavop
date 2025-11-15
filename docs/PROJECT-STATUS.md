@@ -1,24 +1,26 @@
-# MyPak Connect - Project Status Dashboard
+# MyPak - Kavop: Project Status Dashboard
 
-**Last Updated:** November 12, 2024  
-**Version:** 1.0  
-**Phase:** Production with Live ERP Integration
+**Last Updated:** January 15, 2025
+**Version:** 2.0
+**Phase:** Production with Better Auth & Live ERP Integration
 
 ---
 
 ## Executive Summary
 
-MyPak Connect is **in production** with live ERP integration for product and order data. Core features are complete and operational. Phase 2 work (inventory tracking, recommendation algorithm) is in planning.
+MyPak - Kavop is **in production** with Better Auth passwordless authentication and live ERP integration. Core features complete including Email OTP authentication, multi-tenant organizations, admin impersonation, and real-time product/order data from Kavop API.
 
 ### Quick Status
 
 | Category | Status | Notes |
 |----------|--------|-------|
-| **ERP Integration** | ✅ Production | Products, orders fetched from live API |
-| **Authentication** | ✅ Production | JWT-based multi-tenant system |
+| **Authentication** | ✅ Production | Better Auth Email OTP passwordless |
+| **Multi-Tenancy** | ✅ Production | Organization memberships with roles |
+| **Admin Features** | ✅ Production | Impersonation, org management |
+| **ERP Integration** | ✅ Production | Products, orders fetched from Kavop API |
 | **Dashboard** | ✅ Production | Live product data with Server Components |
 | **Orders Page** | ✅ Production | Live order data (current + completed) |
-| **Database** | ✅ Production | PostgreSQL with multi-tenant schema |
+| **Database** | ✅ Production | PostgreSQL + Better Auth tables |
 | **Inventory Tracking** | 🚧 Temporary Mock | Using placeholder data |
 | **Recommendations** | 🚧 Temporary Mock | Using placeholder algorithm |
 | **Order Submission** | 📝 Planned | POST /order/create endpoint ready |
@@ -38,22 +40,25 @@ MyPak Connect is **in production** with live ERP integration for product and ord
 - ✅ Responsive design
 
 #### Authentication System
-- ✅ Custom JWT implementation (jose library)
-- ✅ httpOnly secure cookies
-- ✅ `/api/auth/sign-in` endpoint
-- ✅ `/api/auth/sign-out` endpoint
-- ✅ `/api/auth/me` endpoint (includes orgName)
-- ✅ Client hook: `useAuth.ts`
-- ✅ JWT verification in Server Components
-- ✅ Multi-tenant architecture
+- ✅ Better Auth v1.3.34 passwordless authentication
+- ✅ Email OTP (6-digit codes, 5-minute expiry)
+- ✅ Resend email integration
+- ✅ httpOnly secure cookies (`better-auth.session_token`)
+- ✅ Session management (60 days expiry, 7-day auto-renewal)
+- ✅ Multi-tenant organizations with member roles
+- ✅ Platform admin vs org owner authorization
+- ✅ Admin impersonation (1-hour sessions)
+- ✅ Organization invitations via email
 
-**Docs:** [backend-planning/AUTHENTICATION.md](backend-planning/AUTHENTICATION.md)
+**Docs:** [CLAUDE.md](../CLAUDE.md#authentication), [backend-planning/DATABASE-MODELS.md](backend-planning/DATABASE-MODELS.md)
 
 #### Database
 - ✅ PostgreSQL with Drizzle ORM
-- ✅ Multi-tenant schema (organizations + users)
+- ✅ Better Auth tables (user, session, verification, organization, member, invitation)
+- ✅ Business tables (organizations, users, product_data, orders, order_items)
+- ✅ Multi-tenant schema with org isolation
 - ✅ Organizations table with `kavop_token` for ERP
-- ✅ Users table with role-based access
+- ✅ Legacy users table (password field deprecated)
 - ✅ Database migrations setup
 
 **Docs:** [backend-planning/DATABASE-MODELS.md](backend-planning/DATABASE-MODELS.md)
@@ -231,11 +236,10 @@ MyPak Connect is **in production** with live ERP integration for product and ord
 
 ### ✅ Complete & Accurate
 
-- ✅ [CLAUDE.md](../CLAUDE.md) - AI assistant guidance (most accurate)
+- ✅ [CLAUDE.md](../CLAUDE.md) - AI assistant guidance with Better Auth section
 - ✅ [README.md](../README.md) - Project overview
 - ✅ [backend-planning/ERP-API-ENDPOINTS.md](backend-planning/ERP-API-ENDPOINTS.md) - Complete API reference
-- ✅ [backend-planning/AUTHENTICATION.md](backend-planning/AUTHENTICATION.md) - Auth system design
-- ✅ [backend-planning/DATABASE-MODELS.md](backend-planning/DATABASE-MODELS.md) - Database schema
+- ✅ [backend-planning/DATABASE-MODELS.md](backend-planning/DATABASE-MODELS.md) - Database schema with Better Auth tables
 - ✅ [backend-planning/ALGORITHM-COMPARISON.md](backend-planning/ALGORITHM-COMPARISON.md) - Algorithm analysis
 - ✅ [backend-planning/RECOMMENDATION-ALGORITHM.md](backend-planning/RECOMMENDATION-ALGORITHM.md) - Algorithm spec
 - ✅ [design/component-system.md](design/component-system.md) - Component architecture
@@ -249,6 +253,8 @@ MyPak Connect is **in production** with live ERP integration for product and ord
 
 ### ♻️ Archived
 
+- ♻️ [AUTHENTICATION-JWT-OLD.md](backend-planning/archive/AUTHENTICATION-JWT-OLD.md) - Replaced by Better Auth
+- ♻️ [2025-11-14-better-auth-clean-slate.md](plans/archive/2025-11-14-better-auth-clean-slate.md) - Implementation completed
 - ♻️ [state-management.md](../archive/guides-dev-mode/state-management-OBSOLETE.md) - Dev mode feature removed
 - ♻️ [walkthrough.md](../archive/guides-dev-mode/walkthrough-dev-mode-OBSOLETE.md) - Outdated dev mode guide
 - ♻️ [repo-status.md](../archive/docs-old-phases/repo-status-nov2024-OBSOLETE.md) - Historical snapshot
@@ -388,4 +394,4 @@ Before production deployment:
 
 **This is a living document. Update after major milestones or architectural decisions.**
 
-Last Updated: November 12, 2024
+Last Updated: January 15, 2025

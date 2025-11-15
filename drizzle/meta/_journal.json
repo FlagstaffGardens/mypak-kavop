@@ -36,6 +36,34 @@
       "when": 1763006539907,
       "tag": "0004_lucky_molecule_man",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1763029843508,
+      "tag": "0005_safe_deadpool",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1763091197434,
+      "tag": "0006_damp_taskmaster",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1763113928301,
+      "tag": "0007_even_eddie_brock",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1763175814850,
+      "tag": "0008_remove_legacy_users_table",
+      "breakpoints": true
     }
   ]
 }

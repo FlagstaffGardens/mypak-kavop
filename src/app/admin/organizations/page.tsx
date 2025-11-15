@@ -2,52 +2,58 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { OrganizationCard } from "@/components/admin/OrganizationCard";
-import { getCurrentUser } from "@/lib/auth/jwt";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { organizations, users } from "@/lib/db/schema";
+import { organizations, member, user } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-async function getOrganizationsWithUsers() {
-  // Fetch directly from database with optimized query
+async function getOrganizationsWithMembers() {
+  // Fetch all business organizations
   const orgs = await db.select().from(organizations);
 
   if (orgs.length === 0) {
     return [];
   }
 
-  // Fetch all users for all orgs in one query
-  const allUsers = await db
-    .select()
-    .from(users)
-    .where(
-      eq(users.role, "org_user") // Only fetch org users, not admins
-    );
+  // Fetch all members with their user data for all Better Auth orgs in one query
+  const allMembers = await db
+    .select({
+      organizationId: member.organizationId,
+      userId: member.userId,
+      role: member.role,
+      email: user.email,
+      name: user.name,
+      createdAt: member.createdAt,
+    })
+    .from(member)
+    .innerJoin(user, eq(member.userId, user.id));
 
-  // Group users by org_id
-  const usersByOrg = allUsers.reduce((acc, user) => {
-    if (!user.org_id) return acc;
-    if (!acc[user.org_id]) {
-      acc[user.org_id] = [];
+  // Group members by Better Auth org ID
+  const membersByOrgId = allMembers.reduce((acc, mbr) => {
+    if (!acc[mbr.organizationId]) {
+      acc[mbr.organizationId] = [];
     }
-    acc[user.org_id].push(user);
+    acc[mbr.organizationId].push(mbr);
     return acc;
-  }, {} as Record<string, typeof allUsers>);
+  }, {} as Record<string, typeof allMembers>);
 
-  // Combine orgs with their users
+  // Combine business orgs with their Better Auth members
   return orgs.map((org) => ({
     ...org,
-    users: usersByOrg[org.org_id] || [],
+    members: org.better_auth_org_id ? (membersByOrgId[org.better_auth_org_id] || []) : [],
   }));
 }
 
 export default async function OrganizationsPage() {
   // Check authentication
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     redirect("/sign-in");
   }
 
-  const organizations = await getOrganizationsWithUsers();
+  const organizations = await getOrganizationsWithMembers();
 
   return (
     <div>
@@ -59,12 +65,12 @@ export default async function OrganizationsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {organizations.map((org: any) => (
+        {organizations.map((org) => (
           <OrganizationCard
             key={org.org_id}
             organization={org}
-            userCount={org.users.length}
-            userEmails={org.users.map((u: any) => u.email)}
+            userCount={org.members.length}
+            userEmails={org.members.map((m) => m.email)}
           />
         ))}
       </div>

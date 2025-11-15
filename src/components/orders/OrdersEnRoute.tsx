@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Ship, Package, Factory } from 'lucide-react';
 import { OrderDetailsModal } from './OrderDetailsModal';
@@ -8,13 +8,45 @@ import type { Order } from '@/lib/types';
 
 interface OrdersEnRouteProps {
   orders: Order[];
+  highlightOrderNumber?: string | null;
 }
 
-export function OrdersEnRoute({ orders }: OrdersEnRouteProps) {
+export function OrdersEnRoute({ orders, highlightOrderNumber }: OrdersEnRouteProps) {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const orderRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const INITIAL_COUNT = 20;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
+
+  // Handle highlighting and auto-opening modal
+  useEffect(() => {
+    if (highlightOrderNumber) {
+      const inTransitOrders = orders.filter(order => order.type === 'IN_TRANSIT');
+      const index = inTransitOrders.findIndex(
+        order => order.orderNumber === highlightOrderNumber
+      );
+      if (index >= 0) {
+        // Ensure highlighted item is visible
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setVisibleCount((count) => Math.max(count, index + 1));
+        const orderToHighlight = inTransitOrders[index];
+        // Open the modal
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedOrder(orderToHighlight);
+
+        // Scroll to the order on next animation frame (faster than setTimeout)
+        requestAnimationFrame(() => {
+          const orderElement = orderRefs.current.get(highlightOrderNumber);
+          if (orderElement) {
+            orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      }
+    }
+  }, [highlightOrderNumber, orders]);
 
   // Get only in-transit orders (includes both APPROVED and IN_TRANSIT from ERP)
   const inTransitOrders = orders.filter(order => order.type === 'IN_TRANSIT');
+  const visibleOrders = inTransitOrders.slice(0, visibleCount);
 
   // Status icon mapping
   const getStatusIcon = (status: string) => {
@@ -63,9 +95,16 @@ export function OrdersEnRoute({ orders }: OrdersEnRouteProps) {
   return (
     <>
     <div className="space-y-4">
-        {inTransitOrders.map((order) => (
+        {visibleOrders.map((order) => (
           <div
             key={order.id}
+            ref={(el) => {
+              if (el) {
+                orderRefs.current.set(order.orderNumber, el);
+              } else {
+                orderRefs.current.delete(order.orderNumber);
+              }
+            }}
             className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded overflow-hidden hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md transition-all"
           >
             <div className="px-6 py-5">
@@ -136,6 +175,13 @@ export function OrdersEnRoute({ orders }: OrdersEnRouteProps) {
             </div>
           </div>
         ))}
+        {visibleCount < inTransitOrders.length && (
+          <div className="flex justify-center mt-4">
+            <Button variant="outline" onClick={() => setVisibleCount((c) => c + INITIAL_COUNT)}>
+              Show more ({inTransitOrders.length - visibleCount} more)
+            </Button>
+          </div>
+        )}
     </div>
 
     <OrderDetailsModal

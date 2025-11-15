@@ -19,7 +19,7 @@ interface OrderConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-  containerNumber: number;
+  containerNumber: number | null;
   products: OrderProduct[];
   totalCartons: number;
   totalPallets: number;
@@ -58,9 +58,11 @@ export function OrderConfirmationModal({
 
         <div className="space-y-4 py-4">
           {/* Container Info */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-2">Container {containerNumber}</h3>
-          </div>
+          {containerNumber && (
+            <div>
+              <h3 className="font-semibold text-foreground mb-2">Container {containerNumber}</h3>
+            </div>
+          )}
 
           {/* Products */}
           <div>
@@ -68,7 +70,7 @@ export function OrderConfirmationModal({
             <ul className="space-y-1.5 text-sm">
               {products.map((product, index) => (
                 <li key={index} className="text-muted-foreground">
-                  • {product.name}: <span className="font-medium text-foreground">{product.quantity.toLocaleString()} cartons</span> ({product.pallets} pallets)
+                  • {product.name}: <span className="font-medium text-foreground">{product.quantity.toLocaleString()} cartons</span> ({product.pallets.toFixed(1)} pallets)
                 </li>
               ))}
             </ul>
@@ -77,7 +79,7 @@ export function OrderConfirmationModal({
           {/* Total */}
           <div className="pt-2 border-t">
             <p className="text-base font-semibold text-foreground">
-              Total: {totalCartons.toLocaleString()} cartons ({totalPallets} pallets)
+              Total: {totalCartons.toLocaleString()} cartons ({totalPallets.toFixed(1)} pallets)
             </p>
           </div>
 

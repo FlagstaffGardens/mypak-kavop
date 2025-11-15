@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Edit3, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/shared/ProductCard';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { InventoryEditTable } from '@/components/shared/InventoryEditTable';
+import { toast } from 'sonner';
 import type { Product, ContainerRecommendation, Order } from '@/lib/types';
 
 interface DashboardClientProps {
@@ -43,11 +45,11 @@ export function DashboardClient({
   isFirstVisit,
   newProductCount,
 }: DashboardClientProps) {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [showEditTable, setShowEditTable] = useState(isFirstVisit); // Auto-show on first visit
   const [lastUpdatedTime, setLastUpdatedTime] = useState<Date | null>(lastUpdated);
   const [showNewProductsBanner, setShowNewProductsBanner] = useState(newProductCount > 0 && !isFirstVisit);
-  const [isReloading, setIsReloading] = useState(false);
 
   // Sync modal state with isFirstVisit prop
   useEffect(() => {
@@ -55,24 +57,45 @@ export function DashboardClient({
   }, [isFirstVisit]);
 
   // Calculate worst product
-  const worstProduct = products.length > 0
-    ? products.reduce((worst, product) =>
-        product.weeksRemaining < worst.weeksRemaining ? product : worst
-      )
-    : null;
+  const worstProduct = useMemo(() => {
+    return products.length > 0
+      ? products.reduce((worst, product) =>
+          product.weeksRemaining < worst.weeksRemaining ? product : worst
+        )
+      : null;
+  }, [products]);
 
   // Group products by status
-  const criticalProducts = products.filter(p => p.status === 'CRITICAL');
-  const orderNowProducts = products.filter(p => p.status === 'ORDER_NOW');
-  const healthyProducts = products.filter(p => p.status === 'HEALTHY');
+  const criticalProducts = useMemo(
+    () => products.filter(p => p.status === 'CRITICAL'),
+    [products]
+  );
 
-  // Handle inventory data save - reload page to get fresh data
+  const orderNowProducts = useMemo(
+    () => products.filter(p => p.status === 'ORDER_NOW'),
+    [products]
+  );
+
+  const healthyProducts = useMemo(
+    () => products.filter(p => p.status === 'HEALTHY'),
+    [products]
+  );
+
+  // Handle inventory data save - refresh to get fresh data from server
   const handleSaveInventory = () => {
-    setIsReloading(true);
-    // Give a brief moment for the state to update before reload
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+    // Close the modal
+    setShowEditTable(false);
+
+    // Show success toast
+    toast.success('Inventory updated successfully', {
+      description: 'Container recommendations have been recalculated.',
+    });
+
+    // Refresh server data (no full page reload!)
+    router.refresh();
+
+    // Update timestamp
+    setLastUpdatedTime(new Date());
   };
 
   // Format last updated timestamp
@@ -101,16 +124,6 @@ export function DashboardClient({
 
   return (
     <div className="space-y-8 relative">
-      {/* Reloading Overlay */}
-      {isReloading && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-card border border-border rounded-lg p-6 flex flex-col items-center gap-3">
-            <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-medium">Reloading dashboard...</p>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>

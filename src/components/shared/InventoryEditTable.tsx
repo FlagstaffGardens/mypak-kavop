@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { EditableNumberCell } from './EditableNumberCell';
-import { validateCurrentStock, validateWeeklyConsumption } from '@/lib/validation';
+import { validateCurrentStock, validateWeeklyConsumption, validateTargetSOH } from '@/lib/validation';
 import { calculateStockoutDate, calculateTargetStock } from '@/lib/calculations';
 import { DEFAULT_TARGET_SOH } from '@/lib/constants';
 import { toast } from 'sonner';
@@ -57,6 +57,8 @@ interface ErpProduct {
  * @param onCancel - Callback when user cancels (ignored on first visit)
  * @param isFirstVisit - Whether this is first-time setup (blocks dismissal)
  */
+type SaveStage = 'idle' | 'saving' | 'calculating' | 'success';
+
 export function InventoryEditTable({
   products,
   onSave,
@@ -64,7 +66,7 @@ export function InventoryEditTable({
   isFirstVisit,
 }: InventoryEditTableProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveStage, setSaveStage] = useState<SaveStage>('idle');
   const [editableProducts, setEditableProducts] = useState<EditableProduct[]>([]);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
 
@@ -74,6 +76,17 @@ export function InventoryEditTable({
   } | null>(null);
 
   const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
+
+  // Track timers for cleanup on unmount
+  const timersRef = useRef<NodeJS.Timeout[]>([]);
+
+  // Cleanup timers on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+    };
+  }, []);
 
   // Load data from API on mount
   useEffect(() => {
@@ -171,6 +184,7 @@ export function InventoryEditTable({
         product.weeklyConsumption,
         product.originalConsumption
       ),
+      targetSOH: validateTargetSOH(product.targetSOH || DEFAULT_TARGET_SOH),
     }));
   }, [editableProducts]);
 
@@ -178,7 +192,7 @@ export function InventoryEditTable({
 
   // Check if there are any errors
   const hasErrors = validations.some(
-    (v) => v.stock.state === 'error' || v.consumption.state === 'error'
+    (v) => v.stock.state === 'error' || v.consumption.state === 'error' || v.targetSOH.state === 'error'
   );
 
   // Check if there are any warnings
@@ -189,6 +203,9 @@ export function InventoryEditTable({
     }
     if (v.consumption.state === 'warning') {
       acc.push(`${product.name}: ${v.consumption.message}`);
+    }
+    if (v.targetSOH.state === 'warning') {
+      acc.push(`${product.name}: ${v.targetSOH.message}`);
     }
     return acc;
   }, []);
@@ -232,7 +249,7 @@ export function InventoryEditTable({
 
   const performSave = async () => {
     try {
-      setIsSaving(true);
+      setSaveStage('saving');
 
       // Convert to API format (cartons)
       const dataToSave = editableProducts.map(p => ({
@@ -242,22 +259,42 @@ export function InventoryEditTable({
         targetSOH: p.targetSOH || DEFAULT_TARGET_SOH,
       }));
 
+      // Show "calculating" stage after 1.5s to indicate progress
+      const calculatingTimer = setTimeout(() => {
+        setSaveStage('calculating');
+      }, 1500);
+      timersRef.current.push(calculatingTimer);
+
       const response = await fetch('/api/inventory/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ products: dataToSave }),
       });
 
+      // Clear timer if request finishes early
+      clearTimeout(calculatingTimer);
+      timersRef.current = timersRef.current.filter(t => t !== calculatingTimer);
+
       if (!response.ok) {
         throw new Error('Failed to save inventory data');
       }
 
-      // Success - call onSave to reload page
-      onSave();
+      // Show success state briefly
+      setSaveStage('success');
+
+      // Call onSave after brief success display
+      const successTimer = setTimeout(() => {
+        onSave();
+      }, 800);
+      timersRef.current.push(successTimer);
     } catch (error) {
+      // Clear all timers on error
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
+
       console.error('Failed to save inventory data:', error);
       toast.error('Failed to save inventory data. Please try again.');
-      setIsSaving(false);
+      setSaveStage('idle');
     }
   };
 
@@ -316,7 +353,7 @@ export function InventoryEditTable({
             </p>
           </div>
           {!isFirstVisit && (
-            <Button variant="ghost" size="icon" onClick={onCancel} disabled={isSaving}>
+            <Button variant="ghost" size="icon" onClick={onCancel} disabled={saveStage !== 'idle'}>
               <X className="h-5 w-5" />
             </Button>
           )}
@@ -333,25 +370,61 @@ export function InventoryEditTable({
           </div>
           <div className="flex gap-2">
             {!isFirstVisit && (
-              <Button variant="outline" onClick={onCancel} disabled={isSaving || isLoading}>
+              <Button variant="outline" onClick={onCancel} disabled={saveStage !== 'idle' || isLoading}>
                 Cancel
               </Button>
             )}
-            <Button onClick={handleSave} disabled={hasErrors || isSaving || isLoading}>
-              {isSaving ? (
+            <Button
+              onClick={handleSave}
+              disabled={hasErrors || saveStage !== 'idle' || isLoading}
+              className={saveStage === 'success' ? 'bg-green-600 hover:bg-green-700' : ''}
+            >
+              {saveStage === 'saving' && (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  Saving inventory...
                 </>
-              ) : (
-                'Save Changes'
               )}
+              {saveStage === 'calculating' && (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Recalculating recommendations...
+                </>
+              )}
+              {saveStage === 'success' && (
+                <>
+                  <span className="mr-2">✓</span>
+                  Saved!
+                </>
+              )}
+              {saveStage === 'idle' && 'Save Changes'}
             </Button>
           </div>
         </div>
 
         {/* Table */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto relative">
+          {/* Saving Overlay */}
+          {saveStage !== 'idle' && (
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 flex items-center justify-center">
+              <div className="bg-card border border-border rounded-lg p-6 shadow-lg">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="text-center">
+                    <p className="font-medium">
+                      {saveStage === 'saving' && 'Saving inventory...'}
+                      {saveStage === 'calculating' && 'Recalculating recommendations...'}
+                      {saveStage === 'success' && '✓ Complete!'}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {saveStage === 'calculating' && 'This may take a few seconds...'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -360,16 +433,16 @@ export function InventoryEditTable({
             <table className="w-full">
               <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-sm">
                 <tr>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[40%]">
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[38%]">
                     Product Name
                   </th>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[24%]">
                     Current Stock (Pallets)
                   </th>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[25%]">
+                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[23%]">
                     Weekly Consumption (Pallets)
                   </th>
-                  <th className="text-left px-4 py-3 text-sm font-semibold text-foreground w-[10%]">
+                  <th className="text-center px-4 py-3 text-sm font-semibold text-foreground w-[15%]">
                     Target SOH (Weeks)
                   </th>
                 </tr>
@@ -416,6 +489,8 @@ export function InventoryEditTable({
                             validation={validations[index].stock}
                             onKeyDown={(e) => handleKeyDown(e, index, 'stock')}
                             autoFocus={isStockFocused}
+                            allowDecimals={true}
+                            maxDecimals={1}
                           />
                           <div className="text-xs text-muted-foreground">
                             pallets = {product.currentStock.toLocaleString()} cartons ({product.piecesPerPallet.toLocaleString()}/pallet)
@@ -430,6 +505,8 @@ export function InventoryEditTable({
                             validation={validations[index].consumption}
                             onKeyDown={(e) => handleKeyDown(e, index, 'consumption')}
                             autoFocus={isConsumptionFocused}
+                            allowDecimals={true}
+                            maxDecimals={1}
                           />
                           <div className="text-xs text-muted-foreground">
                             pallets/week = {product.weeklyConsumption.toLocaleString()} cartons/week
@@ -437,15 +514,16 @@ export function InventoryEditTable({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="space-y-1">
+                        <div className="space-y-1 flex flex-col items-center">
                           <EditableNumberCell
                             value={product.targetSOH || DEFAULT_TARGET_SOH}
                             onChange={(value) => updateProduct(index, 'targetSOH', value)}
-                            validation={{ state: 'valid', message: '' }}
+                            validation={validations[index].targetSOH}
                             onKeyDown={(e) => handleKeyDown(e, index, 'targetSOH')}
                             autoFocus={isTargetSOHFocused}
+                            centerText={true}
                           />
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-muted-foreground text-center">
                             weeks target
                           </div>
                         </div>
@@ -518,7 +596,7 @@ export function InventoryEditTable({
               <AlertTriangle className="h-5 w-5 text-amber-600" />
               {warnings.length} Warning{warnings.length !== 1 ? 's' : ''} Detected
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
+            <div className="space-y-3 text-muted-foreground text-sm">
               <p>The following products have warnings:</p>
               <ul className="space-y-2">
                 {warnings.slice(0, 5).map((warning, index) => (
@@ -534,7 +612,7 @@ export function InventoryEditTable({
                 )}
               </ul>
               <p className="text-sm font-medium">Do you want to save anyway?</p>
-            </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>

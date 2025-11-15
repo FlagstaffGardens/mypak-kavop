@@ -1,51 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "./lib/auth/jwt";
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Skip middleware for:
-  // - API routes (they handle their own auth)
-  // - Static files
-  // - Next.js internals
+  // Public routes
   if (
-    pathname.startsWith("/api") ||
+    pathname.startsWith("/api/auth") ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
+    pathname.startsWith("/favicon") ||
+    pathname.startsWith("/sign-in")
   ) {
     return NextResponse.next();
   }
 
-  // Public route - allow access without auth check
-  if (pathname.startsWith("/sign-in")) {
-    return NextResponse.next();
-  }
+  // Check for Better Auth session cookie
+  const sessionCookie = request.cookies.get("better-auth.session_token");
 
-  // Get current user from JWT
-  const user = await getCurrentUser();
-
-  // Require authentication for all other routes
-  if (!user) {
-    console.log("No user found for", pathname, "- redirecting to /sign-in");
+  if (!sessionCookie) {
+    console.log("No session cookie found, redirecting to /sign-in");
     return NextResponse.redirect(new URL("/sign-in", request.url));
   }
 
-  // Admin routes require platform_admin role
-  if (pathname.startsWith("/admin")) {
-    if (user.role !== "platform_admin") {
-      console.log("Non-admin trying to access", pathname, "- redirecting to /");
-      return NextResponse.redirect(new URL("/", request.url));
-    }
-    console.log("Admin accessing", pathname, "- allowing");
-    return NextResponse.next();
-  }
-
-  // Platform admins should only access /admin routes
-  if (user.role === "platform_admin") {
-    console.log("Admin trying to access non-admin route", pathname, "- redirecting to /admin");
-    return NextResponse.redirect(new URL("/admin", request.url));
-  }
-
+  // Let route handlers do heavy auth checks
   return NextResponse.next();
 }
 

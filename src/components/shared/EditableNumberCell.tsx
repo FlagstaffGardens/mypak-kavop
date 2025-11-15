@@ -11,6 +11,9 @@ interface EditableNumberCellProps {
   validation: ValidationResult;
   onKeyDown?: (e: React.KeyboardEvent) => void;
   autoFocus?: boolean;
+  allowDecimals?: boolean; // Allow decimal input (default: false)
+  maxDecimals?: number;    // Maximum decimal places (default: 1)
+  centerText?: boolean;    // Center-align text (default: false)
 }
 
 export function EditableNumberCell({
@@ -19,6 +22,9 @@ export function EditableNumberCell({
   validation,
   onKeyDown,
   autoFocus,
+  allowDecimals = false,
+  maxDecimals = 1,
+  centerText = false,
 }: EditableNumberCellProps) {
   const [editValue, setEditValue] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -31,8 +37,12 @@ export function EditableNumberCell({
     }
   }, [autoFocus]);
 
-  // When focused, use editValue; when not focused, derive from value prop
-  const displayValue = isFocused && editValue !== null ? editValue : value.toLocaleString();
+  // When focused, use editValue; when not focused, format based on allowDecimals
+  const displayValue = isFocused && editValue !== null
+    ? editValue
+    : allowDecimals
+      ? value.toString() // Show decimals as-is (e.g., "63.5")
+      : value.toLocaleString(); // Show with comma separators for whole numbers
 
   const handleFocus = () => {
     setIsFocused(true);
@@ -46,8 +56,11 @@ export function EditableNumberCell({
     // Parse and validate the input
     const currentEdit = editValue || value.toString();
     const numericValue = parseFloat(currentEdit.replace(/,/g, ''));
-    if (!isNaN(numericValue)) {
+    if (!isNaN(numericValue) && numericValue >= 0) {
       onChange(numericValue);
+    } else {
+      // Invalid input - revert to original value
+      onChange(value);
     }
     // Clear edit state and unfocus
     setEditValue(null);
@@ -55,8 +68,32 @@ export function EditableNumberCell({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow only numbers and commas while typing
-    const input = e.target.value.replace(/[^0-9,]/g, '');
+    if (!allowDecimals) {
+      // Whole numbers only: allow digits and commas
+      const input = e.target.value.replace(/[^0-9,]/g, '');
+      setEditValue(input);
+      return;
+    }
+
+    // Allow decimals: digits, one decimal point
+    let input = e.target.value.replace(/[^0-9.]/g, '');
+
+    // Only one decimal point allowed
+    const parts = input.split('.');
+    if (parts.length > 2) {
+      input = parts[0] + '.' + parts.slice(1).join('');
+    }
+
+    // Limit to maxDecimals places after decimal
+    if (parts.length === 2 && parts[1].length > maxDecimals) {
+      input = parts[0] + '.' + parts[1].substring(0, maxDecimals);
+    }
+
+    // Strip leading zeros (except "0" or "0.x")
+    if (input.length > 1 && input.startsWith('0') && input[1] !== '.') {
+      input = input.replace(/^0+/, '') || '0'; // Preserve at least one zero
+    }
+
     setEditValue(input);
   };
 
@@ -88,7 +125,7 @@ export function EditableNumberCell({
         onBlur={handleBlur}
         onKeyDown={onKeyDown}
         autoFocus={autoFocus}
-        className={`font-mono text-base h-10 pr-8 cursor-pointer ${getBorderColor()}`}
+        className={`font-mono text-base h-10 pr-8 cursor-pointer ${centerText ? 'text-center' : ''} ${getBorderColor()}`}
       />
       <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
         {getValidationIcon()}

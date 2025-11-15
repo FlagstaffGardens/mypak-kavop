@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/jwt';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { upsertInventoryData, type InventoryInput } from '@/lib/services/inventory';
 import { generateAndSaveRecommendations } from '@/lib/services/recommendations';
 import { MIN_TARGET_SOH_WEEKS, MAX_TARGET_SOH_WEEKS } from '@/lib/constants';
 import { z } from 'zod';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { auth } from "@/lib/auth";
+import { getCurrentOrgId } from "@/lib/utils/get-org";
+import { headers } from "next/headers";
 
 // Validation schema
 const inventorySchema = z.object({
@@ -22,10 +28,14 @@ const inventorySchema = z.object({
  */
 export async function POST(request: Request) {
   try {
-    // Get current user
-    const user = await getCurrentUser();
+    console.log('[API] Inventory save started');
 
-    if (!user || !user.orgId) {
+    // Get current user
+    const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+
+    const orgId = await getCurrentOrgId();
+  if (!user || !orgId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -37,16 +47,41 @@ export async function POST(request: Request) {
     const validated = inventorySchema.parse(body);
 
     // 1. Upsert inventory data
-    await upsertInventoryData(user.orgId, validated.products as InventoryInput[]);
+    console.log('[API] Saving inventory data...');
+    await upsertInventoryData(orgId, validated.products as InventoryInput[]);
+    console.log('[API] Inventory data saved');
 
-    // 2. Regenerate recommendations (synchronous - user waits)
-    console.log('[API] Regenerating recommendations...');
-    await generateAndSaveRecommendations(user.orgId);
-    console.log('[API] Recommendations regenerated successfully');
+    // 2. Update organization's last_inventory_update timestamp
+    await db
+      .update(organizations)
+      .set({ last_inventory_update: new Date() })
+      .where(eq(organizations.org_id, orgId));
+    console.log('[API] Updated last_inventory_update timestamp');
+
+    // 3. Regenerate recommendations (synchronous - user waits)
+    console.log('[API] Recalculating recommendations...');
+    await generateAndSaveRecommendations(orgId);
+    console.log('[API] Recommendations updated successfully');
+
+    // 4. Invalidate caches to ensure fresh data on next page load
+    try {
+      // Page-level revalidation (routes that consume ERP + inventory data)
+      revalidatePath('/', 'layout'); // Revalidate dashboard
+      revalidatePath('/orders', 'layout'); // Revalidate orders page
+
+      // ERP API cache revalidation (broad) to beat TTLs immediately
+      // Per-org cache busting is handled via versioned cache keys (last_inventory_update)
+      revalidateTag('erp:products', 'max');
+      revalidateTag('erp:orders', 'max');
+      console.log('[API] Cache invalidated (paths + tags)');
+    } catch (cacheError) {
+      console.warn('[API] Cache invalidation failed (non-fatal):', cacheError);
+      // Continue: inventory data and recommendations were already saved
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Inventory saved and recommendations updated',
+      message: 'Inventory and recommendations updated successfully',
     });
   } catch (error) {
     console.error('[API] /api/inventory/save error:', error);

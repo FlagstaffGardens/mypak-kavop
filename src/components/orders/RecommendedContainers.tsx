@@ -30,8 +30,8 @@ export function RecommendedContainers({ containers }: RecommendedContainersProps
     );
   }
 
-  const handleOrderClick = (containerId: number) => {
-    router.push(`/orders/review/${containerId}`);
+  const handleOrderClick = (containerNumber: number) => {
+    router.push(`/orders/review/${containerNumber}`);
   };
 
   return (
@@ -55,11 +55,11 @@ export function RecommendedContainers({ containers }: RecommendedContainersProps
           <div className="space-y-4">
             {urgentContainers.map(container => (
               <ContainerCard
-                key={container.id}
+                key={container.containerNumber}
                 container={container}
                 variant="recommended"
                 defaultExpanded={true}
-                onOrderClick={() => handleOrderClick(container.id)}
+                onOrderClick={() => handleOrderClick(container.containerNumber)}
               />
             ))}
           </div>
@@ -79,11 +79,11 @@ export function RecommendedContainers({ containers }: RecommendedContainersProps
           <div className="space-y-4">
             {nonUrgentContainers.map(container => (
               <ContainerCard
-                key={container.id}
+                key={container.containerNumber}
                 container={container}
                 variant="recommended"
                 defaultExpanded={false}
-                onOrderClick={() => handleOrderClick(container.id)}
+                onOrderClick={() => handleOrderClick(container.containerNumber)}
               />
             ))}
           </div>

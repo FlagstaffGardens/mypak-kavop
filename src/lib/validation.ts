@@ -34,12 +34,17 @@ export function validateWeeklyConsumption(
   consumption: number,
   previousValue?: number
 ): ValidationResult {
-  if (consumption <= 0) {
-    return { state: 'error', message: 'Consumption must be greater than 0' };
+  if (consumption < 0) {
+    return { state: 'error', message: 'Consumption cannot be negative' };
   }
 
   if (isNaN(consumption)) {
     return { state: 'error', message: 'Please enter a valid number' };
+  }
+
+  // Allow 0 consumption (indicates discontinued/inactive product)
+  if (consumption === 0) {
+    return { state: 'valid' };
   }
 
   // Warning if changed by more than 50% from previous value
@@ -53,5 +58,23 @@ export function validateWeeklyConsumption(
     }
   }
 
+  return { state: 'valid' };
+}
+
+export function validateTargetSOH(targetSOH: number): ValidationResult {
+  if (targetSOH < 0) {
+    return { state: 'error', message: 'Target SOH cannot be negative' };
+  }
+
+  if (isNaN(targetSOH)) {
+    return { state: 'error', message: 'Please enter a valid number' };
+  }
+
+  // Must be a whole number (integer)
+  if (!Number.isInteger(targetSOH)) {
+    return { state: 'error', message: 'Target SOH must be a whole number' };
+  }
+
+  // Allow 0 (indicates discontinued/inactive product)
   return { state: 'valid' };
 }

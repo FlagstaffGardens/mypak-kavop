@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/jwt";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { CreateOrgWizard } from "@/components/admin/CreateOrgWizard";
 
 export default async function CreateOrganizationPage() {
   // Check authentication
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     redirect("/sign-in");
   }
 

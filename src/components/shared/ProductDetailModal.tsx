@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { X, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import { X, ExternalLink, Info } from 'lucide-react';
 import { parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { StatusBadge } from './StatusBadge';
 import { InventoryChart } from './InventoryChart';
 import type { Product, Order } from '@/lib/types';
@@ -17,6 +19,7 @@ interface ProductDetailModalProps {
 export function ProductDetailModal({ product, liveOrders = [], onClose }: ProductDetailModalProps) {
   // Timeframe state
   const [selectedTimeframe, setSelectedTimeframe] = useState<'4w' | '6w' | '12w' | '6m' | '1y'>('6w');
+  const [viewingImage, setViewingImage] = useState<{ url: string; name: string } | null>(null);
 
   if (!product) return null;
 
@@ -77,9 +80,19 @@ export function ProductDetailModal({ product, liveOrders = [], onClose }: Produc
               <StatusBadge status={product.status} />
             </div>
             {product.sku && (
-              <p className="text-xs text-muted-foreground font-mono mb-1">
-                SKU: {product.sku}
-              </p>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-xs text-muted-foreground font-mono">
+                  SKU: {product.sku}
+                </p>
+                {product.imageUrl && (
+                  <button
+                    onClick={() => setViewingImage({ url: product.imageUrl!, name: product.name })}
+                    className="flex-shrink-0"
+                  >
+                    <Info className="h-4 w-4 text-blue-500 hover:text-blue-600 cursor-pointer transition-colors" />
+                  </button>
+                )}
+              </div>
             )}
             <p className="text-sm text-muted-foreground">
               {product.size} - {product.packCount}
@@ -210,11 +223,12 @@ export function ProductDetailModal({ product, liveOrders = [], onClose }: Produc
               </h3>
               <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
                 {productLiveOrders.map((order) => (
-                  <a
+                  <Link
                     key={order.orderNumber}
-                    href={`/orders?highlight=${order.orderNumber}`}
+                    href={`/orders?tab=live&highlight=${order.orderNumber}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    prefetch={true}
                     className="group cursor-pointer rounded-lg border border-border transition-all hover:bg-muted/50 hover:border-foreground/20 block px-4 py-3"
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -227,7 +241,7 @@ export function ProductDetailModal({ product, liveOrders = [], onClose }: Produc
                         </div>
                         <div className="text-sm text-muted-foreground">
                           <span className="font-medium text-foreground">
-                            {Math.round(order.quantity / 1000)} pallets
+                            {(order.quantity / product.piecesPerPallet).toFixed(1)} pallets
                           </span>
                           <span className="text-muted-foreground">
                             {' '}({order.quantity.toLocaleString()} cartons)
@@ -254,7 +268,7 @@ export function ProductDetailModal({ product, liveOrders = [], onClose }: Produc
                         <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors mt-0.5 flex-shrink-0" />
                       </div>
                     </div>
-                  </a>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -268,6 +282,41 @@ export function ProductDetailModal({ product, liveOrders = [], onClose }: Produc
           </Button>
         </div>
       </div>
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <Dialog open={!!viewingImage} onOpenChange={() => setViewingImage(null)}>
+          <DialogContent className="max-w-[95vw] max-h-[95vh] p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Product Label Image</DialogTitle>
+            </DialogHeader>
+            <div className="relative w-full h-full flex flex-col">
+              {/* Close button */}
+              <button
+                onClick={() => setViewingImage(null)}
+                className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+
+              {/* Image */}
+              <div className="flex-1 flex items-center justify-center p-4 bg-black/95">
+                <img
+                  src={viewingImage.url}
+                  alt={viewingImage.name}
+                  className="max-w-full max-h-[85vh] object-contain"
+                />
+              </div>
+
+              {/* Product name footer */}
+              <div className="bg-card border-t px-6 py-4">
+                <p className="text-sm font-semibold text-center">{viewingImage.name}</p>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

@@ -11,9 +11,6 @@ import { ProductSelector } from '@/components/orders/ProductSelector';
 import { ShippingDetailsForm } from '@/components/orders/ShippingDetailsForm';
 import { OrderConfirmationModal } from '@/components/orders/OrderConfirmationModal';
 import { validateCapacity, validateOrder } from '@/lib/validations';
-import { mockContainers } from '@/lib/data/mock-containers';
-import { mockProducts } from '@/lib/data/mock-products';
-import { SCENARIOS } from '@/lib/data/mock-scenarios';
 import { addDays, format } from 'date-fns';
 import type { ContainerRecommendation, ShippingDetails, ShippingMethod, Order, Product, ContainerProduct } from '@/lib/types';
 
@@ -25,6 +22,8 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   // Data state
   const [container, setContainer] = useState<ContainerRecommendation | null>(null);
   const [addedProducts, setAddedProducts] = useState<ContainerProduct[]>([]);
+  const [allAvailableProducts, setAllAvailableProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Form state
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -40,29 +39,65 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Load container data
+  // Load container data from API
   useEffect(() => {
-    const loadContainer = () => {
-      const demoState = typeof window !== 'undefined' ? localStorage.getItem('demoState') : 'healthy';
+    const loadContainer = async () => {
+      try {
+        setIsLoading(true);
 
-      const containerData = SCENARIOS[demoState as keyof typeof SCENARIOS]?.containers.find(
-        (c) => c.id.toString() === containerId
-      );
+        // Fetch both recommendations and all products in parallel
+        const [recommendationsResponse, productsResponse] = await Promise.all([
+          fetch('/api/recommendations'),
+          fetch('/api/products'),
+        ]);
 
-      if (containerData) {
-        setContainer(containerData);
+        if (!recommendationsResponse.ok || !productsResponse.ok) {
+          throw new Error('Failed to fetch data');
+        }
 
-        // Initialize quantities from recommended amounts
-        const initialQuantities: Record<string, number> = {};
-        containerData.products.forEach((p) => {
-          initialQuantities[p.productId.toString()] = p.recommendedQuantity;
+        const [recommendationsData, productsData] = await Promise.all([
+          recommendationsResponse.json(),
+          productsResponse.json(),
+        ]);
+
+        // Find container by container number (which is now the ID)
+        const containerData = recommendationsData.containers.find(
+          (c: ContainerRecommendation) => c.containerNumber.toString() === containerId
+        );
+
+        if (containerData) {
+          setContainer(containerData);
+
+          // Initialize quantities from recommended amounts
+          const initialQuantities: Record<string, number> = {};
+          containerData.products.forEach((p: ContainerProduct) => {
+            initialQuantities[p.productId.toString()] = p.recommendedQuantity;
+          });
+          setQuantities(initialQuantities);
+        }
+
+        // Store all available products for adding
+        setAllAvailableProducts(productsData.products || []);
+      } catch (error) {
+        console.error('Failed to load container:', error);
+        toast({
+          title: 'Error loading data',
+          description: 'Failed to load container data. Please try again.',
+          variant: 'destructive',
         });
-        setQuantities(initialQuantities);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadContainer();
-  }, [containerId]);
+  }, [containerId, toast]);
+
+  // All products in the order (container + added)
+  const allProducts = useMemo(() => {
+    if (!container) return [];
+    return [...container.products, ...addedProducts];
+  }, [container, addedProducts]);
 
   // Computed values
   const totalCartons = useMemo(() => {
@@ -70,15 +105,27 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
   }, [quantities]);
 
   const totalPallets = useMemo(() => {
-    if (!container) return 0;
-    // Use first product's piecesPerPallet as default, or 200
-    const piecesPerPallet = 200; // Could be refined per product
-    return Math.ceil(totalCartons / piecesPerPallet);
-  }, [totalCartons, container]);
+    // Calculate pallets per product using actual piecesPerPallet, then sum
+    return allProducts.reduce((sum, product) => {
+      const productQuantity = quantities[product.productId.toString()] || 0;
+      const productPallets = productQuantity / product.piecesPerPallet;
+      return sum + productPallets;
+    }, 0);
+  }, [quantities, allProducts]);
+
+  const totalVolume = useMemo(() => {
+    // Calculate volume per product using volumePerCarton, then sum
+    return allProducts.reduce((sum, product) => {
+      const productQuantity = quantities[product.productId.toString()] || 0;
+      const volumePerCarton = product.volumePerCarton || 0;
+      return sum + (productQuantity * volumePerCarton);
+    }, 0);
+  }, [quantities, allProducts]);
 
   const capacityValidation = useMemo(() => {
-    return validateCapacity(totalCartons);
-  }, [totalCartons]);
+    // Review orders also require 100-105% capacity range (same as new orders)
+    return validateCapacity(totalVolume, true);
+  }, [totalVolume]);
 
   const estimatedDelivery = useMemo(() => {
     if (shippingDetails.arrivalPreference === 'specific' && shippingDetails.specificDate) {
@@ -89,43 +136,79 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
     return format(addDays(new Date(), weeksToAdd * 7), 'MMM dd, yyyy');
   }, [shippingDetails.arrivalPreference, shippingDetails.specificDate]);
 
-  // All products in the order (container + added)
-  const allProducts = useMemo(() => {
-    if (!container) return [];
-    return [...container.products, ...addedProducts];
-  }, [container, addedProducts]);
-
-  // Available products for adding (exclude ones already in order)
+  // Available products for adding (exclude ones already in the order)
   const availableProducts = useMemo(() => {
     const productsInOrder = new Set(allProducts.map(p => p.productId));
-    return mockProducts.filter(p => !productsInOrder.has(p.id));
-  }, [allProducts]);
+    return allAvailableProducts.filter(p => !productsInOrder.has(p.id));
+  }, [allAvailableProducts, allProducts]);
 
   // Handlers
   const handleProductAdd = (product: Product) => {
+    // Calculate smart default quantity:
+    // - If has weekly consumption: 4 weeks worth (rounded to nearest 1000)
+    // - Otherwise: 5000 cartons (minimum 1 pallet)
+    let defaultQuantity = 5000;
+    if (product.weeklyConsumption > 0) {
+      const fourWeeksWorth = product.weeklyConsumption * 4;
+      defaultQuantity = Math.round(fourWeeksWorth / 1000) * 1000;
+      defaultQuantity = Math.max(defaultQuantity, 5000); // Minimum 5000
+    }
+
     // Convert Product to ContainerProduct format
     const containerProduct: ContainerProduct = {
       productId: product.id,
+      sku: product.sku,
       productName: product.name,
       currentStock: product.currentStock,
       weeklyConsumption: product.weeklyConsumption,
       weeksSupply: product.weeksRemaining,
       runsOutDate: product.runsOutDate,
-      recommendedQuantity: 0, // User will set this
-      afterDeliveryStock: product.currentStock, // Will be updated when quantity changes
+      recommendedQuantity: defaultQuantity,
+      afterDeliveryStock: product.currentStock + defaultQuantity,
+      piecesPerPallet: product.piecesPerPallet,
+      volumePerCarton: product.volumePerPallet / product.piecesPerPallet,
+      imageUrl: product.imageUrl,
     };
 
     setAddedProducts(prev => [...prev, containerProduct]);
-    setQuantities(prev => ({ ...prev, [product.id.toString()]: 0 }));
+    setQuantities(prev => ({ ...prev, [product.id.toString()]: defaultQuantity }));
 
     toast({
       title: 'Product added',
-      description: `${product.name} has been added to the order.`,
+      description: `${product.name} added with ${(defaultQuantity / 1000).toFixed(0)}k cartons.`,
     });
   };
 
   const handleQuantityChange = (productId: string, quantity: number) => {
     setQuantities((prev) => ({ ...prev, [productId]: quantity }));
+  };
+
+  const handleProductRemove = (productId: number) => {
+    if (!container) return;
+
+    // Remove from container products
+    setContainer(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        products: prev.products.filter(p => p.productId !== productId)
+      };
+    });
+
+    // Remove from added products
+    setAddedProducts(prev => prev.filter(p => p.productId !== productId));
+
+    // Remove quantity
+    setQuantities(prev => {
+      const newQuantities = { ...prev };
+      delete newQuantities[productId.toString()];
+      return newQuantities;
+    });
+
+    toast({
+      title: 'Product removed',
+      description: 'Product has been removed from the order.',
+    });
   };
 
   const handleShippingChange = (updates: Partial<ShippingDetails>) => {
@@ -236,12 +319,20 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <p className="text-center text-muted-foreground">Loading container data...</p>
+      </div>
+    );
+  }
+
   if (!container) {
     return (
       <div className="container mx-auto px-4 py-8">
         <p className="text-center text-muted-foreground">Container not found</p>
-        <Button variant="link" onClick={() => router.push('/')} className="mx-auto block mt-4">
-          Return to Dashboard
+        <Button variant="link" onClick={() => router.push('/orders')} className="mx-auto block mt-4">
+          Return to Orders
         </Button>
       </div>
     );
@@ -255,11 +346,11 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/orders')}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
+            Back to Orders
           </Button>
         </div>
       </header>
@@ -302,7 +393,8 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
                 product={product}
                 quantity={quantities[product.productId.toString()] || 0}
                 onQuantityChange={(qty) => handleQuantityChange(product.productId.toString(), qty)}
-                piecesPerPallet={200}
+                piecesPerPallet={product.piecesPerPallet}
+                onRemove={() => handleProductRemove(product.productId)}
               />
             ))}
 
@@ -310,6 +402,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
             <ProductSelector
               availableProducts={availableProducts}
               onProductAdd={handleProductAdd}
+              isEmptyState={false}
             />
           </div>
 
@@ -326,7 +419,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
       <footer className="sticky bottom-0 bg-background border-t z-10">
         <div className="container mx-auto px-4 py-4 max-w-4xl">
           <div className="flex flex-col md:flex-row gap-3 md:justify-between">
-            <Button variant="outline" onClick={() => router.push('/')} className="w-full md:w-auto">
+            <Button variant="outline" onClick={() => router.push('/orders')} className="w-full md:w-auto">
               Cancel
             </Button>
             <Button
@@ -354,7 +447,7 @@ export default function OrderReviewPage({ params }: { params: Promise<{ containe
           .map((p) => ({
             name: p.productName,
             quantity: quantities[p.productId.toString()],
-            pallets: Math.ceil(quantities[p.productId.toString()] / 200),
+            pallets: quantities[p.productId.toString()] / p.piecesPerPallet,
           }))}
         totalCartons={totalCartons}
         totalPallets={totalPallets}

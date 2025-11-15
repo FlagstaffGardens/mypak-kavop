@@ -1,27 +1,47 @@
 import { redirect } from 'next/navigation';
-import { fetchErpProducts, fetchErpCurrentOrders } from '@/lib/erp/client';
+import { getCachedErpProducts, getCachedErpCurrentOrders } from '@/lib/erp/client';
 import { transformErpProduct, transformErpOrder, completeProductWithInventory } from '@/lib/erp/transforms';
 import { getInventoryData } from '@/lib/services/inventory';
 import { getRecommendations } from '@/lib/services/recommendations';
-import { getCurrentUser } from '@/lib/auth/jwt';
 import { DashboardClient } from '@/components/dashboard/DashboardClient';
 import { DEFAULT_TARGET_SOH } from '@/lib/constants';
 import type { Product, ContainerRecommendation } from '@/lib/types';
+import { db } from '@/lib/db';
+import { organizations } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { getCurrentOrgId } from "@/lib/utils/get-org";
 
 export default async function Dashboard() {
-  // Get current user
-  const user = await getCurrentUser();
+  // Get current user and org
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  const orgId = await getCurrentOrgId();
 
-  if (!user || !user.orgId) {
+  // Redirect to sign-in if not authenticated or no org access
+  // Note: sign-in page already blocks users without org membership
+  if (!user || !orgId) {
     redirect('/sign-in');
   }
 
-  // Fetch data from ERP API
-  const erpProducts = await fetchErpProducts();
-  const erpOrders = await fetchErpCurrentOrders();
+  // Fetch data from ERP API and database
+  const [inventoryRows, org] = await Promise.all([
+    getInventoryData(orgId),
+    db.select().from(organizations).where(eq(organizations.org_id, orgId)).limit(1),
+  ]);
 
-  // Fetch inventory from database
-  const inventoryRows = await getInventoryData(user.orgId);
+  // Use last inventory update as version to bust cache per org on save
+  const version = (org[0]?.last_inventory_update?.toISOString?.() ?? '0') as string;
+
+  // Fetch ERP data with per-org versioned cache
+  const [erpProducts, erpOrders] = await Promise.all([
+    getCachedErpProducts(orgId, version),
+    getCachedErpCurrentOrders(orgId, version),
+  ]);
+
+  // Get last updated timestamp from organization
+  const lastUpdated = org[0]?.last_inventory_update || null;
 
   // Check first visit (no inventory data)
   const isFirstVisit = inventoryRows.length === 0;
@@ -72,19 +92,20 @@ export default async function Dashboard() {
   const liveOrders = erpOrders.map(transformErpOrder);
 
   // Fetch recommendations from database
-  const dbRecommendations = await getRecommendations(user.orgId);
+  const dbRecommendations = await getRecommendations(orgId);
+
+  // Create product map ONCE before the loop
+  const productMap = new Map(products.map(p => [p.sku, p]));
 
   // Transform recommendations to UI format
-  const containers: ContainerRecommendation[] = dbRecommendations.map((rec, index) => {
-    // Create product map for lookups
-    const productMap = new Map(products.map(p => [p.sku, p]));
-
+  const containers: ContainerRecommendation[] = dbRecommendations.map((rec) => {
     return {
-      id: index + 1,
+      id: rec.containerNumber, // Use container number as ID (stable and meaningful)
       containerNumber: rec.containerNumber,
       orderByDate: rec.orderByDate.toISOString().split('T')[0],
       deliveryDate: rec.deliveryDate.toISOString().split('T')[0],
       totalCartons: rec.totalCartons,
+      totalVolume: rec.totalVolume, // Total volume from algorithm (already a number)
       productCount: rec.products.length,
       urgency: rec.urgency === 'URGENT' || rec.urgency === 'OVERDUE' ? 'URGENT' : null,
       products: rec.products.map(p => {
@@ -101,15 +122,13 @@ export default async function Dashboard() {
             ? ((product.currentStock || 0) + p.quantity) / product.weeklyConsumption
             : 999,
           runsOutDate: '',
-          piecesPerPallet: product?.piecesPerPallet,
+          piecesPerPallet: p.piecesPerPallet, // From algorithm output (always present)
+          volumePerCarton: product ? product.volumePerPallet / product.piecesPerPallet : undefined,
           imageUrl: product?.imageUrl,
         };
       }),
     };
   });
-
-  // Get last updated from localStorage (client-side only)
-  const lastUpdated = null; // Will be hydrated on client
 
   return (
     <DashboardClient

@@ -35,6 +35,7 @@ export const healthyScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 56000,
         weeksSupply: 26.7,
         runsOutDate: format(addDays(today, 93), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 2,
@@ -45,6 +46,7 @@ export const healthyScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 40000,
         weeksSupply: 28.6,
         runsOutDate: format(addDays(today, 105), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 3,
@@ -55,6 +57,7 @@ export const healthyScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 59000,
         weeksSupply: 49.2,
         runsOutDate: format(addDays(today, 105), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },
@@ -76,6 +79,7 @@ export const healthyScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 64000,
         weeksSupply: 35.6,
         runsOutDate: format(addDays(today, 124), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 5,
@@ -86,6 +90,7 @@ export const healthyScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 67000,
         weeksSupply: 74.4,
         runsOutDate: format(addDays(today, 210), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },
@@ -111,6 +116,7 @@ export const singleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 30800,
         weeksSupply: 14.7,
         runsOutDate: format(addDays(today, 9), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 2,
@@ -121,6 +127,7 @@ export const singleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 20500,
         weeksSupply: 14.6,
         runsOutDate: format(addDays(today, 7), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 3,
@@ -131,6 +138,7 @@ export const singleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 45200,
         weeksSupply: 37.7,
         runsOutDate: format(addDays(today, 24), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },
@@ -152,6 +160,7 @@ export const singleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 50000,
         weeksSupply: 27.8,
         runsOutDate: format(addDays(today, 70), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 5,
@@ -162,6 +171,7 @@ export const singleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 54000,
         weeksSupply: 60.0,
         runsOutDate: format(addDays(today, 108), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },
@@ -187,6 +197,7 @@ export const multipleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 30100,
         weeksSupply: 14.3,
         runsOutDate: format(addDays(today, 7), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 2,
@@ -197,6 +208,7 @@ export const multipleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 20400,
         weeksSupply: 14.6,
         runsOutDate: format(addDays(today, 7), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 3,
@@ -207,6 +219,7 @@ export const multipleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 44600,
         weeksSupply: 37.2,
         runsOutDate: format(addDays(today, 21), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },
@@ -228,6 +241,7 @@ export const multipleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 35600,
         weeksSupply: 19.8,
         runsOutDate: format(addDays(today, 14), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
       {
         productId: 5,
@@ -238,6 +252,7 @@ export const multipleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 42700,
         weeksSupply: 47.4,
         runsOutDate: format(addDays(today, 21), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },
@@ -259,6 +274,7 @@ export const multipleUrgentScenario: ContainerRecommendation[] = [
         afterDeliveryStock: 59800,
         weeksSupply: 37.4,
         runsOutDate: format(addDays(today, 21), "MMM dd, yyyy"),
+        piecesPerPallet: 5000,
       },
     ],
   },

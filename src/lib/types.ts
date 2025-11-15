@@ -51,7 +51,8 @@ export interface ContainerProduct {
   afterDeliveryStock: number;
   weeksSupply: number;
   runsOutDate: string;
-  piecesPerPallet?: number; // For calculating pallets from quantity
+  piecesPerPallet: number; // For calculating pallets from quantity (always provided by algorithm)
+  volumePerCarton?: number; // m³ per carton (for capacity validation)
   imageUrl?: string; // Product label image
 }
 
@@ -62,6 +63,7 @@ export interface ContainerRecommendation {
   orderByDate: string;
   deliveryDate: string;
   totalCartons: number;
+  totalVolume?: number; // m³ - total volume of container (from algorithm)
   productCount: number;
   products: ContainerProduct[];
   urgency?: "URGENT" | null;

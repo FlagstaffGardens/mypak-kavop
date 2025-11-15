@@ -1,37 +1,41 @@
 import { addWeeks, format } from 'date-fns';
-import type { Product, ContainerRecommendation } from '@/lib/types';
+import type { Product, ContainerRecommendation, Order } from '@/lib/types';
 
 interface CompactStatusBarProps {
   products: Product[];
   containers: ContainerRecommendation[];
+  liveOrders: Order[];
 }
 
 export function CompactStatusBar({
   products,
   containers,
+  liveOrders,
 }: CompactStatusBarProps) {
-  // Calculate total coverage
+  // Calculate total coverage based on worst-case product (bottleneck)
   const calculateCoverage = () => {
     if (!products || products.length === 0) return { weeksCovered: 0, coveredUntilDate: null };
 
-    // Sum current stock across all products
-    const totalCurrentStock = products.reduce((sum, p) => sum + p.currentStock, 0);
+    // Filter out unconfigured products (weekly consumption or target SOH = 0)
+    const validProducts = products.filter(
+      p => p.weeklyConsumption > 0 && (p.targetSOH ?? 0) > 0
+    );
 
-    // Sum all container quantities
-    const totalContainerQuantity = containers?.reduce((sum, c) => sum + c.totalCartons, 0) || 0;
+    if (validProducts.length === 0) {
+      return { weeksCovered: 0, coveredUntilDate: null };
+    }
 
-    // Sum weekly consumption across all products
-    const totalWeeklyConsumption = products.reduce((sum, p) => sum + p.weeklyConsumption, 0);
+    // Find product with minimum weeks remaining (the bottleneck)
+    const worstProduct = validProducts.reduce((worst, current) =>
+      current.weeksRemaining < worst.weeksRemaining ? current : worst
+    );
 
-    if (totalWeeklyConsumption === 0) return { weeksCovered: 0, coveredUntilDate: null };
-
-    // Calculate weeks covered
-    const weeksCovered = (totalCurrentStock + totalContainerQuantity) / totalWeeklyConsumption;
-
-    // Calculate covered until date
-    const coveredUntilDate = addWeeks(new Date(), weeksCovered);
-
-    return { weeksCovered, coveredUntilDate };
+    return {
+      weeksCovered: worstProduct.weeksRemaining,
+      coveredUntilDate: worstProduct.runsOutDate !== 'Not configured' && worstProduct.runsOutDate !== 'Never'
+        ? new Date(worstProduct.runsOutDate)
+        : null,
+    };
   };
 
   const { weeksCovered, coveredUntilDate } = calculateCoverage();

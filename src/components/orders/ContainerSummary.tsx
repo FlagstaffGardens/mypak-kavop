@@ -2,8 +2,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import type { CapacityValidation } from '@/lib/validations';
 
 interface ContainerSummaryProps {
-  containerNumber: number;
-  orderByDate: string;
+  containerNumber: number | null;
+  orderByDate: string | null;
   deliveryDate: string;
   totalCartons: number;
   totalPallets: number;
@@ -37,12 +37,14 @@ export function ContainerSummary({
       <CardContent className="pt-6">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
           <div className="flex-1">
-            <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
-              Container {containerNumber}
-            </h2>
+            {containerNumber && (
+              <h2 className="text-xl md:text-2xl font-bold text-foreground mb-2">
+                Container {containerNumber}
+              </h2>
+            )}
             <div className="space-y-1 text-sm text-muted-foreground">
-              <p>Order by: <span className="font-medium text-foreground">{orderByDate}</span></p>
-              <p>Expected delivery: <span className="font-medium text-foreground">{deliveryDate}</span></p>
+              {orderByDate && <p>Order by: <span className="font-medium text-foreground">{orderByDate}</span></p>}
+              <p>{orderByDate ? 'Expected delivery' : 'Estimated delivery'}: <span className="font-medium text-foreground">{deliveryDate}</span></p>
             </div>
           </div>
 
@@ -51,7 +53,7 @@ export function ContainerSummary({
               {totalCartons.toLocaleString()}
             </p>
             <p className="text-sm text-muted-foreground">
-              cartons ({totalPallets} pallets)
+              cartons ({totalPallets.toFixed(1)} pallets)
             </p>
           </div>
         </div>
@@ -77,7 +79,7 @@ export function ContainerSummary({
             />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {capacityValidation.currentCartons.toLocaleString()} / {capacityValidation.maxCartons.toLocaleString()} cartons
+            {capacityValidation.currentVolume.toFixed(2)} / {capacityValidation.maxVolume} m³
           </p>
         </div>
 

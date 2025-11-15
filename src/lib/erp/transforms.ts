@@ -24,6 +24,11 @@ import type { ErpProduct, ErpOrder } from './types';
  * For now, return products with placeholder inventory values
  */
 export function transformErpProduct(erpProduct: ErpProduct): Omit<Product, 'currentStock' | 'weeklyConsumption' | 'targetStock' | 'runsOutDate' | 'runsOutDays' | 'weeksRemaining' | 'status' | 'currentPallets' | 'weeklyPallets'> {
+  // Handle multiple image URLs separated by semicolon (take first one)
+  const imageUrl = erpProduct.imageUrl
+    ? erpProduct.imageUrl.split(';')[0].trim()
+    : undefined;
+
   return {
     id: erpProduct.id,
     name: erpProduct.name,
@@ -32,7 +37,7 @@ export function transformErpProduct(erpProduct: ErpProduct): Omit<Product, 'curr
     size: extractSize(erpProduct.name),
     packCount: erpProduct.packCount.toString(),
     sku: erpProduct.sku,
-    imageUrl: erpProduct.imageUrl || undefined,
+    imageUrl,
     piecesPerPallet: erpProduct.piecesPerPallet,
     volumePerPallet: erpProduct.volumePerPallet,
   };
@@ -244,6 +249,7 @@ export function transformErpOrder(erpOrder: ErpOrder): Order {
       afterDeliveryStock: 0,
       weeksSupply: 0,
       runsOutDate: '',
+      piecesPerPallet: 5000, // Default, will be enriched with actual value later
     })),
     status: mapErpStatusToOrderType(erpOrder.status),
     erpStatus: erpOrder.status, // Pass through raw ERP status

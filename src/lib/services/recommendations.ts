@@ -42,6 +42,7 @@ export interface ContainerRecommendation {
     productName: string;
     quantity: number;
     volume: number;
+    piecesPerPallet: number;
   }[];
   generatedAt: Date;
 }
@@ -190,6 +191,7 @@ function transformOrders(erpOrders: ErpOrder[]): Order[] {
         afterDeliveryStock: 0,
         weeksSupply: 0,
         runsOutDate: '',
+        piecesPerPallet: 5000, // Default, will be enriched with actual value later
       })) || [],
     status: 'IN_TRANSIT' as const,
   }));
@@ -208,7 +210,7 @@ function transformRecommendationRow(row: typeof recommendations.$inferSelect): C
     totalCartons: row.total_cartons,
     totalVolume: parseFloat(row.total_volume),
     urgency: row.urgency as 'OVERDUE' | 'URGENT' | 'PLANNED',
-    products: row.products as any, // Already JSONB
+    products: row.products as ContainerRecommendation['products'], // Already JSONB
     generatedAt: row.generated_at,
   };
 }
@@ -228,17 +230,14 @@ function transformRecommendationRow(row: typeof recommendations.$inferSelect): C
 export async function generateAndSaveRecommendations(orgId: string): Promise<void> {
   console.log(`[Recommendations] Generating for org: ${orgId}`);
 
-  // 1. Fetch ERP data
-  const [erpProducts, erpOrders] = await Promise.all([
+  // 1. Fetch all data in parallel (ERP + DB)
+  const [erpProducts, erpOrders, inventoryData] = await Promise.all([
     fetchErpProductsForOrg(orgId),
     fetchErpCurrentOrdersForOrg(orgId),
+    getInventoryData(orgId),
   ]);
 
-  console.log(`[Recommendations] Fetched ${erpProducts.length} products, ${erpOrders.length} orders`);
-
-  // 2. Fetch inventory from database
-  const inventoryData = await getInventoryData(orgId);
-  console.log(`[Recommendations] Fetched ${inventoryData.length} inventory records`);
+  console.log(`[Recommendations] Fetched ${erpProducts.length} products, ${erpOrders.length} orders, ${inventoryData.length} inventory records`);
 
   // 3. Merge ERP + inventory
   const products = mergeProductData(erpProducts, inventoryData);
@@ -262,7 +261,7 @@ export async function generateAndSaveRecommendations(orgId: string): Promise<voi
 /**
  * Get current recommendations for an organization
  *
- * Returns recommendations sorted by order-by date.
+ * Returns recommendations sorted by container number.
  *
  * @param orgId - Organization UUID
  * @returns Array of container recommendations
@@ -272,7 +271,7 @@ export async function getRecommendations(orgId: string): Promise<ContainerRecomm
     .select()
     .from(recommendations)
     .where(eq(recommendations.org_id, orgId))
-    .orderBy(recommendations.order_by_date);
+    .orderBy(recommendations.container_number);
 
   return rows.map(transformRecommendationRow);
 }

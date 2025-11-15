@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,23 +8,25 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 
-export default function AddUsersPage({
+export default function InviteUsersPage({
   params,
 }: {
   params: Promise<{ org_id: string }>;
 }) {
   const router = useRouter();
-  const [orgId, setOrgId] = useState<string | null>(null);
+  const { org_id: orgId } = use(params);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emails, setEmails] = useState<string[]>([""]);
-  const [createdUsers, setCreatedUsers] = useState<any[]>([]);
-  const [copiedPassword, setCopiedPassword] = useState<string | null>(null);
-
-  // Unwrap params
-  useState(() => {
-    params.then((p) => setOrgId(p.org_id));
-  });
+  const [invitationsSent, setInvitationsSent] = useState<Array<{
+    id: string;
+    email: string;
+    organizationId: string;
+    role: string;
+    status: string;
+    expiresAt: string; // Better Auth returns ISO string
+    inviterId: string;
+  }>>([]);
 
   function addEmailField() {
     setEmails([...emails, ""]);
@@ -43,8 +45,6 @@ export default function AddUsersPage({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!orgId) return;
-
     setLoading(true);
     setError(null);
 
@@ -69,12 +69,12 @@ export default function AddUsersPage({
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.error || "Failed to create users");
+        setError(data.error || "Failed to send invitations");
         setLoading(false);
         return;
       }
 
-      setCreatedUsers(data.users);
+      setInvitationsSent(data.invitations);
     } catch (err) {
       setError("An unexpected error occurred");
     } finally {
@@ -82,26 +82,20 @@ export default function AddUsersPage({
     }
   }
 
-  async function copyPassword(password: string) {
-    await navigator.clipboard.writeText(password);
-    setCopiedPassword(password);
-    setTimeout(() => setCopiedPassword(null), 2000);
-  }
-
   if (!orgId) {
     return <div>Loading...</div>;
   }
 
-  if (createdUsers.length > 0) {
+  if (invitationsSent.length > 0) {
     return (
       <div className="max-w-3xl mx-auto">
         <Card className="p-6">
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded">
             <p className="text-green-800 font-medium">
-              ✓ {createdUsers.length} users created successfully
+              ✓ {invitationsSent.length} invitation(s) sent successfully
             </p>
             <p className="text-sm text-green-700 mt-1">
-              Copy these passwords and share them with your users.
+              Users will receive an invitation email to join the organization.
             </p>
           </div>
 
@@ -110,36 +104,22 @@ export default function AddUsersPage({
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">
                     Email
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium">
-                    Password
+                    Role
                   </th>
-                  <th className="px-4 py-3 text-right text-sm font-medium">
-                    Actions
+                  <th className="px-4 py-3 text-left text-sm font-medium">
+                    Status
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {createdUsers.map((user) => (
-                  <tr key={user.user_id} className="border-b last:border-0">
-                    <td className="px-4 py-3 text-sm">{user.name}</td>
-                    <td className="px-4 py-3 text-sm">{user.email}</td>
-                    <td className="px-4 py-3 text-sm font-mono">
-                      {user.password}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyPassword(user.password)}
-                      >
-                        {copiedPassword === user.password ? "Copied!" : "Copy"}
-                      </Button>
-                    </td>
+                {invitationsSent.map((invitation) => (
+                  <tr key={invitation.id} className="border-b last:border-0">
+                    <td className="px-4 py-3 text-sm">{invitation.email}</td>
+                    <td className="px-4 py-3 text-sm">{invitation.role}</td>
+                    <td className="px-4 py-3 text-sm">{invitation.status}</td>
                   </tr>
                 ))}
               </tbody>
@@ -168,7 +148,7 @@ export default function AddUsersPage({
         ← Back to Organization
       </Link>
 
-      <h2 className="text-2xl font-semibold mb-6">Add Users</h2>
+      <h2 className="text-2xl font-semibold mb-6">Invite Users</h2>
 
       <Card className="p-6">
         {error && (
@@ -216,7 +196,7 @@ export default function AddUsersPage({
           </Button>
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Creating..." : "Create Users →"}
+            {loading ? "Sending invitations..." : "Send Invitations →"}
           </Button>
         </form>
       </Card>

@@ -1,33 +1,32 @@
 import { db } from "../src/lib/db";
-import { users } from "../src/lib/db/schema";
-import postgres from "postgres";
+import { user } from "../src/lib/db/schema";
 
 async function createAdmin() {
   try {
     const [admin] = await db
-      .insert(users)
+      .insert(user)
       .values({
-        user_id: crypto.randomUUID(),
-        org_id: null,
+        id: crypto.randomUUID(),
         email: "admin@mypak.com",
         name: "Platform Admin",
-        password: "admin123",
-        role: "platform_admin",
+        emailVerified: true, // Skip email verification for admin
+        role: "admin", // Platform admin role (matches Better Auth adminRoles)
+        banned: false,
       })
       .returning()
       .onConflictDoNothing();
 
     if (admin) {
-      console.log("✅ Platform admin user created successfully!");
+      console.log("✅ Platform admin created successfully!");
       console.log("Email: admin@mypak.com");
-      console.log("Password: admin123");
+      console.log("Note: Sign in using Email OTP (6-digit code)");
     } else {
-      console.log("ℹ️  Platform admin user already exists");
+      console.log("ℹ️  Platform admin already exists");
     }
 
     process.exit(0);
   } catch (error) {
-    console.error("❌ Error creating admin user:", error);
+    console.error("❌ Error creating admin:", error);
     process.exit(1);
   }
 }

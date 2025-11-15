@@ -1,49 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
-import { getCurrentUser } from "@/lib/auth/jwt";
-import { generatePassword } from "@/lib/utils/password";
-import { generateNameFromEmail } from "@/lib/utils/name";
+import { organizations } from "@/lib/db/schema";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 
 const createUsersSchema = z.object({
   emails: z.array(z.string().email("Invalid email format")).min(1),
+  role: z.enum(["owner", "admin", "member"]).default("member"),
 });
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ org_id: string }> }
 ) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const { org_id } = await params;
     const body = await request.json();
-    const { emails } = createUsersSchema.parse(body);
+    const { emails, role } = createUsersSchema.parse(body);
 
-    // Generate users data
-    const usersData = emails.map((email) => ({
-      user_id: crypto.randomUUID(),
-      org_id: org_id,
-      email,
-      name: generateNameFromEmail(email),
-      password: generatePassword(16),
-      role: "org_user" as const,
-    }));
+    // Get business org to find Better Auth org ID
+    const [businessOrg] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.org_id, org_id));
 
-    // Insert all users
-    const createdUsers = await db
-      .insert(users)
-      .values(usersData)
-      .returning();
+    if (!businessOrg || !businessOrg.better_auth_org_id) {
+      return NextResponse.json(
+        { error: "Organization not found or not linked to Better Auth" },
+        { status: 404 }
+      );
+    }
+
+    // Send invitations via Better Auth
+    const headersList = await headers(); // Hoist headers() call out of loop
+    const invitations = await Promise.all(
+      emails.map(async (email) => {
+        return await auth.api.createInvitation({
+          body: {
+            email,
+            organizationId: businessOrg.better_auth_org_id!,
+            role,
+          },
+          headers: headersList, // Reuse same headers for all invitations
+        });
+      })
+    );
 
     return NextResponse.json({
       success: true,
-      users: createdUsers,
+      invitations,
+      message: `${emails.length} invitation(s) sent via email`,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -53,8 +67,9 @@ export async function POST(
       );
     }
 
+    console.error("Invite users error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to create users" },
+      { success: false, error: "Failed to send invitations" },
       { status: 500 }
     );
   }
@@ -64,25 +79,45 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ org_id: string }> }
 ) {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "platform_admin") {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const user = session?.user;
+  if (!user || user?.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const { org_id } = await params;
-    const orgUsers = await db
+
+    // Get business org to find Better Auth org ID
+    const [businessOrg] = await db
       .select()
-      .from(users)
-      .where(eq(users.org_id, org_id));
+      .from(organizations)
+      .where(eq(organizations.org_id, org_id));
+
+    if (!businessOrg || !businessOrg.better_auth_org_id) {
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 }
+      );
+    }
+
+    // Get organization members from Better Auth
+    const { members, total } = await auth.api.listMembers({
+      query: {
+        organizationId: businessOrg.better_auth_org_id,
+      },
+      headers: await headers(),
+    });
 
     return NextResponse.json({
       success: true,
-      users: orgUsers,
+      members,
+      total,
     });
   } catch (error) {
+    console.error("Get org members error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch users" },
+      { success: false, error: "Failed to fetch members" },
       { status: 500 }
     );
   }

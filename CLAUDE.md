@@ -18,6 +18,127 @@ npm start            # Run production build
 npm run lint         # Run ESLint
 ```
 
+## Authentication
+
+**System:** Better Auth v1.3.34 (Passwordless, Multi-Tenant)
+
+### Authentication Methods
+
+**Email OTP (6-Digit Code)** - Primary method
+- User enters email → receives 6-digit code via Resend
+- Code expires in 5 minutes
+- Clean, familiar UX for B2B users
+
+**Magic Link** - Disabled (commented out, ready for future)
+- Code preserved in `src/lib/auth.ts` and `src/lib/auth-client.ts`
+- Uncomment to re-enable if needed
+
+### Session Management
+
+```typescript
+session: {
+  expiresIn: 60 * 60 * 24 * 60,  // 60 days
+  updateAge: 60 * 60 * 24 * 7,   // Auto-renews every 7 days
+}
+```
+
+**Behavior:**
+- Daily/weekly users: Stay logged in indefinitely (auto-renewal)
+- Inactive 60+ days: Re-authentication required
+- Perfect for enterprise users checking inventory daily
+
+### Better Auth Configuration
+
+**Location:** `src/lib/auth.ts` (server), `src/lib/auth-client.ts` (client)
+
+**Plugins Enabled:**
+- `emailOTP` - 6-digit code authentication
+- `organization` - Multi-tenant organization management
+- `admin` - Platform admin impersonation (1-hour sessions)
+
+**Plugins Disabled (Commented):**
+- `magicLink` - One-click email link authentication (future use)
+
+### Database Tables (Drizzle + Better Auth)
+
+**Better Auth Tables** (auto-managed):
+- `user` - Better Auth users (id, email, emailVerified, name, createdAt, updatedAt, role)
+- `session` - Active sessions with tokens
+- `verification` - OTP codes and magic link tokens
+- `organization` - Better Auth organizations
+- `member` - Organization memberships and roles
+- `invitation` - Pending organization invites
+
+**Business Tables** (custom):
+- `organizations` - Business orgs (org_id, org_name, better_auth_org_id, kavop_token, created_at)
+  - Links to Better Auth via `better_auth_org_id` (NOT NULL)
+  - Contains only ERP integration data (kavop_token, mypak_customer_name)
+  - All user/member management handled by Better Auth
+
+**Schema Mapping:**
+- Better Auth `organization.id` → Business `organizations.better_auth_org_id`
+- Better Auth manages all authentication and organization membership
+- Business tables manage only ERP integration data
+
+**Migration Note (2025-11-15):**
+- Migrated from dual-table architecture to Better Auth-only
+- Removed legacy `users` table (previously held passwords, deprecated fields)
+- Better Auth is now the single source of truth for all user data
+- Organizations created via Better Auth, then linked to business table for ERP data
+
+### Email Templates
+
+**Service:** Resend (noreply@mypak.kavop.com)
+
+**Templates:**
+- OTP Sign-In: Modern card design, blue gradient code box
+- Organization Invite: Professional gradient header, CTA button
+- All emails: Dark slate header, responsive HTML tables, footer with copyright
+
+**Branding:** All emails use "MyPak - Kavop" (not "MyPak Connect")
+
+### Route Protection
+
+**Middleware:** `src/middleware.ts`
+- Checks `better-auth.session_token` cookie
+- Redirects unauthenticated users to `/sign-in`
+- Protects all routes except `/sign-in` and `/api/auth/*`
+
+**Admin Routes:** `src/app/admin/layout.tsx`
+- Platform admins (`user.role === "admin"`) - Full access
+- Org owners (`member.role === "owner"`) - Scoped to their organization
+
+### Key Features
+
+**Passwordless:** No passwords to remember, reset, or compromise
+**Multi-Tenant:** Organizations with member roles (owner, admin, member)
+**Impersonation:** Platform admins can impersonate org users for support
+**Email Delivery:** Resend API for reliable transactional emails
+**Security:** Hashed tokens, httpOnly cookies, 60-day session expiry
+
+### User Management
+
+**Admin Creation:**
+- Run `npm run tsx scripts/create-admin.ts` to create platform admin
+- Creates user in Better Auth `user` table with `role="admin"`
+- Admin can create organizations and invite users
+
+**Organization Creation:**
+- Platform admin creates Better Auth organization
+- Business org automatically linked via `better_auth_org_id`
+- Admin becomes organization owner
+
+**User Invitations:**
+- Send invitations via Better Auth invitation system
+- Users receive invitation email with accept link
+- Upon acceptance, users become organization members
+- No passwords required - passwordless OTP authentication
+
+**Testing:**
+- Admin user: Sign in with admin@mypak.com using Email OTP
+- Org users: Accept invitation, sign in with Email OTP
+- Test flow: Email → 6-digit code → Dashboard access
+
 ## Architecture
 
 ### Data Flow

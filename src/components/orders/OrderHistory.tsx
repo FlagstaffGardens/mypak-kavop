@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, Search } from 'lucide-react';
 import {
@@ -25,12 +25,14 @@ export function OrderHistory({ orders }: OrderHistoryProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('12months');
   const [searchQuery, setSearchQuery] = useState('');
+  const INITIAL_COUNT = 20;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
 
   // Get delivered orders
-  const deliveredOrders = orders.filter(order => order.type === 'DELIVERED');
+  const deliveredOrders = useMemo(() => orders.filter(order => order.type === 'DELIVERED'), [orders]);
 
   // Apply filters
-  const filteredOrders = deliveredOrders.filter(order => {
+  const filteredOrders = useMemo(() => deliveredOrders.filter(order => {
     // Status filter
     if (statusFilter === 'delivered' && order.status !== 'DELIVERED') return false;
 
@@ -44,7 +46,15 @@ export function OrderHistory({ orders }: OrderHistoryProps) {
     }
 
     return true;
-  });
+  }), [deliveredOrders, statusFilter, searchQuery]);
+
+  // Reset visible count when filters change
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVisibleCount(INITIAL_COUNT);
+  }, [statusFilter, searchQuery, timeFilter]);
+
+  const visibleOrders = filteredOrders.slice(0, visibleCount);
 
   if (deliveredOrders.length === 0) {
     return (
@@ -106,7 +116,7 @@ export function OrderHistory({ orders }: OrderHistoryProps) {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredOrders.map((order) => (
+          {visibleOrders.map((order) => (
             <div
               key={order.id}
               className="bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded overflow-hidden hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-md transition-all"
@@ -179,6 +189,13 @@ export function OrderHistory({ orders }: OrderHistoryProps) {
               </div>
             </div>
           ))}
+          {visibleCount < filteredOrders.length && (
+            <div className="flex justify-center mt-4">
+              <Button variant="outline" onClick={() => setVisibleCount((c) => c + INITIAL_COUNT)}>
+                Show more ({filteredOrders.length - visibleCount} more)
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

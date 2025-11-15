@@ -35,6 +35,7 @@ export function DashboardOverview({
       <CompactStatusBar
         products={products}
         containers={containers}
+        liveOrders={liveOrders}
       />
 
       {/* Two-Column Layout: Recommended Orders | Live Orders */}
