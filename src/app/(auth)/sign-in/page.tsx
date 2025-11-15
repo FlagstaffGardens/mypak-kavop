@@ -86,10 +86,20 @@ export default function SignInPage() {
       }
 
       // Auto-set active organization if user has only one
-      await fetch("/api/auth/set-active-org", {
+      const orgResponse = await fetch("/api/auth/set-active-org", {
         method: "POST",
         credentials: "include",
       });
+
+      const orgData = await orgResponse.json();
+
+      // Handle multi-org scenario
+      if (!orgData.success && orgData.organizations && orgData.organizations.length > 1) {
+        // TODO: Redirect to org selection page when implemented
+        // For now, just set the first org as active
+        console.warn("User has multiple orgs. Using first org as default.");
+        // Continue with normal flow - user can switch orgs in settings later
+      }
 
       // Check if user is platform admin and redirect accordingly
       const session = await authClient.getSession();

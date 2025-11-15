@@ -51,6 +51,34 @@ export const auth = betterAuth({
     // Email OTP authentication (6-digit code)
     emailOTPPlugin({
       async sendVerificationOTP({ email, otp, type }) {
+        // SECURITY: Server-side validation for sign-in attempts
+        if (type === "sign-in") {
+          const { user, member } = await import("@/lib/db/schema");
+          const { eq } = await import("drizzle-orm");
+
+          // Check if user exists
+          const existingUser = await db
+            .select()
+            .from(user)
+            .where(eq(user.email, email))
+            .limit(1);
+
+          if (existingUser.length === 0) {
+            throw new Error("No account found with this email address");
+          }
+
+          // Check if user has organization membership
+          const userMemberships = await db
+            .select()
+            .from(member)
+            .where(eq(member.userId, existingUser[0].id))
+            .limit(1);
+
+          if (userMemberships.length === 0) {
+            throw new Error("No organization access. Please contact your administrator");
+          }
+        }
+
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY);
 
