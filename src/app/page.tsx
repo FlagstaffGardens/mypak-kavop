@@ -14,11 +14,13 @@ import { headers } from "next/headers";
 import { getCurrentOrgId } from "@/lib/utils/get-org";
 
 export default async function Dashboard() {
-  // Get current user
+  // Get current user and org
   const session = await auth.api.getSession({ headers: await headers() });
   const user = session?.user;
   const orgId = await getCurrentOrgId();
 
+  // Redirect to sign-in if not authenticated or no org access
+  // Note: sign-in page already blocks users without org membership
   if (!user || !orgId) {
     redirect('/sign-in');
   }

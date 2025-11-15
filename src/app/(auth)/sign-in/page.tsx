@@ -24,10 +24,32 @@ export default function SignInPage() {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
+      // Check if user exists in the system first
+      const checkResponse = await fetch("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const checkData = await checkResponse.json();
+
+      if (!checkData.exists) {
+        setError("No account found with this email address. Please contact your administrator for access.");
+        setLoading(false);
+        return;
+      }
+
+      // User exists, send OTP
       await authClient.emailOtp.sendVerificationOtp({
         email,
         type: "sign-in",
@@ -63,7 +85,6 @@ export default function SignInPage() {
         throw new Error(result.error.message || "Invalid code");
       }
 
-      // Success! Redirect to dashboard
       router.push("/");
       router.refresh();
     } catch (err) {
@@ -75,21 +96,19 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="min-h-screen w-full bg-[#f9fafb] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <Card className="border-border shadow-lg">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-semibold tracking-tight">
-              Sign in to MyPak - Kavop
-            </CardTitle>
-            <CardDescription>
-              {!otpSent ? "We'll send you a 6-digit code" : `Code sent to ${email}`}
-            </CardDescription>
-          </CardHeader>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-slate-900">MyPak - Kavop</h1>
+          <p className="text-sm text-muted-foreground mt-2">
+            {!otpSent ? "Sign in to your account" : `Code sent to ${email}`}
+          </p>
+        </div>
 
-          <CardContent>
+        <Card className="bg-white">
+          <CardContent className="pt-6">
             {error && (
-              <div className="mb-4 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
                 {error}
               </div>
             )}
@@ -106,7 +125,6 @@ export default function SignInPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
-                    className="h-11"
                     autoFocus
                     required
                   />
@@ -115,10 +133,10 @@ export default function SignInPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11"
+                  className="w-full"
                   size="lg"
                 >
-                  {loading ? "Sending..." : "Send Code"}
+                  {loading ? "Sending code..." : "Continue with email"}
                 </Button>
               </form>
             )}
@@ -127,7 +145,7 @@ export default function SignInPage() {
             {otpSent && (
               <form onSubmit={handleVerifyOTP} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="otp">Enter 6-digit code</Label>
+                  <Label htmlFor="otp">Verification code</Label>
                   <Input
                     id="otp"
                     type="text"
@@ -137,22 +155,22 @@ export default function SignInPage() {
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     disabled={loading}
                     maxLength={6}
-                    className="h-11 text-center text-2xl font-mono tracking-widest"
+                    className="h-14 text-center text-2xl font-mono tracking-widest"
                     autoFocus
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Check your email for the verification code
+                    Enter the 6-digit code we sent to your email
                   </p>
                 </div>
 
                 <Button
                   type="submit"
                   disabled={loading || otp.length !== 6}
-                  className="w-full h-11"
+                  className="w-full"
                   size="lg"
                 >
-                  {loading ? "Verifying..." : "Sign In"}
+                  {loading ? "Verifying..." : "Sign in"}
                 </Button>
 
                 <Button
@@ -166,17 +184,19 @@ export default function SignInPage() {
                   className="w-full"
                   disabled={loading}
                 >
-                  ← Back to email
+                  ← Use a different email
                 </Button>
               </form>
             )}
+
           </CardContent>
         </Card>
 
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Secure, passwordless authentication for MyPak - Kavop
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          Secure OTP authentication
         </p>
       </div>
     </div>
   );
 }
+

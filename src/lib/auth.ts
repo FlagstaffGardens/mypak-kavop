@@ -101,8 +101,8 @@ export const auth = betterAuth({
                             <table width="100%" cellpadding="0" cellspacing="0">
                               <tr>
                                 <td align="center" style="padding: 24px 0;">
-                                  <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 12px; padding: 24px; display: inline-block; border: 2px solid #3b82f6;">
-                                    <span style="font-size: 42px; font-weight: 700; letter-spacing: 12px; color: #1e3a8a; font-family: 'Courier New', monospace;">
+                                  <div style="background: #f5f5f5; border-radius: 8px; padding: 20px 32px; display: inline-block;">
+                                    <span style="font-size: 48px; font-weight: 700; letter-spacing: 16px; color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                                       ${otp}
                                     </span>
                                   </div>
