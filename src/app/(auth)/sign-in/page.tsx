@@ -91,7 +91,11 @@ export default function SignInPage() {
         credentials: "include",
       });
 
-      router.push("/");
+      // Check if user is platform admin and redirect accordingly
+      const session = await authClient.getSession();
+      const isPlatformAdmin = session?.data?.user?.role === "admin";
+
+      router.push(isPlatformAdmin ? "/admin" : "/");
       router.refresh();
     } catch (err) {
       console.error("Verification error:", err);

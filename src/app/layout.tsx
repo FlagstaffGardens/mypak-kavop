@@ -14,17 +14,16 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isAuthPage = pathname?.startsWith("/sign-in");
-  const isAdminPage = pathname?.startsWith("/admin");
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          {isAuthPage || isAdminPage ? (
-            // Auth pages and admin pages - no regular sidebar, handled by their own layouts
+          {isAuthPage ? (
+            // Auth pages - no sidebar
             <>{children}</>
           ) : (
-            // App pages - with sidebar
+            // App pages (including admin) - with sidebar
             <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-950">
               {/* Desktop Sidebar - Hidden on mobile (< md), visible on desktop (md+) */}
               <div className="hidden md:block">

@@ -44,5 +44,6 @@ export default async function AdminLayout({
     }
   }
 
-  return <div className="min-h-screen bg-gray-50">{children}</div>;
+  // Sidebar is handled by root layout, just return children
+  return <>{children}</>;
 }
