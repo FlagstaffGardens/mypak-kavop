@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,11 +10,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const invitationId = searchParams?.get("invitationId");
+  const emailParam = searchParams?.get("email");
+
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+
+  // Pre-fill email if provided in URL
+  useEffect(() => {
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+  }, [emailParam]);
 
   async function handleSendOTP(e: React.FormEvent) {
     e.preventDefault();
@@ -99,6 +110,13 @@ export default function SignInPage() {
         // For now, just set the first org as active
         console.warn("User has multiple orgs. Using first org as default.");
         // Continue with normal flow - user can switch orgs in settings later
+      }
+
+      // If user came from invitation link, redirect to accept invitation
+      if (invitationId) {
+        router.push(`/accept-invitation?id=${invitationId}`);
+        router.refresh();
+        return;
       }
 
       // Check if user is platform admin and redirect accordingly

@@ -11,10 +11,9 @@ export default function AcceptInvitationPage() {
   const invitationId = searchParams?.get("id");
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
-  const [email, setEmail] = useState("");
 
   useEffect(() => {
-    async function acceptInvitation() {
+    async function handleInvitation() {
       if (!invitationId) {
         setStatus("error");
         setErrorMessage("Missing invitation ID");
@@ -22,7 +21,17 @@ export default function AcceptInvitationPage() {
       }
 
       try {
-        // Accept invitation using Better Auth client
+        // CRITICAL: Check if user is logged in first
+        // Better Auth requires authentication before accepting invitations
+        const session = await authClient.getSession();
+
+        if (!session?.data?.user) {
+          // User not logged in - redirect to sign-in with invitation ID preserved
+          router.push(`/sign-in?invitationId=${invitationId}`);
+          return;
+        }
+
+        // User is logged in - proceed with acceptance
         const result = await authClient.organization.acceptInvitation({
           invitationId,
         });
@@ -33,14 +42,12 @@ export default function AcceptInvitationPage() {
           return;
         }
 
-        // Get the user's email from the result if available
-        const userEmail = result.data?.email || "";
-        setEmail(userEmail);
         setStatus("success");
 
-        // Redirect to sign-in after 2 seconds
+        // Redirect to dashboard after 2 seconds
         setTimeout(() => {
-          router.push(`/sign-in${userEmail ? `?email=${encodeURIComponent(userEmail)}` : ""}`);
+          router.push("/");
+          router.refresh();
         }, 2000);
       } catch (error) {
         console.error("Accept invitation error:", error);
@@ -49,7 +56,7 @@ export default function AcceptInvitationPage() {
       }
     }
 
-    acceptInvitation();
+    handleInvitation();
   }, [invitationId, router]);
 
   return (
