@@ -121,6 +121,7 @@ export const invitation = pgTable("invitation", {
 export const organizations = pgTable("organizations", {
   org_id: uuid("org_id").defaultRandom().primaryKey(),
   better_auth_org_id: text("better_auth_org_id")
+    .notNull()
     .unique()
     .references(() => organization.id, { onDelete: "cascade" }),
   org_name: text("org_name").notNull(),
@@ -130,20 +131,6 @@ export const organizations = pgTable("organizations", {
   updated_at: timestamp("updated_at").defaultNow().notNull(),
   last_inventory_update: timestamp("last_inventory_update"),
 });
-
-export const users = pgTable("users", {
-  user_id: uuid("user_id").defaultRandom().primaryKey(),
-  org_id: uuid("org_id").references(() => organizations.org_id, { onDelete: "cascade" }),
-  email: text("email").notNull().unique(),
-  name: text("name").notNull(),
-  password: text("password").notNull(),
-  role: text("role").notNull().default("org_user"),
-  created_at: timestamp("created_at").notNull().defaultNow(),
-  updated_at: timestamp("updated_at").notNull().defaultNow(),
-  last_login_at: timestamp("last_login_at"),
-}, (table) => ({
-  orgIdx: index('idx_users_org_id').on(table.org_id),
-}));
 
 export const productData = pgTable("product_data", {
   org_id: uuid("org_id")
