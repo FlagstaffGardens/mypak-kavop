@@ -73,29 +73,56 @@ export async function POST(
             to: email,
             subject: `You've been invited to join ${businessOrg.org_name}`,
             html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-                  <h1 style="color: white; margin: 0;">MyPak - Kavop</h1>
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+                <!-- Header -->
+                <div style="background-color: #0f172a; padding: 40px 32px; text-align: center;">
+                  <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.025em;">
+                    MyPak - Kavop
+                  </h1>
                 </div>
-                <div style="padding: 30px; background: #f9fafb;">
-                  <h2 style="color: #1f2937; margin-top: 0;">Organization Invitation</h2>
-                  <p style="color: #4b5563; font-size: 16px; line-height: 1.5;">
-                    You've been invited to join <strong>${businessOrg.org_name}</strong> on MyPak - Kavop.
+
+                <!-- Content -->
+                <div style="padding: 48px 32px; background-color: #ffffff;">
+                  <h2 style="color: #0f172a; margin: 0 0 8px 0; font-size: 24px; font-weight: 600;">
+                    Organization Invitation
+                  </h2>
+
+                  <p style="color: #64748b; margin: 0 0 32px 0; font-size: 16px; line-height: 1.6;">
+                    You've been invited to join <strong style="color: #0f172a;">${businessOrg.org_name}</strong> on MyPak - Kavop.
                   </p>
-                  <p style="color: #4b5563; font-size: 16px; line-height: 1.5;">
-                    Role: <strong>${role}</strong>
-                  </p>
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${inviteUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+
+                  <div style="background-color: #f8fafc; border-left: 4px solid #0f172a; padding: 16px 20px; margin-bottom: 32px; border-radius: 4px;">
+                    <p style="margin: 0; color: #475569; font-size: 14px;">
+                      <strong style="color: #0f172a;">Role:</strong> ${role}
+                    </p>
+                  </div>
+
+                  <!-- Accept Button -->
+                  <div style="text-align: center; margin: 40px 0;">
+                    <a href="${inviteUrl}"
+                       style="display: inline-block;
+                              background-color: #0f172a;
+                              color: #ffffff;
+                              padding: 14px 32px;
+                              text-decoration: none;
+                              border-radius: 6px;
+                              font-weight: 600;
+                              font-size: 16px;
+                              transition: background-color 0.2s;">
                       Accept Invitation
                     </a>
                   </div>
-                  <p style="color: #6b7280; font-size: 14px;">
+
+                  <p style="color: #94a3b8; font-size: 14px; margin: 32px 0 0 0; text-align: center;">
                     This invitation will expire in 7 days.
                   </p>
                 </div>
-                <div style="padding: 20px; text-align: center; color: #9ca3af; font-size: 12px;">
-                  <p>© 2025 MyPak - Kavop. All rights reserved.</p>
+
+                <!-- Footer -->
+                <div style="background-color: #f8fafc; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
+                  <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+                    © 2025 MyPak - Kavop. All rights reserved.
+                  </p>
                 </div>
               </div>
             `,
