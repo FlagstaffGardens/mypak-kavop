@@ -2,13 +2,19 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UsersTable } from "@/components/admin/UsersTable";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
-import { organizations, users } from "@/lib/db/schema";
+import { organizations } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import type { User } from "@/lib/types";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 async function getOrganization(orgId: string) {
   const [org] = await db
@@ -18,12 +24,19 @@ async function getOrganization(orgId: string) {
   return org || null;
 }
 
-async function getOrgUsers(orgId: string): Promise<User[]> {
-  const orgUsers = await db
-    .select()
-    .from(users)
-    .where(eq(users.org_id, orgId));
-  return orgUsers as User[];
+async function getOrgMembers(betterAuthOrgId: string) {
+  try {
+    const orgData = await auth.api.getFullOrganization({
+      query: {
+        organizationId: betterAuthOrgId,
+      },
+      headers: await headers(),
+    });
+    return orgData?.members || [];
+  } catch (error) {
+    console.error("Error fetching org members:", error);
+    return [];
+  }
 }
 
 export default async function OrganizationDetailPage({
@@ -40,11 +53,14 @@ export default async function OrganizationDetailPage({
 
   const { org_id } = await params;
   const org = await getOrganization(org_id);
-  const users = await getOrgUsers(org_id);
 
   if (!org) {
     notFound();
   }
+
+  const members = org.better_auth_org_id
+    ? await getOrgMembers(org.better_auth_org_id)
+    : [];
 
   return (
     <div>
@@ -80,6 +96,10 @@ export default async function OrganizationDetailPage({
             <dd className="font-mono">{org.org_id}</dd>
           </div>
           <div>
+            <dt className="text-gray-500">Better Auth Org ID</dt>
+            <dd className="font-mono">{org.better_auth_org_id}</dd>
+          </div>
+          <div>
             <dt className="text-gray-500">MyPak Customer Name</dt>
             <dd className="font-mono">{org.mypak_customer_name}</dd>
           </div>
@@ -87,29 +107,54 @@ export default async function OrganizationDetailPage({
             <dt className="text-gray-500">Created</dt>
             <dd>{new Date(org.created_at).toLocaleString()}</dd>
           </div>
-          <div>
-            <dt className="text-gray-500">Last Updated</dt>
-            <dd>{new Date(org.updated_at).toLocaleString()}</dd>
-          </div>
         </dl>
       </Card>
 
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Users ({users.length})</h3>
+          <h3 className="text-lg font-semibold">Members ({members.length})</h3>
           <Button asChild>
             <Link href={`/admin/organizations/${org.org_id}/users/new`}>
-              + Add Users
+              + Invite Users
             </Link>
           </Button>
         </div>
 
-        {users.length === 0 ? (
+        {members.length === 0 ? (
           <Card className="p-8 text-center text-gray-500">
-            No users yet. Add users to get started.
+            No members yet. Invite users to get started.
           </Card>
         ) : (
-          <UsersTable users={users} orgId={org.org_id} />
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Joined</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.map((member: any) => (
+                  <TableRow key={member.id}>
+                    <TableCell className="font-medium">
+                      {member.user.name}
+                    </TableCell>
+                    <TableCell>{member.user.email}</TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {member.role}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(member.createdAt).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         )}
       </div>
     </div>
