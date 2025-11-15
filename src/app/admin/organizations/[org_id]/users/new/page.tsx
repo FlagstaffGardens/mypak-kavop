@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 
-export default function AddUsersPage({
+export default function InviteUsersPage({
   params,
 }: {
   params: Promise<{ org_id: string }>;
@@ -18,7 +18,7 @@ export default function AddUsersPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emails, setEmails] = useState<string[]>([""]);
-  const [createdUsers, setCreatedUsers] = useState<Array<{
+  const [invitationsSent, setInvitationsSent] = useState<Array<{
     user_id: string;
     org_id: string;
     email: string;
@@ -76,12 +76,12 @@ export default function AddUsersPage({
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.error || "Failed to create users");
+        setError(data.error || "Failed to send invitations");
         setLoading(false);
         return;
       }
 
-      setCreatedUsers(data.users);
+      setInvitationsSent(data.users);
     } catch (err) {
       setError("An unexpected error occurred");
     } finally {
@@ -93,16 +93,16 @@ export default function AddUsersPage({
     return <div>Loading...</div>;
   }
 
-  if (createdUsers.length > 0) {
+  if (invitationsSent.length > 0) {
     return (
       <div className="max-w-3xl mx-auto">
         <Card className="p-6">
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded">
             <p className="text-green-800 font-medium">
-              ✓ {createdUsers.length} users created successfully
+              ✓ {invitationsSent.length} invitation(s) sent successfully
             </p>
             <p className="text-sm text-green-700 mt-1">
-              Users will receive a 6-digit verification code via email when they sign in.
+              Users will receive an invitation email to join the organization.
             </p>
           </div>
 
@@ -122,7 +122,7 @@ export default function AddUsersPage({
                 </tr>
               </thead>
               <tbody>
-                {createdUsers.map((user) => (
+                {invitationsSent.map((user) => (
                   <tr key={user.user_id} className="border-b last:border-0">
                     <td className="px-4 py-3 text-sm">{user.name}</td>
                     <td className="px-4 py-3 text-sm">{user.email}</td>
@@ -155,7 +155,7 @@ export default function AddUsersPage({
         ← Back to Organization
       </Link>
 
-      <h2 className="text-2xl font-semibold mb-6">Add Users</h2>
+      <h2 className="text-2xl font-semibold mb-6">Invite Users</h2>
 
       <Card className="p-6">
         {error && (
@@ -203,7 +203,7 @@ export default function AddUsersPage({
           </Button>
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Creating..." : "Create Users →"}
+            {loading ? "Sending invitations..." : "Send Invitations →"}
           </Button>
         </form>
       </Card>
