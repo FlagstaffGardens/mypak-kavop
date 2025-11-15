@@ -86,15 +86,10 @@ export default function SignInPage() {
       }
 
       // Auto-set active organization if user has only one
-      const session = await authClient.getSession();
-      if (session?.data?.user) {
-        const orgs = await authClient.organization.listOrganizations();
-        if (orgs.data && orgs.data.length === 1) {
-          await authClient.organization.setActive({
-            organizationId: orgs.data[0].id,
-          });
-        }
-      }
+      await fetch("/api/auth/set-active-org", {
+        method: "POST",
+        credentials: "include",
+      });
 
       router.push("/");
       router.refresh();
