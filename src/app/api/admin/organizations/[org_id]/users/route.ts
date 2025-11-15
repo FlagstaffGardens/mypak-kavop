@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { organizations } from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { generatePassword } from "@/lib/utils/password";
-import { generateNameFromEmail } from "@/lib/utils/name";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 
 const createUsersSchema = z.object({
   emails: z.array(z.string().email("Invalid email format")).min(1),
+  role: z.enum(["owner", "admin", "member"]).default("member"),
 });
 
 export async function POST(
@@ -25,32 +24,39 @@ export async function POST(
   try {
     const { org_id } = await params;
     const body = await request.json();
-    const { emails } = createUsersSchema.parse(body);
+    const { emails, role } = createUsersSchema.parse(body);
 
-    // Generate users data
-    // NOTE: Password field is DEPRECATED - Better Auth handles all authentication
-    // Passwords are generated here only for legacy schema compatibility
-    const usersData = emails.map((email) => ({
-      user_id: crypto.randomUUID(),
-      org_id: org_id,
-      email,
-      name: generateNameFromEmail(email),
-      password: generatePassword(16), // DEPRECATED: Not used for auth
-      role: "org_user" as const,
-    }));
+    // Get business org to find Better Auth org ID
+    const [businessOrg] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.org_id, org_id));
 
-    // Insert all users
-    const createdUsers = await db
-      .insert(users)
-      .values(usersData)
-      .returning();
+    if (!businessOrg || !businessOrg.better_auth_org_id) {
+      return NextResponse.json(
+        { error: "Organization not found or not linked to Better Auth" },
+        { status: 404 }
+      );
+    }
 
-    // SECURITY: Remove passwords from API response
-    const safeUsers = createdUsers.map(({ password, ...user }) => user);
+    // Send invitations via Better Auth
+    const invitations = await Promise.all(
+      emails.map(async (email) => {
+        return await auth.api.inviteUser({
+          body: {
+            email,
+            organizationId: businessOrg.better_auth_org_id!,
+            role,
+            inviterId: user.id,
+          },
+        });
+      })
+    );
 
     return NextResponse.json({
       success: true,
-      users: safeUsers,
+      invitations,
+      message: `${emails.length} invitation(s) sent via email`,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -60,8 +66,9 @@ export async function POST(
       );
     }
 
+    console.error("Invite users error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to create users" },
+      { success: false, error: "Failed to send invitations" },
       { status: 500 }
     );
   }
@@ -79,18 +86,35 @@ export async function GET(
 
   try {
     const { org_id } = await params;
-    const orgUsers = await db
+
+    // Get business org to find Better Auth org ID
+    const [businessOrg] = await db
       .select()
-      .from(users)
-      .where(eq(users.org_id, org_id));
+      .from(organizations)
+      .where(eq(organizations.org_id, org_id));
+
+    if (!businessOrg || !businessOrg.better_auth_org_id) {
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 }
+      );
+    }
+
+    // Get organization members from Better Auth
+    const members = await auth.api.listOrganizationMembers({
+      query: {
+        organizationId: businessOrg.better_auth_org_id,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      users: orgUsers,
+      members,
     });
   } catch (error) {
+    console.error("Get org members error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch users" },
+      { success: false, error: "Failed to fetch members" },
       { status: 500 }
     );
   }

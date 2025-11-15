@@ -20,15 +20,7 @@ export function CreateOrgWizard() {
 
   // Step 2 data
   const [emails, setEmails] = useState<string[]>([""]);
-  const [createdUsers, setCreatedUsers] = useState<Array<{
-    user_id: string;
-    org_id: string;
-    email: string;
-    name: string;
-    role: string;
-    created_at: Date;
-    updated_at: Date;
-  }>>([]);
+  const [createdUsers, setCreatedUsers] = useState<string[]>([]);
 
   async function handleStep1Submit(e: React.FormEvent) {
     e.preventDefault();
@@ -125,13 +117,13 @@ export function CreateOrgWizard() {
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.error || "Failed to create users");
+        setError(data.error || "Failed to send invitations");
         setLoading(false);
         return;
       }
 
-      // Show password results
-      setCreatedUsers(data.users);
+      // Show invitation results
+      setCreatedUsers(validEmails);
     } catch (err) {
       setError("An unexpected error occurred");
     } finally {
@@ -260,16 +252,17 @@ export function CreateOrgWizard() {
     );
   }
 
-  // Password Results Display
+  // Invitation Success Display
   if (step === 2 && createdUsers.length > 0) {
     return (
       <Card className="p-6">
         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded">
           <p className="text-green-800 font-medium">
-            ✓ {createdUsers.length} users created successfully for {orgName}
+            ✓ {createdUsers.length} invitation(s) sent for {orgName}
           </p>
           <p className="text-sm text-green-700 mt-1">
-            Users will receive authentication credentials via email when they sign in using Magic Link or Email OTP.
+            Users will receive an email invitation to join the organization.
+            They'll sign in using Email OTP (6-digit code).
           </p>
         </div>
 
@@ -278,22 +271,20 @@ export function CreateOrgWizard() {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-medium">
-                  Name
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
                   Email
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium">
-                  Role
+                  Status
                 </th>
               </tr>
             </thead>
             <tbody>
-              {createdUsers.map((user) => (
-                <tr key={user.user_id} className="border-b last:border-0">
-                  <td className="px-4 py-3 text-sm">{user.name}</td>
-                  <td className="px-4 py-3 text-sm">{user.email}</td>
-                  <td className="px-4 py-3 text-sm">{user.role}</td>
+              {emails.filter(e => e.trim() !== "").map((email, idx) => (
+                <tr key={idx} className="border-b last:border-0">
+                  <td className="px-4 py-3 text-sm">{email}</td>
+                  <td className="px-4 py-3 text-sm text-green-600">
+                    Invitation sent
+                  </td>
                 </tr>
               ))}
             </tbody>
