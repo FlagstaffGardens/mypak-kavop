@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,24 +14,19 @@ export default function InviteUsersPage({
   params: Promise<{ org_id: string }>;
 }) {
   const router = useRouter();
-  const [orgId, setOrgId] = useState<string | null>(null);
+  const { org_id: orgId } = use(params);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emails, setEmails] = useState<string[]>([""]);
   const [invitationsSent, setInvitationsSent] = useState<Array<{
-    user_id: string;
-    org_id: string;
+    id: string;
     email: string;
-    name: string;
+    organizationId: string;
     role: string;
-    created_at: Date;
-    updated_at: Date;
+    status: string;
+    expiresAt: Date;
+    inviterId: string;
   }>>([]);
-
-  // Unwrap params
-  useState(() => {
-    params.then((p) => setOrgId(p.org_id));
-  });
 
   function addEmailField() {
     setEmails([...emails, ""]);
@@ -50,8 +45,6 @@ export default function InviteUsersPage({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!orgId) return;
-
     setLoading(true);
     setError(null);
 
@@ -81,7 +74,7 @@ export default function InviteUsersPage({
         return;
       }
 
-      setInvitationsSent(data.users);
+      setInvitationsSent(data.invitations);
     } catch (err) {
       setError("An unexpected error occurred");
     } finally {
@@ -111,22 +104,22 @@ export default function InviteUsersPage({
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">
                     Email
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium">
                     Role
                   </th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {invitationsSent.map((user) => (
-                  <tr key={user.user_id} className="border-b last:border-0">
-                    <td className="px-4 py-3 text-sm">{user.name}</td>
-                    <td className="px-4 py-3 text-sm">{user.email}</td>
-                    <td className="px-4 py-3 text-sm">{user.role}</td>
+                {invitationsSent.map((invitation) => (
+                  <tr key={invitation.id} className="border-b last:border-0">
+                    <td className="px-4 py-3 text-sm">{invitation.email}</td>
+                    <td className="px-4 py-3 text-sm">{invitation.role}</td>
+                    <td className="px-4 py-3 text-sm">{invitation.status}</td>
                   </tr>
                 ))}
               </tbody>

@@ -23,29 +23,64 @@ export async function POST(request: NextRequest) {
     const data = createOrgSchema.parse(body);
 
     // Step 1: Create Better Auth organization
-    const betterAuthOrg = await auth.api.createOrganization({
-      body: {
-        name: data.org_name,
-        slug: data.org_name.toLowerCase().replace(/\s+/g, "-"),
-      },
-      user: user, // Platform admin creates the org
-    });
+    let betterAuthOrg;
+    try {
+      betterAuthOrg = await auth.api.createOrganization({
+        body: {
+          name: data.org_name,
+          slug: data.org_name.toLowerCase().replace(/\s+/g, "-"),
+        },
+        headers: await headers(), // Pass session context
+      });
+    } catch (authError: any) {
+      // Check for specific Better Auth errors
+      if (authError?.message?.includes("ORGANIZATION_ALREADY_EXISTS") ||
+          authError?.code === "ORGANIZATION_ALREADY_EXISTS") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "An organization with this name already exists. Please choose a different name."
+          },
+          { status: 409 }
+        );
+      }
+      throw authError; // Re-throw if it's a different error
+    }
+
+    if (!betterAuthOrg) {
+      return NextResponse.json(
+        { success: false, error: "Failed to create Better Auth organization" },
+        { status: 500 }
+      );
+    }
 
     // Step 2: Create business organization (ERP integration data)
-    const [org] = await db
-      .insert(organizations)
-      .values({
-        org_name: data.org_name,
-        mypak_customer_name: data.mypak_customer_name,
-        kavop_token: data.kavop_token,
-        better_auth_org_id: betterAuthOrg.id, // Link to Better Auth org
-      })
-      .returning();
+    // Note: This is not a true transaction with Better Auth.
+    // If this fails, the Better Auth org will be orphaned and require manual cleanup.
+    try {
+      const [org] = await db
+        .insert(organizations)
+        .values({
+          org_name: data.org_name,
+          mypak_customer_name: data.mypak_customer_name,
+          kavop_token: data.kavop_token,
+          better_auth_org_id: betterAuthOrg.id, // Link to Better Auth org
+        })
+        .returning();
 
-    return NextResponse.json({
-      success: true,
-      organization: org,
-    });
+      return NextResponse.json({
+        success: true,
+        organization: org,
+      });
+    } catch (dbError) {
+      // Database insert failed - Better Auth org is now orphaned
+      console.error(
+        `[CRITICAL] DB insert failed. Orphaned Better Auth org ID: ${betterAuthOrg.id}`,
+        dbError
+      );
+      // TODO: Add manual cleanup process for orphaned Better Auth organizations
+      throw dbError;
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

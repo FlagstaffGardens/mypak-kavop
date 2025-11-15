@@ -42,13 +42,13 @@ export async function POST(
     // Send invitations via Better Auth
     const invitations = await Promise.all(
       emails.map(async (email) => {
-        return await auth.api.inviteUser({
+        return await auth.api.createInvitation({
           body: {
             email,
             organizationId: businessOrg.better_auth_org_id!,
             role,
-            inviterId: user.id,
           },
+          headers: await headers(), // Pass session context for inviter
         });
       })
     );
@@ -101,15 +101,17 @@ export async function GET(
     }
 
     // Get organization members from Better Auth
-    const members = await auth.api.listOrganizationMembers({
+    const { members, total } = await auth.api.listMembers({
       query: {
         organizationId: businessOrg.better_auth_org_id,
       },
+      headers: await headers(),
     });
 
     return NextResponse.json({
       success: true,
       members,
+      total,
     });
   } catch (error) {
     console.error("Get org members error:", error);
