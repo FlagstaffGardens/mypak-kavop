@@ -39,18 +39,73 @@ export async function POST(
       );
     }
 
-    // Send invitations via Better Auth
-    const headersList = await headers(); // Hoist headers() call out of loop
+    // Platform admins can invite to any org - bypass Better Auth API and use database directly
+    const { invitation } = await import("@/lib/db/schema");
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
     const invitations = await Promise.all(
       emails.map(async (email) => {
-        return await auth.api.createInvitation({
-          body: {
-            email,
+        // Generate invitation ID (used as token)
+        const invitationId = crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+        // Create invitation in database
+        const [inv] = await db
+          .insert(invitation)
+          .values({
+            id: invitationId,
             organizationId: businessOrg.better_auth_org_id!,
+            email,
             role,
-          },
-          headers: headersList, // Reuse same headers for all invitations
-        });
+            status: "pending",
+            expiresAt,
+            inviterId: user.id,
+          })
+          .returning();
+
+        // Send invitation email (use invitation ID as token)
+        const inviteUrl = `${process.env.BETTER_AUTH_URL}/api/auth/organization/accept-invitation?invitationId=${invitationId}`;
+
+        try {
+          await resend.emails.send({
+            from: "MyPak - Kavop <noreply@mypak.kavop.com>",
+            to: email,
+            subject: `You've been invited to join ${businessOrg.org_name}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+                  <h1 style="color: white; margin: 0;">MyPak - Kavop</h1>
+                </div>
+                <div style="padding: 30px; background: #f9fafb;">
+                  <h2 style="color: #1f2937; margin-top: 0;">Organization Invitation</h2>
+                  <p style="color: #4b5563; font-size: 16px; line-height: 1.5;">
+                    You've been invited to join <strong>${businessOrg.org_name}</strong> on MyPak - Kavop.
+                  </p>
+                  <p style="color: #4b5563; font-size: 16px; line-height: 1.5;">
+                    Role: <strong>${role}</strong>
+                  </p>
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${inviteUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                      Accept Invitation
+                    </a>
+                  </div>
+                  <p style="color: #6b7280; font-size: 14px;">
+                    This invitation will expire in 7 days.
+                  </p>
+                </div>
+                <div style="padding: 20px; text-align: center; color: #9ca3af; font-size: 12px;">
+                  <p>© 2025 MyPak - Kavop. All rights reserved.</p>
+                </div>
+              </div>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Failed to send invitation email:", emailError);
+          throw new Error(`Failed to send email to ${email}`);
+        }
+
+        return inv;
       })
     );
 
